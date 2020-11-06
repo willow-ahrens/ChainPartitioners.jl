@@ -1,0 +1,57 @@
+N - the number of nonzeros
+q - index into nonzeros
+Q - index into nonzero group
+t - time
+c - cost
+c - count
+m - number of rows
+i - index into rows
+I - index into row group
+K - number of row parts
+k - row partind
+Π - row partitition
+π - row part (set of row indices)
+n - number of columns
+j - index into columns
+J - index into column group
+L - number of column parts (if semantically different from row parts)
+l - index into column part (if semantically different from row parts)
+Φ - column partitition
+ϕ - column part (set of column indices)
+p - number of right-hand-sides
+k - right-hand-side index (TODO conflict)
+S - split points
+s - split point
+A - matrix A
+a - matrix entry a
+x - vector x
+x - vector value x
+y - vector y
+y - vector value y
+z - vector z
+z - vector value z
+b - vector b
+b - vector value b
+r - vector b
+r - vector value b
+b - base nbits
+H - number of levels
+h - level
+d - remainder
+E - edges
+e - edge
+V - vertices
+v - vertex
+U - other vertices
+u - other vertex
+G - graph
+G - hypergraph
+W - weights
+w - weight
+λ - number of cuts
+ε - small things
+
+if i is bounded, we bound it between i_lo and i_hi
+if i ranges between two values (exclusive upper), we say i ∈ i₀ : i′ - 1
+rename colptr to pos
+rename rowval to idx

@@ -1,0 +1,21 @@
+name = "ChainPartitioners"
+uuid = "7a2a9441-b812-4af5-b203-314e7cbd5d81"
+authors = ["Peter Ahrens <ptrahrens@gmail.com>"]
+version = "1.0.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+
+[extras]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+MatrixDepot = "b51810bb-c9f3-55da-ae3c-350fc1fbce05"
+
+[targets]
+test = ["Test", "LinearAlgebra", "SparseArrays", "Random", "MatrixDepot"]
