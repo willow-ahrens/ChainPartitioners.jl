@@ -19,7 +19,7 @@ function bandwidth(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
         end
     end
 
-    return maximum(top[1:n] .- bot[2:n + 1])
+    return maximum(top[2:n + 1] .- bot[1:n])
 end
 
 @testset "CuthillMcKee" begin
