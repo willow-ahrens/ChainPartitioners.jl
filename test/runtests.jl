@@ -2,7 +2,7 @@ using Test
 using ChainPartitioners
 using SparseArrays
 using Random
-using MatrixDepot
+include("matrices.jl")
 
 macro ignore(ex)
     nothing

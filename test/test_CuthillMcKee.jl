@@ -23,7 +23,7 @@ function bandwidth(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
 end
 
 @testset "CuthillMcKee" begin
-    A = mdopen("HB/can_292").A
+    A = matrices["HB/can_292"]
     (σ, τ) = permute_plaid(A, CuthillMcKeePermuter())
     @test σ.prm === τ.prm
     (σ′, τ′) = permute_plaid(A, CuthillMcKeePermuter(reverse=true))
@@ -37,14 +37,14 @@ end
     @test τ.prm == reverse(τ′.prm)
     @test bandwidth(A[perm(σ), perm(τ)]) < bandwidth(A)
     @test bandwidth(permutedims(A[perm(σ), perm(τ)])) < bandwidth(permutedims(A))
-    A = mdopen("HB/west0132").A;
+    A = matrices["HB/west0132"]
     (σ, τ) = permute_plaid(A, CuthillMcKeePermuter())
     (σ′, τ′) = permute_plaid(A, CuthillMcKeePermuter(reverse=true))
     @test σ.prm == reverse(σ′.prm)
     @test τ.prm == reverse(τ′.prm)
     @test bandwidth(A[perm(σ), perm(τ)]) < bandwidth(A)
     @test bandwidth(permutedims(A[perm(σ), perm(τ)])) < bandwidth(permutedims(A))
-    A = mdopen("LPnetlib/lp_etamacro").A;
+    A = matrices["LPnetlib/lp_etamacro"]
     (σ, τ) = permute_plaid(A, CuthillMcKeePermuter())
     (σ′, τ′) = permute_plaid(A, CuthillMcKeePermuter(reverse=true))
     @test σ.prm == reverse(σ′.prm)

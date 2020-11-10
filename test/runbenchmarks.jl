@@ -1,8 +1,9 @@
 using BenchmarkTools
 using ChainPartitioners
 using SparseArrays
-using MatrixDepot
 using JSON
+
+include("matrices.jl")
 
 function main(args)
     suite = BenchmarkGroup()
@@ -20,7 +21,7 @@ function main(args)
         "Pajek/GD99_c",
         "LPnetlib/lp_blend",
     ]
-        A = SparseMatrixCSC(mdopen(mtx).A)
+        A = SparseMatrixCSC(matrices[mtx])
         (m, n) = size(A)
         ϵ = 0.01
         for K = [2, ceil(Int, n^(3/4))]
