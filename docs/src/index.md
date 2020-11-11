@@ -4,6 +4,8 @@ CurrentModule = ChainPartitioners
 
 # ChainPartitioners
 
+Some test documentation
+
 ```@index
 ```
 
