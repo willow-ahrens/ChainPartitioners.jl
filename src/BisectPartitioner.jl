@@ -10,8 +10,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
         ϵ = method.ϵ
 
         #=
-            search returns the largest j′ such that
-            f(j, j′) <= c
+            search returns the largest j′ such that f(j, j′) <= c, returns
+            max(j, j′_lo) - 1 if no such j′ can be found
         =#
         @inline function search(j, j′_lo, j′_hi, k, c)
             j′_lo = max(j, j′_lo)
@@ -19,7 +19,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
                 j′ = fld2(j′_lo + j′_hi)
                 if f(j, j′, k) <= c
                     j′_lo = j′ + 1
-                else # f(j, j′) > c
+                else
                     j′_hi = j′ - 1
                 end
             end
@@ -48,12 +48,12 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
                     break
                 end
             end
-            if chk && spl[end] == n + 1 #yes, we can achieve spl[k + 1] at the cost of c.
-                c_hi = c #thus, we have a lower achievable cost for c_hi
-                spl_hi .= spl #record the split points which achieved c_hi
-            else #no we cannot achieve spl[k + 1] at the cost of c.
-                c_lo = c #since c is not achievable, no cost below c can be achievable
-                spl_lo .= spl #these split points cannot achieve an improvement on c_hi
+            if chk && spl[end] == n + 1
+                c_hi = c
+                spl_hi .= spl
+            else
+                c_lo = c
+                spl_lo .= spl
             end
         end
         return SplitPartition(K, spl_hi)
@@ -72,9 +72,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
         ϵ = method.ϵ
 
         #=
-            search returns the largest j′ such that
-            f(j, j′) <= c. returns j′_hi + 1 if no
-            such j′ can be found
+            search returns the smallest j′ such that f(j, j′) <= c, returns
+            j′_hi + 1 if no such j′ can be found
         =#
         @inline function search(j, j′_lo, j′_hi, k, c)
             j′_lo = max(j, j′_lo)
@@ -83,7 +82,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
                 j′ = fld2(j′_lo + j′_hi)
                 if f(j, j′, k) <= c
                     j′_hi = j′ - 1
-                else # f(j, j′) > c
+                else
                     j′_lo = j′ + 1
                 end
             end
@@ -112,12 +111,12 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
                     break
                 end
             end
-            if chk #yes, we can achieve spl[k + 1] at the cost of c.
-                c_hi = c #thus, we have a lower achievable cost for c_hi
-                spl_lo .= spl #record the split points which achieved c_hi
-            else #no we cannot achieve spl[k + 1] at the cost of c.
-                c_lo = c #since c is not achievable, no cost below c can be achievable
-                spl_hi .= spl #these split points cannot achieve an improvement on c_hi
+            if chk
+                c_hi = c
+                spl_lo .= spl
+            else
+                c_lo = c
+                spl_hi .= spl
             end
         end
         spl_lo[K + 1] = n + 1
