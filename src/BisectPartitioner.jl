@@ -27,12 +27,14 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
         end
 
         spl_lo = ones(Int, K + 1)
+        spl_lo[K + 1] = n + 1
 
         spl_hi = fill(n + 1, K + 1)
         spl_hi[1] = 1
 
         spl = undefs(Int, K + 1)
         spl[1] = 1
+        spl[K + 1] = n + 1
 
         c_lo, c_hi = bound_stripe(A, K, args..., f)./1
 
@@ -40,15 +42,15 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
             c = (c_lo + c_hi) / 2
             spl[1] = 1
             chk = true
-            for k = 1 : K
+            for k = 1 : K - 1
                 spl[k + 1] = search(spl[k], spl_lo[k + 1], spl_hi[k + 1], k, c)
-                if spl[k + 1] < max(spl[k], spl_lo[k + 1])
+                if spl[k + 1] < spl[k]
                     chk = false
-                    spl[k + 1 : end] .= spl_lo[k + 1 : end]
+                    spl[k + 1 : K] .= spl[k]
                     break
                 end
             end
-            if chk && spl[end] == n + 1
+            if chk && f(spl[K], spl[K + 1], K) <= c
                 c_hi = c
                 spl_hi .= spl
             else
@@ -77,7 +79,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
         =#
         @inline function search(j, j′_lo, j′_hi, k, c)
             j′_lo = max(j, j′_lo)
-            @assert j′_lo <= j′_hi
             while j′_lo <= j′_hi
                 j′ = fld2(j′_lo + j′_hi)
                 if f(j, j′, k) <= c
@@ -90,12 +91,14 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
         end
 
         spl_lo = ones(Int, K + 1)
+        spl_lo[K + 1] = n + 1
 
         spl_hi = fill(n + 1, K + 1)
         spl_hi[1] = 1
 
         spl = undefs(Int, K + 1)
         spl[1] = 1
+        spl[K + 1] = n + 1
 
         c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
@@ -103,15 +106,15 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
             c = (c_lo + c_hi) / 2
             spl[1] = 1
             chk = true
-            for k = 1 : K
+            for k = 1 : K - 1
                 spl[k + 1] = search(spl[k], spl_lo[k + 1], spl_hi[k + 1], k, c)
-                if spl[k + 1] > spl_hi[k + 1]
+                if spl[k + 1] > n + 1
                     chk = false
-                    spl[k + 1 : end] .= spl_hi[k + 1 : end]
+                    spl[k + 1 : K] .= n + 1
                     break
                 end
             end
-            if chk
+            if chk && f(spl[K], spl[K + 1], K) <= c
                 c_hi = c
                 spl_lo .= spl
             else
@@ -119,7 +122,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectParti
                 spl_hi .= spl
             end
         end
-        spl_lo[K + 1] = n + 1
         return SplitPartition(K, spl_lo)
     end
 end

@@ -27,12 +27,14 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
         end
 
         spl_lo = ones(Int, K + 1)
+        spl_lo[K + 1] = n + 1
 
         spl_hi = fill(n + 1, K + 1)
         spl_hi[1] = 1
 
         spl = undefs(Int, K + 1)
         spl[1] = 1
+        spl[K + 1] = n + 1
 
         c_lo, c_hi = bound_stripe(A, K, args..., f)
 
@@ -45,23 +47,23 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
                 if c_lo <= c < c_hi
                     spl[k + 1] = j′
                     chk = true
-                    for k′ = k + 1 : K
+                    for k′ = k + 1 : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
-                        if spl[k′ + 1] < max(spl[k′], spl_lo[k′ + 1])
+                        if spl[k′ + 1] < spl[k′]
                             chk = false
-                            spl[k′ + 1 : end] .= spl[k′]
+                            spl[k′ + 1 : K] .= spl[k′]
                             break
                         end
                     end
-                    if chk && spl[K + 1] == n + 1
+                    if chk && f(spl[K], spl[K + 1], K) <= c
                         c_hi = c
                         j′_hi = j′ - 1
-                        @assert spl_hi >= spl
+                        #@assert spl_hi >= spl
                         spl_hi .= spl
                     else
                         c_lo = c
                         j′_lo = j′ + 1
-                        @assert spl_lo <= spl
+                        #@assert spl_lo <= spl
                         spl_lo .= spl
                     end
                 elseif c >= c_hi
@@ -71,7 +73,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
                 end
             end
 
-            if j′_hi < max(spl[k], spl_lo[k + 1])
+            if j′_hi < spl[k]
                 break
             end
 
@@ -112,12 +114,14 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
         end
 
         spl_lo = ones(Int, K + 1)
+        spl_lo[K + 1] = n + 1
 
         spl_hi = fill(n + 1, K + 1)
         spl_hi[1] = 1
 
         spl = undefs(Int, K + 1)
         spl[1] = 1
+        spl[K + 1] = n + 1
 
         c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
@@ -130,23 +134,23 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                 if c_lo <= c < c_hi
                     spl[k + 1] = j′
                     chk = true
-                    for k′ = k + 1 : K
+                    for k′ = k + 1 : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
-                        if spl[k′ + 1] > spl_hi[k′ + 1]
+                        if spl[k′ + 1] > n + 1
                             chk = false
-                            spl[k′ + 1 : end] .= spl_hi[k′ + 1 : end]
+                            spl[k′ + 1 : K] .= n + 1
                             break
                         end
                     end
-                    if chk
+                    if chk && f(spl[K], spl[K + 1], K) <= c
                         c_hi = c
                         j′_lo = j′ + 1
-                        @assert spl_lo <= spl
+                        #@assert spl_lo <= spl
                         spl_lo .= spl
                     else
                         c_lo = c
                         j′_hi = j′ - 1
-                        @assert spl_hi >= spl
+                        #@assert spl_hi >= spl
                         spl_hi .= spl
                     end
                 elseif c >= c_hi
@@ -156,14 +160,13 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                 end
             end
 
-            if j′_lo > spl_hi[k + 1]
+            if j′_lo > n + 1
                 break
             end
 
             spl[k + 1] = j′_lo 
         end
 
-        spl_lo[K + 1] = n + 1 
         return SplitPartition(K, spl_lo)
     end
 end
