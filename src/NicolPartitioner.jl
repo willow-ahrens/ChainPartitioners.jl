@@ -40,14 +40,13 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
 
         for k = 1:K
             j′_hi = spl_hi[k + 1]
-            j′_lo = spl_lo[k + 1]
+            j′_lo = max(spl[k], spl_lo[k + 1])
             while j′_lo <= j′_hi
                 j′ = fld2(j′_lo + j′_hi)
                 c = f(spl[k], j′, k)
                 if c_lo <= c < c_hi
-                    spl[k + 1] = j′
                     chk = true
-                    for k′ = k + 1 : K - 1
+                    for k′ = k : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
                         if spl[k′ + 1] < spl[k′]
                             chk = false
@@ -55,6 +54,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
                             break
                         end
                     end
+                    j′ = spl[k + 1]
                     if chk && f(spl[K], spl[K + 1], K) <= c
                         c_hi = c
                         j′_hi = j′ - 1
@@ -132,9 +132,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                 j′ = fld2(j′_lo + j′_hi)
                 c = f(spl[k], j′, k)
                 if c_lo <= c < c_hi
-                    spl[k + 1] = j′
                     chk = true
-                    for k′ = k + 1 : K - 1
+                    for k′ = k : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
                         if spl[k′ + 1] > n + 1
                             chk = false
@@ -142,6 +141,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                             break
                         end
                     end
+                    j′ = spl[k + 1]
                     if chk && f(spl[K], spl[K + 1], K) <= c
                         c_hi = c
                         j′_lo = j′ + 1
@@ -164,7 +164,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                 break
             end
 
-            spl[k + 1] = j′_lo 
+            spl[k + 1] = j′_lo
         end
 
         return SplitPartition(K, spl_lo)

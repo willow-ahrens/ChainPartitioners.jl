@@ -3,6 +3,7 @@ using LinearAlgebra
 using MatrixDepot
 
 matrices = [
+    "LPnetlib/lpi_itest6",
     "HB/west0132",
     "LPnetlib/lp_etamacro",
     "LPnetlib/lp_blend",

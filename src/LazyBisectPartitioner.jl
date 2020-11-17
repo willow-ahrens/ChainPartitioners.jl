@@ -392,6 +392,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
                 zero!(hst)
                 zero!(drt)
                 spl[1] = 1
+                spl[2:K + 1] .= n + 1
                 j = 1
                 k = 1
 
@@ -424,7 +425,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
                         end
                         hst[i] = j′
                     end
-                    if hst[j′] < j
+                    if j′ <= m && hst[j′] < j
                         x_diagonal += 1
                     end
                     while g(x_width, x_work, x_overwork, x_net, x_diagonal, x_local, k) > c
@@ -437,17 +438,13 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
                         x_width = 1
                         x_work = A.colptr[j′ + 1] - A.colptr[j′]
                         x_net = A.colptr[j′ + 1] - A.colptr[j′]
-                        x_diagonal = A.colptr[j′ + 1] - A.colptr[j′] + (hst[j′] < j′)
+                        x_diagonal = A.colptr[j′ + 1] - A.colptr[j′] + (j′ <= m && hst[j′] < j′)
                         x_overwork = max(A.colptr[j′ + 1] - A.colptr[j′] - Δ_work, 0)
                         x_local = 0
                         if drt[k] == j′
                             x_local += lcl[k]
                         end
                     end
-                end
-                while k <= K
-                    spl[k + 1] = n + 1
-                    k += 1
                 end
                 return true
             end
@@ -470,6 +467,132 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
             end
         end
         return SplitPartition(K, spl_hi)
+    end
+end
+
+struct LazyFlipBisectPartitioner{F, T}
+    f::F
+    ϵ::T
+end
+
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectPartitioner, args...; kwargs...) where {Tv, Ti}
+    g = nothing
+    f = method.f
+    Δ_work = 0
+    g(x_width, x_work, x_overwork, x_net, x_diagonal, x_local, k) = begin
+        if f isa AbstractNetCostModel
+            return f(x_width, x_work, x_net, k)
+        elseif f isa AbstractSymCostModel
+            Δ_work = f.Δ_work
+            return f(x_width, x_overwork, x_diagonal, k)
+        elseif f isa AbstractCommCostModel
+            return f(x_width, x_work, x_local, x_net - x_local, k)
+        else
+            @assert false
+        end
+    end
+    Π = partition_stripe(SparseMatrixCSC(A'), K, EquiPartitioner())
+    if length(args) > 0
+        Π = args[1]
+    end
+    
+    @inbounds begin 
+        (m, n) = size(A)
+        N = nnz(A)
+        ϵ = method.ϵ
+        f = method.f
+        Π_map = convert(MapPartition, Π)
+
+        spl = undefs(Int, K + 1)
+        spl[1] = 1
+
+        spl_lo = fill(n + 1, K + 1)
+        spl_lo[1] = 1
+
+        hst = undefs(Int, m)
+        lcl = undefs(Int, K)
+        drt = undefs(Int, K)
+
+        function probe(c)
+            @inbounds begin
+                zero!(hst)
+                zero!(drt)
+                spl[1] = 1
+                spl[2:K + 1] .= n + 1
+                j = 1
+                k = 1
+
+                x_width = 0
+                x_work = 0
+                x_overwork = 0
+                x_net = 0
+                x_diagonal = 0
+                x_local = 0
+                while g(x_width, x_work, x_overwork, x_net, x_diagonal, x_local, k) <= c
+                    if k == K
+                        return true
+                    end
+                    spl[k + 1] = j
+                    k += 1
+                end
+                for j′ = 1:n
+                    x_width += 1
+                    x_work += A.colptr[j′ + 1] - A.colptr[j′]
+                    x_overwork += max(A.colptr[j′ + 1] - A.colptr[j′] - Δ_work, 0)
+                    for q = A.colptr[j′]:A.colptr[j′ + 1] - 1
+                        i = A.rowval[q]
+                        _k = Π_map.asg[i]
+                        if drt[_k] < j′
+                            lcl[_k] = 0
+                        end
+                        lcl[_k] += 1
+                        drt[_k] = j′
+                        if hst[i] < j
+                            x_net += 1
+                            if _k == k
+                                x_local += 1
+                            end
+                        end
+                        if (i < j || i >= j′) && hst[i] < j
+                            x_diagonal += 1
+                        end
+                        hst[i] = j′
+                    end
+                    if j′ <= m && hst[j′] < j
+                        x_diagonal += 1
+                    end
+                    while g(x_width, x_work, x_overwork, x_net, x_diagonal, x_local, k) <= c
+                        if k == K
+                            return true
+                        end
+                        spl[k + 1] = j′ + 1
+                        j = j′ + 1
+                        k += 1
+                        x_width = 0
+                        x_work = 0
+                        x_net = 0
+                        x_diagonal = 0
+                        x_overwork = 0
+                        x_local = 0
+                    end
+                end
+                return false
+            end
+        end
+
+        c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
+
+        while c_lo * (1 + ϵ) < c_hi
+            c = (c_lo + c_hi) / 2
+            chk = probe(c)
+            if chk && spl[end] == n + 1
+                c_hi = c
+                spl_lo .= spl
+            else
+                c_lo = c
+            end
+        end
+        return SplitPartition(K, spl_lo)
     end
 end
 =#
