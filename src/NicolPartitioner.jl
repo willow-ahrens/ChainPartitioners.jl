@@ -46,7 +46,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
                 c = f(spl[k], j′, k)
                 if c_lo <= c < c_hi
                     chk = true
-                    for k′ = k : K - 1
+                    spl[k + 1] = j′
+                    for k′ = k + 1 : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
                         if spl[k′ + 1] < spl[k′]
                             chk = false
@@ -132,7 +133,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                 c = f(spl[k], j′, k)
                 if c_lo <= c < c_hi
                     chk = true
-                    for k′ = k : K - 1
+                    spl[k + 1] = j′
+                    for k′ = k + 1 : K - 1
                         spl[k′ + 1] = search(spl[k′], spl_lo[k′ + 1], spl_hi[k′ + 1], k′, c)
                         if spl[k′ + 1] > n + 1
                             chk = false
@@ -143,12 +145,10 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
                     if chk && f(spl[K], spl[K + 1], K) <= c
                         c_hi = c
                         j′_lo = j′ + 1
-                        #@assert spl_lo <= spl
                         spl_lo .= spl
                     else
                         c_lo = c
                         j′_hi = j′ - 1
-                        #@assert spl_hi >= spl
                         spl_hi .= spl
                     end
                 elseif c >= c_hi

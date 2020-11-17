@@ -112,9 +112,9 @@ end
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1
                 @test bottleneck_plaid(A, k, Π, Φ′, f) == bottleneck_plaid(A, k, Π, Φ, f)
-                _Φ = partition_stripe(A, k, LeftistPartitioner(f), Π)
-                @test bottleneck_plaid(A, k, Π, _Φ, f) == bottleneck_plaid(A, k, Π, Φ, f)
-                @test Φ′ == _Φ
+                #_Φ = partition_stripe(A, k, LeftistPartitioner(f), Π)
+                #@test bottleneck_plaid(A, k, Π, _Φ, f) == bottleneck_plaid(A, k, Π, Φ, f)
+                #@test Φ′ == _Φ
             end
 
             for f = fs[2:end]
@@ -155,9 +155,9 @@ end
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1
                 @test bottleneck_plaid(A, k, Π, Φ′, f) == bottleneck_plaid(A, k, Π, Φ, f)
-                _Φ = partition_stripe(A, k, FlipLeftistPartitioner(f), Π)
-                @test bottleneck_plaid(A, k, Π, _Φ, f) == bottleneck_plaid(A, k, Π, Φ, f)
-                @test Φ′ == _Φ
+                #_Φ = partition_stripe(A, k, FlipLeftistPartitioner(f), Π)
+                #@test bottleneck_plaid(A, k, Π, _Φ, f) == bottleneck_plaid(A, k, Π, Φ, f)
+                #@test Φ′ == _Φ
 
                 ϵ = 0.0001
                 Φ′′ = partition_stripe(A, k, FlipBisectPartitioner(f, ϵ), Π)
