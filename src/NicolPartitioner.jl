@@ -36,7 +36,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitione
         spl[1] = 1
         spl[K + 1] = n + 1
 
-        c_lo, c_hi = bound_stripe(A, K, args..., f)
+        c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
         for k = 1:K
             j′_hi = spl_hi[k + 1]
@@ -97,7 +97,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartit
         =#
         @inline function search(j, j′_lo, j′_hi, k, c)
             j′_lo = max(j, j′_lo)
-            @assert j′_lo <= j′_hi
             let j′
                 while j′_lo <= j′_hi
                     j′ = fld2(j′_lo + j′_hi)
