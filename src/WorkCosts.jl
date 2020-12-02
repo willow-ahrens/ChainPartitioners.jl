@@ -13,7 +13,7 @@ struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractCostOracle
     mdl::Mdl
 end
 
-function oracle_stripe(mdl::AbstractWorkCostModel, A::SparseMatrixCSC, K; kwargs...)
+function oracle_stripe(mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...)
     return WorkCostOracle(A.colptr, mdl)
 end
 
@@ -40,9 +40,9 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     return (c_lo, c_hi)
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, mdl::AbstractWorkCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel)
     cst = -Inf
-    for k = 1:K
+    for k = 1:Π.K
         j = Π.spl[k]
         j′ = Π.spl[k + 1]
         cst = max(cst, mdl(j′ - j, A.colptr[j′] - A.colptr[j]))
@@ -50,9 +50,9 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, mdl::Abstr
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractWorkCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel)
     cst = -Inf
-    for k = 1:K
+    for k = 1:Π.K
         s = Π.spl[k]
         s′ = Π.spl[k + 1]
         x_width = s′ - s
@@ -66,6 +66,6 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::Abst
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::MapPartition, mdl::AbstractWorkCostModel)
-    return bottleneck_stripe(A, K, convert(DomainPartition, Π), mdl)
+function bottleneck_stripe(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
+    return bottleneck_stripe(A, convert(DomainPartition, Π), mdl)
 end

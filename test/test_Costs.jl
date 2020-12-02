@@ -23,11 +23,11 @@
             AffineSymCostModel(10, 10, 10, 100, 8),
         ]
         for mdl in models
-            ocl = oracle_stripe(mdl, A, K, Φ)
-            @test bottleneck_plaid(A, K, Π, Φ, mdl) == bottleneck_plaid(A, K, Π, Φ, ocl)
+            ocl = oracle_stripe(mdl, A, Φ)
+            @test bottleneck_plaid(A, Π, Φ, mdl) == bottleneck_plaid(A, Π, Φ, ocl)
             @test bound_stripe(A, K, Π, mdl) == bound_stripe(A, K, Π, ocl)
             c_lo, c_hi = bound_stripe(A, K, Π, mdl)
-            @test 0 <= c_lo <= bottleneck_plaid(A, K, Π, Φ, mdl) <= c_hi
+            @test 0 <= c_lo <= bottleneck_plaid(A, Π, Φ, mdl) <= c_hi
         end
 
         Π = SplitPartition(K, [1, sort(rand(1:(m + 1), K - 1))..., m + 1])
@@ -38,18 +38,18 @@
         ]
         adj_A = permutedims(A)
         for (comm_mdl, local_mdl) in models
-            comm_ocl = oracle_stripe(comm_mdl, A, K, Π)
-            local_ocl = oracle_stripe(local_mdl, adj_A, K, Φ)
-            @test bottleneck_plaid(A, K, Π, Φ, comm_mdl) == bottleneck_plaid(A, K, Π, Φ, comm_ocl)
-            @test bottleneck_plaid(adj_A, K, Φ, Π, local_mdl) == bottleneck_plaid(adj_A, K, Φ, Π, local_ocl)
+            comm_ocl = oracle_stripe(comm_mdl, A, Π)
+            local_ocl = oracle_stripe(local_mdl, adj_A, Φ)
+            @test bottleneck_plaid(A, Π, Φ, comm_mdl) == bottleneck_plaid(A, Π, Φ, comm_ocl)
+            @test bottleneck_plaid(adj_A, Φ, Π, local_mdl) == bottleneck_plaid(adj_A, Φ, Π, local_ocl)
             @test bound_stripe(A, K, Π, comm_mdl) == bound_stripe(A, K, Π, comm_ocl)
             @test bound_stripe(adj_A, K, Φ, local_mdl) == bound_stripe(adj_A, K, Φ, local_ocl)
             c_lo, c_hi = bound_stripe(A, K, Π, comm_mdl)
-            @test 0 <= c_lo <= bottleneck_plaid(A, K, Π, Φ, comm_mdl) <= c_hi
+            @test 0 <= c_lo <= bottleneck_plaid(A, Π, Φ, comm_mdl) <= c_hi
             c_lo, c_hi = bound_stripe(adj_A, K, Φ, local_mdl)
-            @test 0 <= c_lo <= bottleneck_plaid(adj_A, K, Φ, Π, local_mdl) <= c_hi
-            @test bottleneck_plaid(adj_A, K, Φ, Π, local_mdl) == bottleneck_plaid(A, K, Π, Φ, comm_mdl)
-            @test bottleneck_plaid(adj_A, K, Φ, Π, local_ocl) == bottleneck_plaid(A, K, Π, Φ, comm_ocl)
+            @test 0 <= c_lo <= bottleneck_plaid(adj_A, Φ, Π, local_mdl) <= c_hi
+            @test bottleneck_plaid(adj_A, Φ, Π, local_mdl) == bottleneck_plaid(A, Π, Φ, comm_mdl)
+            @test bottleneck_plaid(adj_A, Φ, Π, local_ocl) == bottleneck_plaid(A, Π, Φ, comm_ocl)
         end
     end
 

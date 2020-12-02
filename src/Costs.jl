@@ -1,7 +1,7 @@
 abstract type AbstractCostOracle end
 
-function oracle_stripe(mdl, A, K, Π; kwargs...)
-    return oracle_stripe(mdl, A, K; kwargs...)
+function oracle_stripe(mdl, A, Π; kwargs...)
+    return oracle_stripe(mdl, A; kwargs...)
 end
 
 function bound_stripe(A, K, Π, mdl::AbstractCostOracle)
@@ -16,13 +16,13 @@ function bound_stripe(A, K, Π, mdl)
     return bound_stripe(A, K, mdl)
 end
 
-function bottleneck_plaid(A, K, Π, Φ, mdl)
-    return bottleneck_stripe(A, K, Φ, mdl)
+function bottleneck_plaid(A, Π, Φ, mdl)
+    return bottleneck_stripe(A, Φ, mdl)
 end
 
-function bottleneck_stripe(A, K, Φ::SplitPartition, mdl::AbstractCostOracle)
+function bottleneck_stripe(A, Φ::SplitPartition, mdl::AbstractCostOracle)
     cst = 0
-    for k = 1:K
+    for k = 1:Φ.K
         j = Φ.spl[k]
         j′ = Φ.spl[k + 1]
         cst = max(cst, mdl(j, j′, k))

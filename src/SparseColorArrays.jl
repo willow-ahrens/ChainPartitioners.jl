@@ -57,8 +57,8 @@ function Base.getindex(arg::SparseCountedRowNet{Ti}, j::Integer, j′::Integer) 
     end
 end
 
-localrownetcount(A::SparseMatrixCSC{Tv, Ti}, K, Π; kwargs...) where {Tv, Ti} =
-    SparseCountedLocalRowNet{Ti}(size(A)..., nnz(A), K, A.colptr, A.rowval, Π; kwargs...)
+localrownetcount(A::SparseMatrixCSC{Tv, Ti}, Π; kwargs...) where {Tv, Ti} =
+    SparseCountedLocalRowNet{Ti}(size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
 
 SparseCountedLocalRowNet(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
     SparseCountedLocalRowNet{Ti}(m, n, N, K, pos, idx, Π; kwargs...)
@@ -132,8 +132,8 @@ function Base.getindex(arg::SparseCountedLocalRowNet{Ti}, j::Integer, j′::Inte
     end
 end
 
-localcolnetcount(A::SparseMatrixCSC{Tv, Ti}, K, Π; kwargs...) where {Tv, Ti} =
-    SparseCountedLocalColNet{Ti}(size(A)..., nnz(A), K, A.colptr, A.rowval, Π; kwargs...)
+localcolnetcount(A::SparseMatrixCSC{Tv, Ti}, Π; kwargs...) where {Tv, Ti} =
+    SparseCountedLocalColNet{Ti}(size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
 
 SparseCountedLocalColNet(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
     SparseCountedLocalColNet{Ti}(m, n, N, K, pos, idx, Π; kwargs...)

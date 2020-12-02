@@ -6,7 +6,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::DynamicPartitio
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, K, args...)
+        f = oracle_stripe(method.f, A, args...)
 
         ptr = zeros(Ti, K + 1, n + 1)
         cst = fill(Inf, K, n + 1)
@@ -44,7 +44,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LeftistPartitio
     @inbounds begin
         (m, n) = size(A)
         Φ = partition_stripe(A, K, DynamicPartitioner(method.f), args...)
-        f = oracle_stripe(method.f, A, K, args...)
+        f = oracle_stripe(method.f, A, args...)
         c = -Inf
         for k = 1:K
             c = max(c, f(Φ.spl[k], Φ.spl[k + 1], k))
@@ -73,7 +73,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipLeftistPart
     @inbounds begin
         (m, n) = size(A)
         Φ = partition_stripe(A, K, DynamicPartitioner(method.f), args...)
-        f = oracle_stripe(method.f, A, K, args...)
+        f = oracle_stripe(method.f, A, args...)
         c = -Inf
         for k = 1:K
             c = max(c, f(Φ.spl[k], Φ.spl[k + 1], k))

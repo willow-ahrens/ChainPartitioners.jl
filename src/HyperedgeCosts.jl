@@ -44,7 +44,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineNetCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC, K; net=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC; net=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
@@ -63,11 +63,11 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::SplitPartition, mdl::AbstractNetCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel)
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Φ.K
         j = Φ.spl[k]
         j′ = Φ.spl[k + 1]
         x_width = j′ - j
@@ -90,11 +90,11 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::SplitPartition, mdl::Abstr
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::DomainPartition, mdl::AbstractNetCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel)
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Φ.K
         s = Φ.spl[k]
         s′ = Φ.spl[k + 1]
         x_width = s′ - s
@@ -118,8 +118,8 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::DomainPartition, mdl::Abst
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::MapPartition, mdl::AbstractNetCostModel)
-    return bottleneck_stripe(A, K, convert(DomainPartition, Φ), mdl)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
+    return bottleneck_stripe(A, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -165,7 +165,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}, K; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
+function oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         @assert m == n
@@ -218,12 +218,12 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::SplitPartition, mdl::AbstractSymCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel)
     cst = -Inf
     m, n = size(A)
     @assert m == n
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Φ.K
         j = Φ.spl[k]
         j′ = Φ.spl[k + 1]
         x_width = j′ - j
@@ -250,12 +250,12 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::SplitPartition, mdl::Abstr
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::DomainPartition, mdl::AbstractSymCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel)
     cst = -Inf
     m, n = size(A)
     @assert m == n
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Φ.K
         s = Φ.spl[k]
         s′ = Φ.spl[k + 1]
         x_width = s′ - s
@@ -283,8 +283,8 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::DomainPartition, mdl::Abst
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Φ::MapPartition, mdl::AbstractSymCostModel)
-    return bottleneck_stripe(A, K, convert(DomainPartition, Φ), mdl)
+function bottleneck_stripe(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
+    return bottleneck_stripe(A, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -337,14 +337,14 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineCommCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractCommCostModel, A::SparseMatrixCSC, K, Π; net=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(mdl::AbstractCommCostModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
         if net === nothing
             net = rownetcount(A; kwargs...)
         end
-        lcr = localrownetcount(A, K, convert(MapPartition, Π); kwargs...)
+        lcr = localrownetcount(A, convert(MapPartition, Π); kwargs...)
         return CommCostOracle(pos, net, lcr, mdl)
     end
 end
@@ -358,14 +358,15 @@ end
     end
 end
 
-bottleneck_plaid(A::SparseMatrixCSC, K, Π, Φ, mdl::AbstractCommCostModel) =
-    bottleneck_plaid(A, K, convert(MapPartition, Π), Φ, mdl)
+bottleneck_plaid(A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
+    bottleneck_plaid(A, convert(MapPartition, Π), Φ, mdl)
 
-function bottleneck_plaid(A::SparseMatrixCSC, K, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel)
+function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel)
+    @assert Φ.K == Π.K
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Π.K
         j = Φ.spl[k]
         j′ = Φ.spl[k + 1]
         x_width = j′ - j
@@ -393,11 +394,12 @@ function bottleneck_plaid(A::SparseMatrixCSC, K, Π::MapPartition, Φ::SplitPart
     return cst
 end
 
-function bottleneck_plaid(A::SparseMatrixCSC, K, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel)
+function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel)
+    @assert Φ.K == Π.K
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Π.K
         s = Φ.spl[k]
         s′ = Φ.spl[k + 1]
         x_width = s′ - s
@@ -426,8 +428,8 @@ function bottleneck_plaid(A::SparseMatrixCSC, K, Π::MapPartition, Φ::DomainPar
     return cst
 end
 
-function bottleneck_plaid(A::SparseMatrixCSC, K, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
-    return bottleneck_plaid(A, K, Π, convert(DomainPartition, Φ), mdl)
+function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
+    return bottleneck_plaid(A, Π, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -446,8 +448,8 @@ end
 
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineLocalCostModel)
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_stripe(adj_A, K, Π, AffineNetCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_comm))
-    c_lo = bottleneck_stripe(adj_A, K, Π, AffineWorkCostModel(mdl.α, mdl.β_width, mdl.β_work))
+    c_hi = bottleneck_stripe(adj_A, Π, AffineNetCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_comm))
+    c_lo = bottleneck_stripe(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_width, mdl.β_work))
     return (c_lo, c_hi)
 end
 
@@ -473,7 +475,7 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, mdl::LocalCostO
     end
 end
 
-function oracle_stripe(mdl::AbstractLocalCostModel, A::SparseMatrixCSC, K, Π::SplitPartition; adj_pos=nothing, adj_A=nothing, net=nothing, kwargs...)
+function oracle_stripe(mdl::AbstractLocalCostModel, A::SparseMatrixCSC, Π::SplitPartition; adj_pos=nothing, adj_A=nothing, net=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
 
@@ -485,7 +487,7 @@ function oracle_stripe(mdl::AbstractLocalCostModel, A::SparseMatrixCSC, K, Π::S
             adj_pos = adj_A.colptr
         end
 
-        lcc = localcolnetcount(A, K, convert(MapPartition, Π); kwargs...)
+        lcc = localcolnetcount(A, convert(MapPartition, Π); kwargs...)
 
         return LocalCostOracle(Π, adj_pos, lcc, mdl)
     end
@@ -501,6 +503,6 @@ end
 end
 
 #Just a bit of a hack for now
-function bottleneck_plaid(A, K, Π, Φ, mdl::AffineLocalCostModel)
-    return bottleneck_plaid(adjointpattern(A), K, Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+function bottleneck_plaid(A, Π, Φ, mdl::AffineLocalCostModel)
+    return bottleneck_plaid(adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
 end

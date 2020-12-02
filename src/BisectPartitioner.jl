@@ -6,7 +6,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartitioner, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
-        f = oracle_stripe(method.f, A, K, args...; kwargs...)
+        f = oracle_stripe(method.f, A, args...; kwargs...)
         ϵ = method.ϵ
 
         #=
@@ -70,7 +70,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectPartitioner, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
-        f = oracle_stripe(method.f, A, K, args...; kwargs...)
+        f = oracle_stripe(method.f, A, args...; kwargs...)
         ϵ = method.ϵ
 
         #=

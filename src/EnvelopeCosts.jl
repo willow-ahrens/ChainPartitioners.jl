@@ -37,7 +37,7 @@ function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
     return fld(upperbound_stripe(A, K, mdl), K)
 end
 
-function oracle_stripe(mdl::AbstractEnvNetCostModel, A::SparseMatrixCSC, K; env=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(mdl::AbstractEnvNetCostModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
@@ -57,10 +57,10 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, mdl::AbstractEnvNetCostModel)
+function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel)
     cst = -Inf
     m, n = size(A)
-    for k = 1:K
+    for k = 1:Π.K
         j = Π.spl[k]
         j′ = Π.spl[k + 1]
         x_width = j′ - j
@@ -86,7 +86,7 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::Abst
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
-    for k = 1:K
+    for k = 1:Π.K
         s = Π.spl[k]
         s′ = Π.spl[k + 1]
         x_width = s′ - s
@@ -109,6 +109,6 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::Abst
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::MapPartition, mdl::AbstractEnvNetCostModel)
-    return bottleneck_stripe(A, K, convert(DomainPartition, Π), mdl)
+function bottleneck_stripe(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
+    return bottleneck_stripe(A, convert(DomainPartition, Π), mdl)
 end

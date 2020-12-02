@@ -5,7 +5,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::NicolPartitioner, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
-        f = oracle_stripe(method.f, A, K, args...; kwargs...)
+        f = oracle_stripe(method.f, A, args...; kwargs...)
 
         #=
             search returns the largest j′ such that f(j, j′) <= c, returns
@@ -89,7 +89,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipNicolPartitioner, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
-        f = oracle_stripe(method.f, A, K, args...; kwargs...)
+        f = oracle_stripe(method.f, A, args...; kwargs...)
 
         #=
             search returns the smallest j′ such that f(j, j′) <= c, returns

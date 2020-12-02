@@ -26,8 +26,8 @@
             A = dropzeros!(sprand(UInt, m, n, 0.5))
             At = SparseMatrixCSC(A')
             if nnz(A) > 0
-                rownet = localrownetcount(A, K, Φ_map)
-                colnet = localcolnetcount(A, K, Φ_map)
+                rownet = localrownetcount(A, Φ_map)
+                colnet = localcolnetcount(A, Φ_map)
                 @testset "m = $m, K = $K" begin
                     for _ = 1:trials
                         j = rand(1:n + 1)
