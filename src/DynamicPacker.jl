@@ -1,9 +1,49 @@
-struct DynamicPacker{F}
+struct DynamicTotalChunker{F}
     f::F
     w_max::Int
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicPacker{F<:AbstractNetCostModel}) where {F, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F<:AbstractNetCostModel}) where {F, Tv, Ti}
+    @inbounds begin
+        # matrix notation...
+        # i = 1:m rows, j = 1:n columns
+        m, n = size(A)
+
+        f = oracle_stripe(method.f, A, args...)
+        w_max = method.w_max
+
+        cst = Vector{typeof(zero(f))}(undef, n + 1)
+        Π = Vector{Int}(undef, n + 1)
+        for j = n:-1:1
+            best_c = cst[j + 1] + f(j, j + 1)
+            best_j′ = j + 1
+            for j′ = j + 2 : min(j + w_max - 1, n)
+                c = cst[j′] + f(j, j′) 
+                if c < cst[j]
+                    best_c = c
+                    best_j′ = j′
+                end
+            end
+            cst[j] = best_c
+            Π[j] = best_j′
+        end
+
+        K = 0
+        j = 1
+        while j != n + 1
+            j′ = Π[j]
+            K += 1
+            Π[K] = j
+            j = j′
+        end
+        Π[K + 1] = j
+        resize!(Π, K + 1)
+        return SplitPartition{Ti}(K, Π)
+    end
+end
+
+#=
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F<:AbstractNetCostModel}) where {F, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -72,3 +112,4 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicPacker{F<:Abstra
         return Partition{Ti}(Π, pos, ofs)
     end
 end
+=#
