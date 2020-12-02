@@ -59,8 +59,8 @@ export EquiPartitioner
 export NicolPartitioner
 export FlipNicolPartitioner
 export DynamicPartitioner
-export LeftistPartitioner
-export FlipLeftistPartitioner
+#export LeftistPartitioner
+#export FlipLeftistPartitioner
 export BisectPartitioner
 export LazyBisectPartitioner
 export FlipBisectPartitioner

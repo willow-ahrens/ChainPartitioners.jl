@@ -35,6 +35,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::DynamicPartitio
     end
 end
 
+#=
 struct LeftistPartitioner{F}
     f::F
 end
@@ -93,3 +94,4 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipLeftistPart
         return SplitPartition(K, spl)
     end
 end
+=#
