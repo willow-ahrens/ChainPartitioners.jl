@@ -1,9 +1,9 @@
-struct BisectPartitioner{F, T}
+struct BisectCostBottleneckSplitter{F, T}
     f::F
     ϵ::T
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartitioner, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectCostBottleneckSplitter, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
         f = oracle_stripe(method.f, A, args...; kwargs...)
@@ -62,12 +62,12 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectPartition
     end
 end
 
-struct FlipBisectPartitioner{F, T}
+struct FlipBisectCostBottleneckSplitter{F, T}
     f::F
     ϵ::T
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectPartitioner, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipBisectCostBottleneckSplitter, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
         f = oracle_stripe(method.f, A, args...; kwargs...)

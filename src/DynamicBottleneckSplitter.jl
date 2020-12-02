@@ -1,8 +1,8 @@
-struct DynamicPartitioner{F}
+struct DynamicBottleneckSplitter{F}
     f::F
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::DynamicPartitioner, args...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::DynamicBottleneckSplitter, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
@@ -43,7 +43,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LeftistPartitioner, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
-        Φ = partition_stripe(A, K, DynamicPartitioner(method.f), args...)
+        Φ = partition_stripe(A, K, DynamicBottleneckSplitter(method.f), args...)
         f = oracle_stripe(method.f, A, args...)
         c = -Inf
         for k = 1:K
@@ -72,7 +72,7 @@ end
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::FlipLeftistPartitioner, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
-        Φ = partition_stripe(A, K, DynamicPartitioner(method.f), args...)
+        Φ = partition_stripe(A, K, DynamicBottleneckSplitter(method.f), args...)
         f = oracle_stripe(method.f, A, args...)
         c = -Inf
         for k = 1:K

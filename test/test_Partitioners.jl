@@ -103,8 +103,8 @@ end
             Π = partition_stripe(permutedims(A), K, EquiPartitioner())
 
             for f = vcat(fs, funky_fs)
-                Φ = partition_stripe(A, K, DynamicPartitioner(f), Π)
-                Φ′ = partition_stripe(A, K, NicolPartitioner(f), Π)
+                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ′ = partition_stripe(A, K, BisectIndexBottleneckSplitter(f), Π)
                 @test issorted(Φ.spl)
                 @test Φ.spl[1] == 1
                 @test Φ.spl[end] == n + 1
@@ -118,10 +118,10 @@ end
             end
 
             for f = fs[2:end]
-                Φ = partition_stripe(A, K, DynamicPartitioner(f), Π)
+                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
                 ϵ = 0.125
-                Φ′′ = partition_stripe(A, K, BisectPartitioner(f, ϵ), Π)
-                Φ′′′ = partition_stripe(A, K, LazyBisectPartitioner(f, ϵ), Π)
+                Φ′′ = partition_stripe(A, K, BisectCostBottleneckSplitter(f, ϵ), Π)
+                Φ′′′ = partition_stripe(A, K, LazyBisectCostBottleneckSplitter(f, ϵ), Π)
                 @test issorted(Φ′′.spl)
                 @test Φ′′.spl[1] == 1
                 @test Φ′′.spl[end] == n + 1
@@ -130,15 +130,15 @@ end
             end
 
             for f = funky_fs
-                Φ = partition_stripe(A, K, DynamicPartitioner(f), Π)
+                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
                 ϵ = 0.125
-                Φ′′ = partition_stripe(A, K, BisectPartitioner(f, ϵ), Π)
+                Φ′′ = partition_stripe(A, K, BisectCostBottleneckSplitter(f, ϵ), Π)
                 @test issorted(Φ′′.spl)
                 @test Φ′′.spl[1] == 1
                 @test Φ′′.spl[end] == n + 1
                 @test bottleneck_plaid(A, Π, Φ′′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
 
-                Φ′′′ = partition_stripe(A, K, LazyBisectPartitioner(f, ϵ), Π)
+                Φ′′′ = partition_stripe(A, K, LazyBisectCostBottleneckSplitter(f, ϵ), Π)
                 @test issorted(Φ′′′.spl)
                 @test Φ′′′.spl[1] == 1
                 @test Φ′′′.spl[end] == n + 1
@@ -146,8 +146,8 @@ end
             end
 
             for f in flip_fs
-                Φ = partition_stripe(A, K, DynamicPartitioner(f), Π)
-                Φ′ = partition_stripe(A, K, FlipNicolPartitioner(f), Π)
+                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ′ = partition_stripe(A, K, FlipBisectIndexBottleneckSplitter(f), Π)
                 @test issorted(Φ.spl)
                 @test Φ.spl[1] == 1
                 @test Φ.spl[end] == n + 1
@@ -160,7 +160,7 @@ end
                 #@test Φ′ == _Φ
 
                 ϵ = 0.0001
-                Φ′′ = partition_stripe(A, K, FlipBisectPartitioner(f, ϵ), Π)
+                Φ′′ = partition_stripe(A, K, FlipBisectCostBottleneckSplitter(f, ϵ), Π)
                 @test issorted(Φ′′.spl)
                 @test Φ′′.spl[1] == 1
                 @test Φ′′.spl[end] == n + 1

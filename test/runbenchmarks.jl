@@ -36,9 +36,9 @@ function main(args)
             end
             for (f, f_key) = [
                 (EquiPartitioner(), "EquiPartitioner()"),
-                ((NicolPartitioner(mdl), "NicolPartitioner($mdl_key)") for (mdl, mdl_key) in mdls)...,
-                ((BisectPartitioner(mdl, ϵ), "BisectPartitioner($mdl_key)") for (mdl, mdl_key) in mdls)...,
-                ((LazyBisectPartitioner(mdl, ϵ), "LazyBisectPartitioner($mdl_key)") for (mdl, mdl_key) in mdls[2:end])...,
+                ((BisectIndexBottleneckSplitter(mdl), "BisectIndexBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
+                ((BisectCostBottleneckSplitter(mdl, ϵ), "BisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
+                ((LazyBisectCostBottleneckSplitter(mdl, ϵ), "LazyBisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls[2:end])...,
             ]
                 suite["partition_stripe"]["partition_stripe($(mtx), $K, $f_key)"] = @benchmarkable partition_stripe($A, $K, $f)
             end
@@ -47,9 +47,9 @@ function main(args)
                 (MapPartition(K, mod1.(1:m, K)), "Π_map", [comm_model,]),
             ]
                 for (f, f_key) = [
-                    ((NicolPartitioner(mdl), "NicolPartitioner($mdl_key)") for (mdl, mdl_key) in mdls)...,
-                    ((BisectPartitioner(mdl, ϵ), "BisectPartitioner($mdl_key)") for (mdl, mdl_key) in mdls)...,
-                    (LazyBisectPartitioner(comm_model[1], ϵ), "LazyBisectPartitioner(comm_model)"),
+                    ((BisectIndexBottleneckSplitter(mdl), "BisectIndexBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
+                    ((BisectCostBottleneckSplitter(mdl, ϵ), "BisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
+                    (LazyBisectCostBottleneckSplitter(comm_model[1], ϵ), "LazyBisectCostBottleneckSplitter(comm_model)"),
                     (GreedyLocalCostPartitioner(local_model[1]), "GreedyLocalCostPartitioner(local_model)"),
                     (MagneticPartitioner(), "MagneticPartitioner"),
                 ]

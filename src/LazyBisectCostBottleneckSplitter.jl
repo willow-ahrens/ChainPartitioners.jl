@@ -1,9 +1,9 @@
-struct LazyBisectPartitioner{F, T}
+struct LazyBisectCostBottleneckSplitter{F, T}
     f::F
     ϵ::T
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectPartitioner{<:AbstractNetCostModel}, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractNetCostModel}, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
         N = nnz(A)
@@ -123,7 +123,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
     end
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectPartitioner{<:AbstractSymCostModel}, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractSymCostModel}, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
         @assert m == n
@@ -253,7 +253,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
     end
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectPartitioner{<:AbstractCommCostModel}, Π, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractCommCostModel}, Π, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
         N = nnz(A)
@@ -349,7 +349,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
 end
 
 #=
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectPartitioner, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter, args...; kwargs...) where {Tv, Ti}
     g = nothing
     f = method.f
     Δ_work = 0
@@ -470,12 +470,12 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectParti
     end
 end
 
-struct LazyFlipBisectPartitioner{F, T}
+struct LazyFlipBisectCostBottleneckSplitter{F, T}
     f::F
     ϵ::T
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectPartitioner, args...; kwargs...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectCostBottleneckSplitter, args...; kwargs...) where {Tv, Ti}
     g = nothing
     f = method.f
     Δ_work = 0

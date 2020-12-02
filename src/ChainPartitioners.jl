@@ -56,14 +56,14 @@ export bound_stripe
 export partition_stripe
 export partition_plaid
 export EquiPartitioner
-export NicolPartitioner
-export FlipNicolPartitioner
-export DynamicPartitioner
+export BisectIndexBottleneckSplitter
+export FlipBisectIndexBottleneckSplitter
+export DynamicBottleneckSplitter
 #export LeftistPartitioner
 #export FlipLeftistPartitioner
-export BisectPartitioner
-export LazyBisectPartitioner
-export FlipBisectPartitioner
+export BisectCostBottleneckSplitter
+export LazyBisectCostBottleneckSplitter
+export FlipBisectCostBottleneckSplitter
 export SymmetricPartitioner
 export MagneticPartitioner
 export GreedyLocalCostPartitioner
@@ -122,10 +122,10 @@ include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
 include("EquiPartitioner.jl")
-include("DynamicPartitioner.jl")
-include("NicolPartitioner.jl")
-include("BisectPartitioner.jl")
-include("LazyBisectPartitioner.jl")
+include("DynamicBottleneckSplitter.jl")
+include("BisectIndexBottleneckSplitter.jl")
+include("BisectCostBottleneckSplitter.jl")
+include("LazyBisectCostBottleneckSplitter.jl")
 include("SymmetricPartitioner.jl")
 include("AlternatingPartitioner.jl")
 include("MagneticPartitioner.jl")
