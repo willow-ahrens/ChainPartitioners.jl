@@ -19,11 +19,11 @@ function partition_stripe(A::SparseMatrixCSC, k, ::MagneticPartitioner, Π; kwar
     end
 end
 
-struct GreedyLocalCostPartitioner{Mdl <: AbstractLocalCostModel}
+struct GreedyBottleneckPartitioner{Mdl}
     mdl::Mdl
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyLocalCostPartitioner{Mdl}, Π; adj_A = nothing, kwargs...) where {Tv, Ti, Mdl}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottleneckPartitioner{Mdl}, Π; adj_A = nothing, kwargs...) where {Tv, Ti, Mdl <: AbstractLocalCostModel}
     @inbounds begin
         (m, n) = size(A)
         if adj_A === nothing
@@ -93,7 +93,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyLocalCost
     end
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyLocalCostPartitioner{Mdl}, Π::SplitPartition; adj_A = nothing, adj_net=nothing, kwargs...) where {Tv, Ti, Mdl}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottleneckPartitioner{Mdl}, Π::SplitPartition; adj_A = nothing, adj_net=nothing, kwargs...) where {Tv, Ti, Mdl}
     @inbounds begin
         (m, n) = size(A)
         if adj_A === nothing

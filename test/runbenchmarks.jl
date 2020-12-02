@@ -50,7 +50,7 @@ function main(args)
                     ((BisectIndexBottleneckSplitter(mdl), "BisectIndexBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                     ((BisectCostBottleneckSplitter(mdl, ϵ), "BisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                     (LazyBisectCostBottleneckSplitter(comm_model[1], ϵ), "LazyBisectCostBottleneckSplitter(comm_model)"),
-                    (GreedyLocalCostPartitioner(local_model[1]), "GreedyLocalCostPartitioner(local_model)"),
+                    (GreedyBottleneckPartitioner(local_model[1]), "GreedyBottleneckPartitioner(local_model)"),
                     (MagneticPartitioner(), "MagneticPartitioner"),
                 ]
                     suite["partition_stripe"]["partition_stripe($(mtx), $K, $f_key, $Π_key)"] = @benchmarkable partition_stripe($A, $K, $f, $Π)

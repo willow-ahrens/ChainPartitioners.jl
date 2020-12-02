@@ -66,7 +66,7 @@ export LazyBisectCostBottleneckSplitter
 export FlipBisectCostBottleneckSplitter
 export SymmetricPartitioner
 export MagneticPartitioner
-export GreedyLocalCostPartitioner
+export GreedyBottleneckPartitioner
 
 export MetisPartitioner
 export metis_scheme_recursive_bisection
