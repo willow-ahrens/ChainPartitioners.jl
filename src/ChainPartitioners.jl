@@ -55,13 +55,11 @@ export bound_stripe
 
 export partition_stripe
 export partition_plaid
-export EquiPartitioner
-export BisectIndexBottleneckSplitter
-export FlipBisectIndexBottleneckSplitter
+export EquiSplitter
 export DynamicBottleneckSplitter
 export DynamicTotalSplitter
-#export LeftistPartitioner
-#export FlipLeftistPartitioner
+export BisectIndexBottleneckSplitter
+export FlipBisectIndexBottleneckSplitter
 export BisectCostBottleneckSplitter
 export LazyBisectCostBottleneckSplitter
 export FlipBisectCostBottleneckSplitter
@@ -71,6 +69,7 @@ export GreedyBottleneckPartitioner
 
 export pack_stripe
 export pack_plaid
+export EquiChunker
 export DynamicTotalChunker
 
 export MetisPartitioner
@@ -126,7 +125,7 @@ include("Costs.jl")
 include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
-include("EquiPartitioner.jl")
+include("EquiSplitter.jl")
 include("DynamicSplitter.jl")
 include("DynamicPacker.jl")
 include("BisectIndexBottleneckSplitter.jl")

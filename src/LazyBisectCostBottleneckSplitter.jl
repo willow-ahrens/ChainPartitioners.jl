@@ -365,7 +365,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
             @assert false
         end
     end
-    Π = partition_stripe(SparseMatrixCSC(A'), K, EquiPartitioner())
+    Π = partition_stripe(SparseMatrixCSC(A'), K, EquiSplitter())
     if length(args) > 0
         Π = args[1]
     end
@@ -491,7 +491,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectC
             @assert false
         end
     end
-    Π = partition_stripe(SparseMatrixCSC(A'), K, EquiPartitioner())
+    Π = partition_stripe(SparseMatrixCSC(A'), K, EquiSplitter())
     if length(args) > 0
         Π = args[1]
     end

@@ -67,7 +67,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 FunkyCommCostModel(rand(1:10, K), 2, 1, 3, 6);
                 m == n ? FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
-                Π = partition_stripe(A', K, EquiPartitioner())
+                Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
@@ -100,7 +100,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 #m == n ? AffineSymCostModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
                 m == n ? FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
-                Π = partition_stripe(A', K, EquiPartitioner())
+                Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
@@ -124,7 +124,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 AffineNetCostModel(0, 3, 1, 3);
                 m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
             ]
-                Π = partition_stripe(A', K, EquiPartitioner())
+                Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, DynamicTotalSplitter(f), Π)
                 c = total_value(A, Π, Φ, f)
                 for (method, ϵ) = [
@@ -142,7 +142,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
             for (f, w_max) = [
                 (AffineNetCostModel(0, 3, 1, 3), 4);
             ]
-                Π = partition_stripe(A', K, EquiPartitioner()) #TODO need an EquiChunker
+                Π = partition_stripe(A', K, EquiChunker())
                 Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
                 c = total_value(A, Π, Φ, f)
                 for (method, ϵ) = [

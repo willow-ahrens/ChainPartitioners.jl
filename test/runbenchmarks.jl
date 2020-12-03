@@ -35,7 +35,7 @@ function main(args)
                 ])
             end
             for (f, f_key) = [
-                (EquiPartitioner(), "EquiPartitioner()"),
+                (EquiSplitter(), "EquiSplitter()"),
                 ((BisectIndexBottleneckSplitter(mdl), "BisectIndexBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                 ((BisectCostBottleneckSplitter(mdl, ϵ), "BisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                 ((LazyBisectCostBottleneckSplitter(mdl, ϵ), "LazyBisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls[2:end])...,
@@ -43,7 +43,7 @@ function main(args)
                 suite["partition_stripe"]["partition_stripe($(mtx), $K, $f_key)"] = @benchmarkable partition_stripe($A, $K, $f)
             end
             for (Π, Π_key, mdls) in [
-                (partition_stripe(A', K, EquiPartitioner()), "Π_spl", [local_model, comm_model]),
+                (partition_stripe(A', K, EquiSplitter()), "Π_spl", [local_model, comm_model]),
                 (MapPartition(K, mod1.(1:m, K)), "Π_map", [comm_model,]),
             ]
                 for (f, f_key) = [
