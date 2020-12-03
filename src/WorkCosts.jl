@@ -40,7 +40,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     return (c_lo, c_hi)
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel)
     cst = -Inf
     for k = 1:Π.K
         j = Π.spl[k]
@@ -50,7 +50,7 @@ function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel)
     cst = -Inf
     for k = 1:Π.K
         s = Π.spl[k]
@@ -66,6 +66,6 @@ function bottleneck_stripe(A::SparseMatrixCSC, Π::DomainPartition, mdl::Abstrac
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
-    return bottleneck_stripe(A, convert(DomainPartition, Π), mdl)
+function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
+    return bottleneck_value(A, convert(DomainPartition, Π), mdl)
 end

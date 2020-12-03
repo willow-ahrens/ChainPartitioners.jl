@@ -63,7 +63,7 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel)
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
@@ -90,7 +90,7 @@ function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel)
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
@@ -118,8 +118,8 @@ function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::Abstrac
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
-    return bottleneck_stripe(A, convert(DomainPartition, Φ), mdl)
+function bottleneck_value(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
+    return bottleneck_value(A, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -218,7 +218,7 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel)
     cst = -Inf
     m, n = size(A)
     @assert m == n
@@ -250,7 +250,7 @@ function bottleneck_stripe(A::SparseMatrixCSC, Φ::SplitPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel)
     cst = -Inf
     m, n = size(A)
     @assert m == n
@@ -283,8 +283,8 @@ function bottleneck_stripe(A::SparseMatrixCSC, Φ::DomainPartition, mdl::Abstrac
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
-    return bottleneck_stripe(A, convert(DomainPartition, Φ), mdl)
+function bottleneck_value(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
+    return bottleneck_value(A, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -358,10 +358,10 @@ end
     end
 end
 
-bottleneck_plaid(A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
-    bottleneck_plaid(A, convert(MapPartition, Π), Φ, mdl)
+bottleneck_value(A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
+    bottleneck_value(A, convert(MapPartition, Π), Φ, mdl)
 
-function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel)
     @assert Φ.K == Π.K
     cst = -Inf
     m, n = size(A)
@@ -394,7 +394,7 @@ function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartiti
     return cst
 end
 
-function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel)
     @assert Φ.K == Π.K
     cst = -Inf
     m, n = size(A)
@@ -428,8 +428,8 @@ function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartit
     return cst
 end
 
-function bottleneck_plaid(A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
-    return bottleneck_plaid(A, Π, convert(DomainPartition, Φ), mdl)
+function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
+    return bottleneck_value(A, Π, convert(DomainPartition, Φ), mdl)
 end
 
 
@@ -448,8 +448,8 @@ end
 
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineLocalCostModel)
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_stripe(adj_A, Π, AffineNetCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_comm))
-    c_lo = bottleneck_stripe(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_width, mdl.β_work))
+    c_hi = bottleneck_value(adj_A, Π, AffineNetCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_comm))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_width, mdl.β_work))
     return (c_lo, c_hi)
 end
 
@@ -503,6 +503,6 @@ end
 end
 
 #Just a bit of a hack for now
-function bottleneck_plaid(A, Π, Φ, mdl::AffineLocalCostModel)
-    return bottleneck_plaid(adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+function bottleneck_value(A, Π, Φ, mdl::AffineLocalCostModel)
+    return bottleneck_value(adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
 end

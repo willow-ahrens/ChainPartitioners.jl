@@ -63,7 +63,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
             ]
                 Π = partition_stripe(A', K, EquiPartitioner())
                 Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                c = bottleneck_plaid(A, Π, Φ, f)
+                c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
                     (DynamicBottleneckSplitter(f), 0);
                     (BisectIndexBottleneckSplitter(f), 0);
@@ -76,7 +76,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1
-                    @test bottleneck_plaid(A, Π, Φ′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
+                    @test bottleneck_value(A, Π, Φ′, f) <= bottleneck_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
 
@@ -95,7 +95,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
             ]
                 Π = partition_stripe(A', K, EquiPartitioner())
                 Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                c = bottleneck_plaid(A, Π, Φ, f)
+                c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
                     (DynamicBottleneckSplitter(f), 0);
                     (FlipBisectIndexBottleneckSplitter(f), 0);
@@ -108,7 +108,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1
-                    @test bottleneck_plaid(A, Π, Φ′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
+                    @test bottleneck_value(A, Π, Φ′, f) <= bottleneck_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
         end

@@ -57,7 +57,7 @@ end
     end
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel)
+function bottleneck_value(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel)
     cst = -Inf
     m, n = size(A)
     for k = 1:Π.K
@@ -82,7 +82,7 @@ function bottleneck_stripe(A::SparseMatrixCSC, Π::SplitPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvNetCostModel)
+function bottleneck_value(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvNetCostModel)
     cst = -Inf
     m, n = size(A)
     hst = zeros(m)
@@ -109,6 +109,6 @@ function bottleneck_stripe(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::Abst
     return cst
 end
 
-function bottleneck_stripe(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
-    return bottleneck_stripe(A, convert(DomainPartition, Π), mdl)
+function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
+    return bottleneck_value(A, convert(DomainPartition, Π), mdl)
 end

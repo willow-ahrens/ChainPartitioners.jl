@@ -16,11 +16,11 @@ function bound_stripe(A, K, Π, mdl)
     return bound_stripe(A, K, mdl)
 end
 
-function bottleneck_plaid(A, Π, Φ, mdl)
-    return bottleneck_stripe(A, Φ, mdl)
+function bottleneck_value(A, Π, Φ, mdl)
+    return bottleneck_value(A, Φ, mdl)
 end
 
-function bottleneck_stripe(A, Φ::SplitPartition, mdl::AbstractCostOracle)
+function bottleneck_value(A, Φ::SplitPartition, mdl::AbstractCostOracle)
     cst = 0
     for k = 1:Φ.K
         j = Φ.spl[k]

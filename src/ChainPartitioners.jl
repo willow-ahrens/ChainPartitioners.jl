@@ -48,8 +48,7 @@ export AbstractEnvNetCostModel
 export AffineEnvNetCostModel
 export EnvNetCostOracle
 
-export bottleneck_plaid
-export bottleneck_stripe
+export bottleneck_value
 export oracle_stripe
 export bound_stripe
 
