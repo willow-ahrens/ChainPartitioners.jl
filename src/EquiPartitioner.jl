@@ -17,6 +17,6 @@ function pack_stripe(A::AbstractMatrix, method::EquiChunker, args...; kwargs...)
         (m, n) = size(A)
         w = method.w
 
-        return SplitPartition(cld(n, K), collect(1:w:n))
+        return SplitPartition(cld(n, w), collect(1:w:n))
     end
 end
