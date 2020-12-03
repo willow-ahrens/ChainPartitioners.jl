@@ -13,7 +13,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
         w_max = method.w_max
 
         cst = Vector{cost_type(f)}(undef, n + 1)
-        Π = Vector{Int}(undef, n + 1)
+        spl = Vector{Int}(undef, n + 1)
         for j = n:-1:1
             best_c = cst[j + 1] + f(j, j + 1)
             best_j′ = j + 1
@@ -25,20 +25,20 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
                 end
             end
             cst[j] = best_c
-            Π[j] = best_j′
+            spl[j] = best_j′
         end
 
         K = 0
         j = 1
         while j != n + 1
-            j′ = Π[j]
+            j′ = spl[j]
             K += 1
-            Π[K] = j
+            spl[K] = j
             j = j′
         end
-        Π[K + 1] = j
-        resize!(Π, K + 1)
-        return SplitPartition{Ti}(K, Π)
+        spl[K + 1] = j
+        resize!(spl, K + 1)
+        return SplitPartition{Ti}(K, spl)
     end
 end
 
@@ -57,7 +57,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
         Δ_net = zeros(Int, n + 1) # Δ_net is the number of additional distinct entries we see as our part size grows.
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
         cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
-        Π = Vector{Int}(undef, n + 1)
+        spl = Vector{Int}(undef, n + 1)
         if x_net isa Nothing
             x_net = Ref(Vector{Int}(undef, n + 1)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
         else
@@ -91,21 +91,21 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
             end
             cst[j] = best_c
             x_net[][j] = best_d
-            Π[j] = best_j′
+            spl[j] = best_j′
         end
 
         K = 0
         j = 1
         while j != n + 1
-            j′ = Π[j]
+            j′ = spl[j]
             K += 1
-            Π[K] = j
+            spl[K] = j
             x_net[][K] = x_net[][j]
             j = j′
         end
-        Π[K + 1] = j
-        resize!(Π, K + 1)
+        spl[K + 1] = j
+        resize!(spl, K + 1)
         resize!(x_net[], K + 1)
-        return SplitPartition{Ti}(K, Π)
+        return SplitPartition{Ti}(K, spl)
     end
 end

@@ -72,6 +72,7 @@ export pack_plaid
 export EquiChunker
 export DynamicTotalChunker
 export OverlapChunker
+export StrictChunker
 
 export MetisPartitioner
 export metis_scheme_recursive_bisection
@@ -130,6 +131,7 @@ include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
 include("DynamicChunker.jl")
 include("OverlapChunker.jl")
+include("StrictChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")

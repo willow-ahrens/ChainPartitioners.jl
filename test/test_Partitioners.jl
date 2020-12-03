@@ -148,6 +148,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
             c = total_value(A, Π, Φ, f)
             for method = [
                 DynamicTotalChunker(f, w_max);
+                StrictChunker(w_max);
                 OverlapChunker(0.9, w_max);
                 OverlapChunker(0.8, w_max);
                 OverlapChunker(0.7, w_max);

@@ -17,7 +17,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
 
         hst = zeros(Int, m)
 
-        Π = Vector{Int}(undef, n + 1) # Column split locations
+        spl = Vector{Int}(undef, n + 1) # Column split locations
         if x_net isa Nothing
             x_net = Ref(Vector{Int}(undef, n + 1)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
         else
@@ -29,7 +29,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
         c = A_pos[2] - A_pos[1] #The cardinality of the first column in the part
         j = 1
         K = 0
-        Π[1] = 1
+        spl[1] = 1
         for q in A_pos[1] : A_pos[2] - 1
             i = A_idx[q]
             hst[i] = 1
@@ -57,7 +57,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
             w = j′ - j #Current block size
             if w == w_max || cc′ < ρ * min(c, c′)
                 K += 1
-                Π[K + 1] = j′
+                spl[K + 1] = j′
                 x_net[][K] = d
                 j = j′
                 d = c′
@@ -65,12 +65,10 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
                 d = d′
             end
         end
-        j′ = n + 1
-        w = j′ - j
         K += 1
-        Π[K + 1] = j′
-        resize!(Π, K + 1)
+        spl[K + 1] = n + 1
+        resize!(spl, K + 1)
         resize!(x_net[], K)
-        return SplitPartition{Ti}(K, Π)
+        return SplitPartition{Ti}(K, spl)
     end
 end
