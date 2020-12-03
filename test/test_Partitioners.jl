@@ -146,14 +146,18 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
             Π = pack_stripe(A', EquiChunker(2))
             Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
             c = total_value(A, Π, Φ, f)
-            for (method, ϵ) = [
-                (DynamicTotalChunker(f, w_max), 0);
+            for method = [
+                DynamicTotalChunker(f, w_max);
+                OverlapChunker(0.9, w_max);
+                OverlapChunker(0.8, w_max);
+                OverlapChunker(0.7, w_max);
             ]
                 Φ′ = pack_stripe(A, method, Π)
                 @test issorted(Φ′.spl)
+                @test all(Φ′.spl[2:end] .- Φ′.spl[1:end - 1] .<= w_max)
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1
-                @test total_value(A, Π, Φ′, f) <= total_value(A, Π, Φ, f) * (1 + ϵ)
+                @test total_value(A, Π, Φ′, f) >= total_value(A, Π, Φ, f)
             end
         end
     end

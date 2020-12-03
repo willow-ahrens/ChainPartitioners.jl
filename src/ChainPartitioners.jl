@@ -71,6 +71,7 @@ export pack_stripe
 export pack_plaid
 export EquiChunker
 export DynamicTotalChunker
+export OverlapChunker
 
 export MetisPartitioner
 export metis_scheme_recursive_bisection
@@ -127,7 +128,8 @@ include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
-include("DynamicPacker.jl")
+include("DynamicChunker.jl")
+include("OverlapChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")
