@@ -41,130 +41,75 @@ function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, Π, mdl::Union{Fu
     return (minimum(args), maximum(args))
 end
 
+LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommCostModel}
+
 @testset "Partitioners" begin
-    As = vcat(
+    for A in [
         [
             matrices["LPnetlib/lpi_itest6"],
-        ],
-        reshape([sprand(m, n, 0.1) for m = [1, 2, 3, 4, 8, 16], n = [1, 2, 3, 4, 8, 16], trial = 1:8], :),
-    )
-
-    for A in As
+        ];
+        reshape([sprand(m, n, 0.1) for m = [1, 2, 3, 4, 8], n = [1, 2, 3, 4, 8], trial = 1:4], :);
+    ]
         (m, n) = size(A)
-
-        for K = [1, 2, 3, 4, 8, 16]
-            fs = Any[
-                AffineWorkCostModel(0, 10, 1),
-                AffineNetCostModel(0, 3, 1, 3),
-                AffineCommCostModel(0, 2, 1, 3, 6),
+        for K = [1, 2, 3, 4, 8]
+            for f = [
+                AffineWorkCostModel(0, 10, 1);
+                AffineNetCostModel(0, 3, 1, 3);
+                AffineCommCostModel(0, 2, 1, 3, 6);
+                m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
+                FunkyNetCostModel(rand(1:10, K), 3, 1, 3);
+                FunkyCommCostModel(rand(1:10, K), 2, 1, 3, 6);
+                m == n ? FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
-            if m == n
-                append!(fs, [
-                    AffineSymCostModel(0, 3, 1, 3, 5),
-                ])
-            end
-            funky_fs = Any[
-                FunkyNetCostModel(rand(1:10, K), 3, 1, 3),
-                FunkyCommCostModel(rand(1:10, K), 2, 1, 3, 6),
-            ]
-            if m == n
-                append!(funky_fs, [
-                    FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5),
-                ])
-            end
-            funky_fs = Any[
-                FunkyNetCostModel(rand(1:10, K), 3, 1, 3),
-                FunkyCommCostModel(rand(1:10, K), 2, 1, 3, 6),
-            ]
-            if m == n
-                append!(funky_fs, [
-                    FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5),
-                ])
+                Π = partition_stripe(A', K, EquiPartitioner())
+                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                c = bottleneck_plaid(A, Π, Φ, f)
+                for (method, ϵ) = [
+                    (DynamicBottleneckSplitter(f), 0);
+                    (BisectIndexBottleneckSplitter(f), 0);
+                    (BisectCostBottleneckSplitter(f, 0.1), 0.1);
+                    f isa LazyBisectCost ? (LazyBisectCostBottleneckSplitter(f, 0.1), 0.1) : [];
+                    (BisectCostBottleneckSplitter(f, 0.01), 0.01);
+                    f isa LazyBisectCost ? (LazyBisectCostBottleneckSplitter(f, 0.01), 0.01) : [];
+                ]
+                    Φ′ = partition_stripe(A, K, method, Π)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test bottleneck_plaid(A, Π, Φ′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
+                end
             end
 
             # Creating nonnegative monotonic decreasing cost functions requires some care.
             # These complicated affine terms are designed to ensure nonnegativity.
             # Affine cost functions are commented out because their upper and lower bounds assume nonnegative coefficients.
-            flip_fs = Any[
-                #AffineWorkCostModel(1 + nnz(A), 0, -1),
-                #AffineNetCostModel(1 + nnz(A) + 3n + 3m, -3, -1, -3),
-                #AffineCommCostModel(1 + nnz(A) + 3n + 6m, -2, -1, -3, -6),
-                AffineLocalCostModel(0, 2, 1, 3, 6),
-                FunkyNetCostModel(1 + nnz(A) + 3n + 3m .+ rand(1:10, K), -3, -1, -3),
-                FunkyCommCostModel(1 + nnz(A) + 3n + 6m .+ rand(1:10, K), -2, -1, -3, -6),
+            for f = [
+                #AffineWorkCostModel(1 + nnz(A), 0, -1);
+                #AffineNetCostModel(1 + nnz(A) + 3n + 3m, -3, -1, -3);
+                #AffineCommCostModel(1 + nnz(A) + 3n + 6m, -2, -1, -3, -6);
+                AffineLocalCostModel(0, 2, 1, 3, 6);
+                FunkyNetCostModel(1 + nnz(A) + 3n + 3m .+ rand(1:10, K), -3, -1, -3);
+                FunkyCommCostModel(1 + nnz(A) + 3n + 6m .+ rand(1:10, K), -2, -1, -3, -6);
+                #m == n ? AffineSymCostModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
+                m == n ? FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
-            if m == n
-                append!(flip_fs, [
-                    #AffineSymCostModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5),
-                    FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5),
-                ])
-            end
-
-            Π = partition_stripe(permutedims(A), K, EquiPartitioner())
-
-            for f = vcat(fs, funky_fs)
+                Π = partition_stripe(A', K, EquiPartitioner())
                 Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                Φ′ = partition_stripe(A, K, BisectIndexBottleneckSplitter(f), Π)
-                @test issorted(Φ.spl)
-                @test Φ.spl[1] == 1
-                @test Φ.spl[end] == n + 1
-                @test issorted(Φ′.spl)
-                @test Φ′.spl[1] == 1
-                @test Φ′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′, f) == bottleneck_plaid(A, Π, Φ, f)
-                #_Φ = partition_stripe(A, K, LeftistPartitioner(f), Π)
-                #@test bottleneck_plaid(A, Π, _Φ, f) == bottleneck_plaid(A, Π, Φ, f)
-                #@test Φ′ == _Φ
-            end
-
-            for f = fs[2:end]
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                ϵ = 0.125
-                Φ′′ = partition_stripe(A, K, BisectCostBottleneckSplitter(f, ϵ), Π)
-                Φ′′′ = partition_stripe(A, K, LazyBisectCostBottleneckSplitter(f, ϵ), Π)
-                @test issorted(Φ′′.spl)
-                @test Φ′′.spl[1] == 1
-                @test Φ′′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
-                @test Φ′′ == Φ′′′
-            end
-
-            for f = funky_fs
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                ϵ = 0.125
-                Φ′′ = partition_stripe(A, K, BisectCostBottleneckSplitter(f, ϵ), Π)
-                @test issorted(Φ′′.spl)
-                @test Φ′′.spl[1] == 1
-                @test Φ′′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
-
-                Φ′′′ = partition_stripe(A, K, LazyBisectCostBottleneckSplitter(f, ϵ), Π)
-                @test issorted(Φ′′′.spl)
-                @test Φ′′′.spl[1] == 1
-                @test Φ′′′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′′′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
-            end
-
-            for f in flip_fs
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
-                Φ′ = partition_stripe(A, K, FlipBisectIndexBottleneckSplitter(f), Π)
-                @test issorted(Φ.spl)
-                @test Φ.spl[1] == 1
-                @test Φ.spl[end] == n + 1
-                @test issorted(Φ′.spl)
-                @test Φ′.spl[1] == 1
-                @test Φ′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′, f) == bottleneck_plaid(A, Π, Φ, f)
-                #_Φ = partition_stripe(A, K, FlipLeftistPartitioner(f), Π)
-                #@test bottleneck_plaid(A, Π, _Φ, f) == bottleneck_plaid(A, Π, Φ, f)
-                #@test Φ′ == _Φ
-
-                ϵ = 0.0001
-                Φ′′ = partition_stripe(A, K, FlipBisectCostBottleneckSplitter(f, ϵ), Π)
-                @test issorted(Φ′′.spl)
-                @test Φ′′.spl[1] == 1
-                @test Φ′′.spl[end] == n + 1
-                @test bottleneck_plaid(A, Π, Φ′′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
+                c = bottleneck_plaid(A, Π, Φ, f)
+                for (method, ϵ) = [
+                    (DynamicBottleneckSplitter(f), 0);
+                    (FlipBisectIndexBottleneckSplitter(f), 0);
+                    (FlipBisectCostBottleneckSplitter(f, 0.1), 0.1);
+                    (FlipBisectCostBottleneckSplitter(f, 0.01), 0.01);
+                    (FlipBisectCostBottleneckSplitter(f, 0.001), 0.001);
+                    (FlipBisectCostBottleneckSplitter(f, 0.0001), 0.0001);
+                ]
+                    Φ′ = partition_stripe(A, K, method, Π)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test bottleneck_plaid(A, Π, Φ′, f) <= bottleneck_plaid(A, Π, Φ, f) * (1 + ϵ)
+                end
             end
         end
     end
