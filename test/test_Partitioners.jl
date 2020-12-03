@@ -143,7 +143,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
         for (f, w_max) = [
             (AffineNetCostModel(0, 3, 1, 3), 4);
         ]
-            Π = partition_stripe(A', EquiChunker(2))
+            Π = pack_stripe(A', EquiChunker(2))
             Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
             c = total_value(A, Π, Φ, f)
             for (method, ϵ) = [
