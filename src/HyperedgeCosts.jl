@@ -518,7 +518,6 @@ end
     end
 end
 
-#Just a bit of a hack for now TODO is this really a hack?
 function compute_objective(g, A, Π, Φ, mdl::AffineLocalCostModel)
     return compute_objective(g, adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
 end

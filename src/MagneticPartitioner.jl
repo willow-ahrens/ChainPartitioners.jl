@@ -33,7 +33,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         x_work = undefs(Ti,K)
         x_local = undefs(Ti,K)
         x_comm = undefs(Ti,K)
-        cst = undefs(eltype(Mdl),K)
+        cst = undefs(cost_type(method.mdl),K)
 
         Π_dmn = convert(DomainPartition, Π)
         Π_map = convert(MapPartition, Π)
@@ -103,7 +103,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         x_work = undefs(Ti,K)
         x_local = undefs(Ti,K)
         x_comm = undefs(Ti,K)
-        cst = undefs(Float64,K)#TODO we need to do something about these costs
+        cst = undefs(cost_type(method.mdl),K)
 
         m, n = size(A)
 
@@ -153,7 +153,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         asg = ones(Ti, n)
 
         for j = randperm(n)
-            best_c = -Inf
+            best_c = typemin(cost_type(method.mdl))
             best_k = 0
             for q = A.colptr[j] : A.colptr[j + 1] - 1
                 i = A.rowval[q]
