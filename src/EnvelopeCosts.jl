@@ -21,11 +21,14 @@ struct EnvNetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
 end
 
-function upperbound_stripe(A::SparseMatrixCSC, K, mdl::EnvNetCostOracle{<:Any, <:AffineEnvNetCostModel})
+oracle_model(ocl::EnvNetCostOracle) = ocl.mdl
+
+function upperbound_stripe(A::SparseMatrixCSC, K, ocl::EnvNetCostOracle{<:Any, <:AffineEnvNetCostModel})
     m, n = size(A)
     N = nnz(A)
-    (env_lo, env_hi) = mdl.env[1, end]
-    return mdl.mdl.α + mdl.mdl.β_width * n + mdl.mdl.β_work * N + mdl.mdl.β_net * max(env_hi - env_lo, 0)
+    mdl = oracle_model(ocl)
+    (env_lo, env_hi) = ocl.env[1, end]
+    return mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * (env_hi - env_lo)
 end
 function upperbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
     m, n = size(A)

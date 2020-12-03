@@ -19,11 +19,14 @@ struct NetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::NetCostOracle{<:Any, <:AffineNetCostModel})
+oracle_model(ocl::NetCostOracle) = ocl.mdl
+
+function bound_stripe(A::SparseMatrixCSC, K, ocl::NetCostOracle{<:Any, <:AffineNetCostModel})
     m, n = size(A)
     N = nnz(A)
-    c_hi = mdl.mdl.α + mdl.mdl.β_width * n + mdl.mdl.β_work * N + mdl.mdl.β_net * mdl.net[1, end]
-    c_lo = mdl.mdl.α + fld(c_hi - mdl.mdl.α, K)
+    mdl = oracle_model(ocl)
+    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * ocl.net[1, end]
+    c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
 end
 
@@ -150,12 +153,15 @@ struct SymCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::SymCostOracle{<:Any, <:AffineSymCostModel})
+oracle_model(ocl::SymCostOracle) = ocl.mdl
+
+function bound_stripe(A::SparseMatrixCSC, K, ocl::SymCostOracle{<:Any, <:AffineSymCostModel})
     m, n = size(A)
     @assert m == n
     N = nnz(A)
-    c_hi = mdl.mdl.α + mdl.mdl.β_width * n + mdl.mdl.β_work * (mdl.wrk[end] - mdl.wrk[1]) + mdl.mdl.β_net * m
-    c_lo = mdl.mdl.α + fld(c_hi - mdl.mdl.α, K)
+    mdl = oracle_model(ocl)
+    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * (ocl.wrk[end] - ocl.wrk[1]) + mdl.β_net * m
+    c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
 end
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
@@ -320,11 +326,14 @@ struct CommCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::CommCostOracle{<:Any, <:AffineCommCostModel})
+oracle_model(ocl::CommCostOracle) = ocl.mdl
+
+function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:AffineCommCostModel})
     m, n = size(A)
     N = nnz(A)
-    c_hi = mdl.mdl.α + mdl.mdl.β_width * n + mdl.mdl.β_work * N + mdl.mdl.β_comm * mdl.net[1, end]
-    c_lo = mdl.mdl.α + fld(mdl.mdl.β_width * n + mdl.mdl.β_work * N, K)
+    oracle_model(ocl)
+    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_comm * ocl.net[1, end]
+    c_lo = mdl.α + fld(mdl.β_width * n + mdl.β_work * N, K)
     return (c_lo, c_hi)
 end
 
@@ -476,16 +485,19 @@ struct LocalCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, mdl::LocalCostOracle{<:Any, <:AffineLocalCostModel})
+oracle_model(ocl::LocalCostOracle) = ocl.mdl
+
+function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostOracle{<:Any, <:AffineLocalCostModel})
     @inbounds begin
         c_lo = 0
         c_hi = 0
+        mdl = oracle_model(ocl)
         for k = 1:K
             x_width = Π.spl[k + 1] - Π.spl[k]
-            x_work = mdl.pos[Π.spl[k + 1]] - mdl.pos[Π.spl[k]]
-            x_comm = mdl.lcc.Πos[k + 1] - mdl.lcc.Πos[k]
-            c_lo = max(c_lo, mdl.mdl.α + x_width * mdl.mdl.β_width + x_work * mdl.mdl.β_work)
-            c_hi = max(c_hi, mdl.mdl.α + x_width * mdl.mdl.β_width + x_work * mdl.mdl.β_work + x_comm * mdl.mdl.β_comm)
+            x_work = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
+            x_comm = ocl.lcc.Πos[k + 1] - ocl.lcc.Πos[k]
+            c_lo = max(c_lo, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work)
+            c_hi = max(c_hi, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_comm * mdl.β_comm)
         end
         return (c_lo, c_hi)
     end

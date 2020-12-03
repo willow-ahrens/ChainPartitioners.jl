@@ -4,12 +4,12 @@ function oracle_stripe(mdl, A, Π; kwargs...)
     return oracle_stripe(mdl, A; kwargs...)
 end
 
-function bound_stripe(A, K, Π, mdl::AbstractOracleCost)
-    return bound_stripe(A, K, Π, mdl.mdl) #TODO getter method?
+function bound_stripe(A, K, Π, ocl::AbstractOracleCost)
+    return bound_stripe(A, K, Π, oracle_model(ocl))
 end
 
-function bound_stripe(A, K, mdl::AbstractOracleCost)
-    return bound_stripe(A, K, mdl.mdl)
+function bound_stripe(A, K, ocl::AbstractOracleCost)
+    return bound_stripe(A, K, oracle_model(ocl))
 end
 
 function bound_stripe(A, K, Π, mdl)

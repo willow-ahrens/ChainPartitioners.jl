@@ -17,6 +17,8 @@ struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractOracleCost{Md
     mdl::Mdl
 end
 
+oracle_model(ocl::WorkCostOracle) = ocl.mdl
+
 function oracle_stripe(mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...)
     return WorkCostOracle(A.colptr, mdl)
 end
@@ -28,8 +30,8 @@ end
     end
 end
 
-bound_stripe(A::SparseMatrixCSC, K, mdl::WorkCostOracle{<:Any, <:AffineWorkCostModel}) = 
-    bound_stripe(A, K, mdl.mdl)
+bound_stripe(A::SparseMatrixCSC, K, ocl::WorkCostOracle{<:Any, <:AffineWorkCostModel}) = 
+    bound_stripe(A, K, oracle_model(ocl))
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     m, n = size(A)
     N = nnz(A)
