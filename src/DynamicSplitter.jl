@@ -4,20 +4,20 @@ struct DynamicBottleneckSplitter{F} <: AbstractDynamicSplitter{F}
     f::F
 end
 
-@inline _dynamic_splitter_aggregate(::DynamicBottleneckSplitter) = max
+@inline _dynamic_splitter_combine(::DynamicBottleneckSplitter) = max
 
 struct DynamicTotalSplitter{F} <: AbstractDynamicSplitter{F}
     f::F
 end
 
-@inline _dynamic_splitter_aggregate(::DynamicTotalSplitter) = sum
+@inline _dynamic_splitter_combine(::DynamicTotalSplitter) = +
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::DynamicBottleneckSplitter, args...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
         f = oracle_stripe(method.f, A, args...)
-        g = _dynamic_splitter_aggregate(method)
+        g = _dynamic_splitter_combine(method)
 
         ptr = zeros(Ti, K + 1, n + 1)
         cst = fill(Inf, K, n + 1)

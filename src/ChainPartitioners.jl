@@ -49,6 +49,7 @@ export AffineEnvNetCostModel
 export EnvNetCostOracle
 
 export bottleneck_value
+export total_value
 export oracle_stripe
 export bound_stripe
 
@@ -58,6 +59,7 @@ export EquiPartitioner
 export BisectIndexBottleneckSplitter
 export FlipBisectIndexBottleneckSplitter
 export DynamicBottleneckSplitter
+export DynamicTotalSplitter
 #export LeftistPartitioner
 #export FlipLeftistPartitioner
 export BisectCostBottleneckSplitter
@@ -121,7 +123,7 @@ include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
 include("EquiPartitioner.jl")
-include("DynamicBottleneckSplitter.jl")
+include("DynamicSplitter.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")

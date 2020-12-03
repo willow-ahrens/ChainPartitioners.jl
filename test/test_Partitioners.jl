@@ -111,6 +111,25 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test bottleneck_value(A, Π, Φ′, f) <= bottleneck_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
+
+            for f = [
+                AffineNetCostModel(0, 3, 1, 3);
+                AffineCommCostModel(0, 2, 1, 3, 6);
+                m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
+            ]
+                Π = partition_stripe(A', K, EquiPartitioner())
+                Φ = partition_stripe(A, K, DynamicTotalSplitter(f), Π)
+                c = total_value(A, Π, Φ, f)
+                for (method, ϵ) = [
+                    (DynamicTotalSplitter(f), 0);
+                ]
+                    Φ′ = partition_stripe(A, K, method, Π)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test total_value(A, Π, Φ′, f) <= total_value(A, Π, Φ, f) * (1 + ϵ)
+                end
+            end
         end
     end
 end
