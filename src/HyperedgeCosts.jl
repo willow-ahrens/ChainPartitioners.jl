@@ -1,5 +1,7 @@
 abstract type AbstractNetCostModel end
 
+(mdl::AbstractNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+
 struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     α::Tv
     β_width::Tv
@@ -7,7 +9,7 @@ struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     β_net::Tv
 end
 
-(mdl::AffineNetCostModel)(x_width, x_work, x_net, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
 struct NetCostOracle{Ti, Mdl} <: AbstractCostOracle
     pos::Vector{Ti}

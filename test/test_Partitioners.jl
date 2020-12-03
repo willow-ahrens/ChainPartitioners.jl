@@ -76,6 +76,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1
+                    @test Φ′.K == K
                     @test bottleneck_value(A, Π, Φ′, f) <= bottleneck_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
@@ -108,13 +109,13 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1
+                    @test Φ′.K == K
                     @test bottleneck_value(A, Π, Φ′, f) <= bottleneck_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
 
             for f = [
                 AffineNetCostModel(0, 3, 1, 3);
-                AffineCommCostModel(0, 2, 1, 3, 6);
                 m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiPartitioner())
@@ -124,6 +125,24 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     (DynamicTotalSplitter(f), 0);
                 ]
                     Φ′ = partition_stripe(A, K, method, Π)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test Φ′.K == K
+                    @test total_value(A, Π, Φ′, f) <= total_value(A, Π, Φ, f) * (1 + ϵ)
+                end
+            end
+
+            for (f, w_max) = [
+                (AffineNetCostModel(0, 3, 1, 3), 4);
+            ]
+                Π = partition_stripe(A', K, EquiPartitioner()) #TODO need an EquiChunker
+                Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
+                c = total_value(A, Π, Φ, f)
+                for (method, ϵ) = [
+                    (DynamicTotalChunker(f, w_max), 0);
+                ]
+                    Φ′ = pack_stripe(A, method, Π)
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1

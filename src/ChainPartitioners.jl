@@ -69,6 +69,10 @@ export SymmetricPartitioner
 export MagneticPartitioner
 export GreedyBottleneckPartitioner
 
+export pack_stripe
+export pack_plaid
+export DynamicTotalChunker
+
 export MetisPartitioner
 export metis_scheme_recursive_bisection
 export metis_scheme_direct_k_way
@@ -124,6 +128,7 @@ include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
+include("DynamicPacker.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")
