@@ -19,7 +19,7 @@ l - index into column part (if semantically different from row parts)
 Φ - column partitition
 ϕ - column part (set of column indices)
 p - number of right-hand-sides
-k - right-hand-side index (TODO conflict)
+k - right-hand-side index (conflict)
 S - split points
 s - split point
 A - matrix A
