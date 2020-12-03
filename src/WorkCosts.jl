@@ -1,14 +1,18 @@
 abstract type AbstractWorkCostModel end
 
+@inline (mdl::AbstractWorkCostModel)(x_width, x_work, k) = mdl(x_width, x_work)
+
 struct AffineWorkCostModel{Tv} <: AbstractWorkCostModel
     α::Tv
     β_width::Tv
     β_work::Tv
 end
 
+@inline cost_type(::Type{AffineWorkCostModel{Tv}}) where {Tv} = Tv
+
 (mdl::AffineWorkCostModel)(x_width, x_work) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work
 
-struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractCostOracle
+struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     mdl::Mdl
 end
@@ -20,7 +24,7 @@ end
 @inline function (cst::WorkCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
-        return cst.mdl(j′ - j, w)
+        return cst.mdl(j′ - j, w, k)
     end
 end
 
@@ -40,18 +44,18 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     return (c_lo, c_hi)
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     for k = 1:Π.K
         j = Π.spl[k]
         j′ = Π.spl[k + 1]
-        cst = max(cst, mdl(j′ - j, A.colptr[j′] - A.colptr[j]))
+        cst = g(cst, mdl(j′ - j, A.colptr[j′] - A.colptr[j], k))
     end
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     for k = 1:Π.K
         s = Π.spl[k]
         s′ = Π.spl[k + 1]
@@ -61,11 +65,11 @@ function bottleneck_value(A::SparseMatrixCSC, Π::DomainPartition, mdl::Abstract
             j = Π.prm[_s]
             x_work += A.colptr[j + 1] - A.colptr[j]
         end
-        cst = max(cst, mdl(x_width, x_work))
+        cst = g(cst, mdl(x_width, x_work, k))
     end
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
-    return bottleneck_value(A, convert(DomainPartition, Π), mdl)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
+    return compute_objective(g, A, convert(DomainPartition, Π), mdl)
 end

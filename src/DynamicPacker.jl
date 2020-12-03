@@ -12,7 +12,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
         f = oracle_stripe(method.f, A, args...)
         w_max = method.w_max
 
-        cst = Vector{typeof(zero(Float64#=TODO=#))}(undef, n + 1)
+        cst = Vector{cost_type(f)}(undef, n + 1)
         Π = Vector{Int}(undef, n + 1)
         for j = n:-1:1
             best_c = cst[j + 1] + f(j, j + 1)
@@ -56,7 +56,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
 
         Δ_net = zeros(Int, n + 1) # Δ_net is the number of additional distinct entries we see as our part size grows.
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
-        cst = Vector{typeof(zero(Float64#=TODO=#))}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
+        cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         Π = Vector{Int}(undef, n + 1)
         if x_net isa Nothing
             x_net = Ref(Vector{Int}(undef, n)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
@@ -65,7 +65,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
             x_net[] = Vector{Int}(undef, n) # x_net[j] is the corresponding number of distinct nonzero entries in the part
         end
         Δ_net[n + 1] = 0
-        cst[n + 1] = zero(Float64#=TODO f=#)
+        cst[n + 1] = zero(cost_type(f))
         for j = n:-1:1
             d = A_pos[j + 1] - A_pos[j] # The number of distinct nonzero blocks in each candidate part
             Δ_net[j] = d

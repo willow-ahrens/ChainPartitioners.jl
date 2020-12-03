@@ -1,5 +1,7 @@
 abstract type AbstractEnvNetCostModel end
 
+@inline (mdl::AbstractEnvNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+
 struct AffineEnvNetCostModel{Tv} <: AbstractEnvNetCostModel
     α::Tv
     β_width::Tv
@@ -7,11 +9,13 @@ struct AffineEnvNetCostModel{Tv} <: AbstractEnvNetCostModel
     β_net::Tv
 end
 
+@inline cost_type(::Type{AffineEnvNetCostModel{Tv}}) where {Tv} = Tv
+
 AffineEnvNetCostModel(α, β_width, β_work, β_net, k) = AffineEnvNetCostModel(α, β_width, β_work, β_net, k)
 
-(mdl::AffineEnvNetCostModel)(x_width, x_work, x_net, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::AffineEnvNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-struct EnvNetCostOracle{Ti, Mdl} <: AbstractCostOracle
+struct EnvNetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     env::EnvelopeMatrix{Ti}
     mdl::Mdl
@@ -31,7 +35,7 @@ function upperbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
 end
 
 function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::EnvNetCostOracle{<:Any, <:AffineEnvNetCostModel})
-    return fld(upperbound_stripe(A, K, mdl), K)
+    return fld(upperbound_stripe(A, K, mdl), K) #fld is not strictly correct here
 end
 function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
     return fld(upperbound_stripe(A, K, mdl), K)
@@ -57,8 +61,8 @@ end
     end
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     for k = 1:Π.K
         j = Π.spl[k]
@@ -77,13 +81,13 @@ function bottleneck_value(A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractE
             end
         end
         x_net = max(x_env_hi - x_env_lo, 0)
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvNetCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvNetCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
     for k = 1:Π.K
@@ -104,11 +108,11 @@ function bottleneck_value(A::SparseMatrixCSC, K, Π::DomainPartition, mdl::Abstr
             end
         end
         x_net = max(x_env_hi - x_env_lo, 0)
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
-    return bottleneck_value(A, convert(DomainPartition, Π), mdl)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
+    return compute_objective(g, A, convert(DomainPartition, Π), mdl)
 end

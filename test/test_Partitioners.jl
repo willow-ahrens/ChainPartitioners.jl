@@ -7,6 +7,8 @@ end
 
 (mdl::FunkyNetCostModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
+@inline ChainPartitioners.cost_type(::Type{FunkyNetCostModel{Tv}}) where {Tv} = Tv
+
 struct FunkySymCostModel{Tv} <: AbstractSymCostModel
     α::Vector{Tv}
     β_width::Tv
@@ -14,6 +16,8 @@ struct FunkySymCostModel{Tv} <: AbstractSymCostModel
     β_net::Tv
     Δ_work::Tv
 end
+
+@inline ChainPartitioners.cost_type(::Type{FunkySymCostModel{Tv}}) where {Tv} = Tv
 
 (mdl::FunkySymCostModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
@@ -24,6 +28,8 @@ struct FunkyCommCostModel{Tv} <: AbstractCommCostModel
     β_local::Tv
     β_comm::Tv
 end
+
+@inline ChainPartitioners.cost_type(::Type{FunkyCommCostModel{Tv}}) where {Tv} = Tv
 
 (mdl::FunkyCommCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 

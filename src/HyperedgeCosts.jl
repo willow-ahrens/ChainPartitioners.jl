@@ -1,6 +1,6 @@
 abstract type AbstractNetCostModel end
 
-(mdl::AbstractNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
 struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     α::Tv
@@ -9,9 +9,11 @@ struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     β_net::Tv
 end
 
+@inline cost_type(::Type{AffineNetCostModel{Tv}}) where {Tv} = Tv
+
 (mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-struct NetCostOracle{Ti, Mdl} <: AbstractCostOracle
+struct NetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::SparseCountedRowNet{Ti}
     mdl::Mdl
@@ -65,8 +67,8 @@ end
     end
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
     for k = 1:Φ.K
@@ -92,8 +94,8 @@ function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractN
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
     for k = 1:Φ.K
@@ -120,13 +122,15 @@ function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
-    return bottleneck_value(A, convert(DomainPartition, Φ), mdl)
+function compute_objective(g, A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
+    return compute_objective(g, A, convert(DomainPartition, Φ), mdl)
 end
 
 
 
 abstract type AbstractSymCostModel end
+
+@inline (mdl::AbstractSymCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
 struct AffineSymCostModel{Tv} <: AbstractSymCostModel
     α::Tv
@@ -136,9 +140,11 @@ struct AffineSymCostModel{Tv} <: AbstractSymCostModel
     Δ_work::Tv
 end
 
+@inline cost_type(::Type{AffineSymCostModel{Tv}}) where {Tv} = Tv
+
 (mdl::AffineSymCostModel)(x_width, x_work, x_net, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-struct SymCostOracle{Ti, Mdl} <: AbstractCostOracle
+struct SymCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     wrk::Vector{Ti}
     net::SparseCountedRowNet{Ti}
     mdl::Mdl
@@ -220,8 +226,8 @@ end
     end
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     @assert m == n
     hst = zeros(m)
@@ -252,8 +258,8 @@ function bottleneck_value(A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractS
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel)
-    cst = -Inf
+function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel) where {G}
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     @assert m == n
     hst = zeros(m)
@@ -285,13 +291,15 @@ function bottleneck_value(A::SparseMatrixCSC, Φ::DomainPartition, mdl::Abstract
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
-    return bottleneck_value(A, convert(DomainPartition, Φ), mdl)
+function compute_objective(g, A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
+    return compute_objective(g, A, convert(DomainPartition, Φ), mdl)
 end
 
 
 
 abstract type AbstractCommCostModel end
+
+@inline (mdl::AbstractCommCostModel)(x_width, x_work, x_net, x_local, k) = mdl(x_width, x_work, x_net, x_local)
 
 struct AffineCommCostModel{Tv} <: AbstractCommCostModel
     α::Tv
@@ -301,9 +309,11 @@ struct AffineCommCostModel{Tv} <: AbstractCommCostModel
     β_comm::Tv
 end
 
+@inline cost_type(::Type{AffineCommCostModel{Tv}}) where {Tv} = Tv
+
 (mdl::AffineCommCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 
-struct CommCostOracle{Ti, Mdl} <: AbstractCostOracle
+struct CommCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::SparseCountedRowNet{Ti}
     lcr::SparseCountedLocalRowNet{Ti}
@@ -360,12 +370,12 @@ end
     end
 end
 
-bottleneck_value(A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
-    bottleneck_value(A, convert(MapPartition, Π), Φ, mdl)
+compute_objective(g, A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
+    compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
 
-function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel)
+function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G}
     @assert Φ.K == Π.K
-    cst = -Inf
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
     for k = 1:Π.K
@@ -396,9 +406,9 @@ function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartiti
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel)
+function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel) where {G}
     @assert Φ.K == Π.K
-    cst = -Inf
+    cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
     for k = 1:Π.K
@@ -430,13 +440,15 @@ function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartit
     return cst
 end
 
-function bottleneck_value(A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
-    return bottleneck_value(A, Π, convert(DomainPartition, Φ), mdl)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
+    return compute_objective(g, A, Π, convert(DomainPartition, Φ), mdl)
 end
 
 
 
 abstract type AbstractLocalCostModel end
+
+@inline (mdl::AbstractLocalCostModel)(x_width, x_work, x_net, x_local, k) = mdl(x_width, x_work, x_net, x_local)
 
 struct AffineLocalCostModel{Tv} <: AbstractLocalCostModel
     α::Tv
@@ -445,6 +457,8 @@ struct AffineLocalCostModel{Tv} <: AbstractLocalCostModel
     β_local::Tv
     β_comm::Tv
 end
+
+@inline cost_type(::Type{AffineLocalCostModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineLocalCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 
@@ -455,7 +469,7 @@ function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineLocalCostModel)
     return (c_lo, c_hi)
 end
 
-struct LocalCostOracle{Ti, Mdl} <: AbstractCostOracle
+struct LocalCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     Π::SplitPartition{Ti}
     pos::Vector{Ti}
     lcc::SparseCountedLocalColNet{Ti}
@@ -504,7 +518,7 @@ end
     end
 end
 
-#Just a bit of a hack for now
-function bottleneck_value(A, Π, Φ, mdl::AffineLocalCostModel)
-    return bottleneck_value(adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+#Just a bit of a hack for now TODO is this really a hack?
+function compute_objective(g, A, Π, Φ, mdl::AffineLocalCostModel)
+    return compute_objective(g, adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
 end

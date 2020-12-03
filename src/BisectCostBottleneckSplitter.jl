@@ -36,7 +36,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::BisectCostBottl
         spl[1] = 1
         spl[K + 1] = n + 1
 
-        c_lo, c_hi = bound_stripe(A, K, args..., f)./1
+        c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
         while c_lo * (1 + ϵ) < c_hi
             c = (c_lo + c_hi) / 2

@@ -20,7 +20,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         g = _dynamic_splitter_combine(method)
 
         ptr = zeros(Ti, K + 1, n + 1)
-        cst = fill(Inf, K, n + 1)
+        cst = fill(typemax(cost_type(f)), K, n + 1)
 
         for j′ = 1:n + 1
             cst[1, j′] = f(1, j′, 1)
