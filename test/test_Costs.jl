@@ -53,6 +53,7 @@
         end
     end
 
+    #TODO add wrapper cost functions to test that oracle versions of partitioners, bounds, and cost evaluators agree with direct versions.
 
     #=
     for m = 1:100, h = 1:4
