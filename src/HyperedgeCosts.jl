@@ -92,7 +92,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::Ab
                 hst[i] = j
             end
         end
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
