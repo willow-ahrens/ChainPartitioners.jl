@@ -120,7 +120,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::A
                 hst[i] = s
             end
         end
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
@@ -259,7 +259,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::Ab
             end
             hst[_j] = j
         end
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
@@ -292,7 +292,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::A
             end
             hst[_j] = s
         end
-        cst = max(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, mdl(x_width, x_work, x_net, k))
     end
     return cst
 end
@@ -410,7 +410,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::Split
                 hst[i] = j
             end
         end
-        cst = max(cst, mdl(x_width, x_work, x_local, x_comm, k))
+        cst = g(cst, mdl(x_width, x_work, x_local, x_comm, k))
     end
     return cst
 end
@@ -444,7 +444,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::Domai
                 hst[i] = s
             end
         end
-        cst = max(cst, mdl(x_width, x_work, x_local, x_comm, k))
+        cst = g(cst, mdl(x_width, x_work, x_local, x_comm, k))
     end
     return cst
 end
