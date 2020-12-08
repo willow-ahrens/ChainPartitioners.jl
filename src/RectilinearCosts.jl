@@ -7,18 +7,29 @@ end
 
 @inline cost_type(::Type{AffineNetCostModel{Tv}}) where {Tv} = Tv
 
-struct RectilinearCostModel{G, F}
-    g::G
+struct TotalRectilinearCostModel{Tv, F}
+    α
+    β_width::Tv
     f::F
 end
 
-@inline cost_type(::Type{RectilinearCostModel{G, F}}) where {G, F} = cost_type(F)
+@inline cost_type(::Type{TotalRectilinearCostModel{Tv, F}}) where {Tv, F} = promote_type(Tv, cost_type(F))
 
+#Large K regime, assumes blocks are small, only evaluates blocks with nonzeros in them in stripe queries
 struct RectilinearCostOracle{Ti, Mdl<:RectilinearCostModel} <: AbstractOracleCost{Mdl}
     Π::DomainPartition{Ti}
     net::SparsePrefixMatrix{Ti}
     mdl::Mdl
 end
+
+#Small K regime, evaluates all blocks in stripe queries, linear time construction, log time query
+struct BottleneckRectilinearCostOracle{Ti, Mdl<:BottleneckRectilinearCostModel} <: AbstractOracleCost{Mdl}
+    Π::DomainPartition{Ti}
+    net::SparsePrefixMatrix{Ti}
+    mdl::Mdl
+end
+
+
 
 #=
 function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:AffineCommCostModel})
