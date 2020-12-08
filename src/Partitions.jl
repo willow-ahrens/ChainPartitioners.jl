@@ -5,16 +5,22 @@ struct SplitPartition{Ti} <: AbstractPartition{Ti}
     spl::Vector{Ti}
 end
 
+Base.length(Π::SplitPartition) = Π.K
+
 struct DomainPartition{Ti} <: AbstractPartition{Ti}
     K::Int
     prm::Vector{Ti} 
     spl::Vector{Ti}
 end
 
+Base.length(Π::DomainPartition) = Π.K
+
 struct MapPartition{Ti} <: AbstractPartition{Ti}
     K::Int
     asg::Vector{Ti}
 end
+
+Base.length(Π::MapPartition) = Π.K
 
 function Base.:(==)(Π::SplitPartition, Π′::SplitPartition)
     return Π.spl == Π′.spl

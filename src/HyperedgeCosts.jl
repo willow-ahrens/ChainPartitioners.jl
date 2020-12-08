@@ -13,6 +13,17 @@ end
 
 (mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
+struct AffineFillNetCostModel{Tv} <: AbstractNetCostModel
+    α::Tv
+    β_width::Tv
+    β_work::Tv
+    β_net::Tv
+end
+
+@inline cost_type(::Type{AffineFillNetCostModel{Tv}}) where {Tv} = Tv
+
+(mdl::AffineFillNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + (x_width * x_net) * mdl.β_work + x_net * mdl.β_net 
+
 struct NetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::SparseCountedRowNet{Ti}

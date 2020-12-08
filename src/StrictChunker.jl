@@ -2,7 +2,7 @@ struct StrictChunker
     w_max::Int
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker, args...) where {Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::StrictChunker, args...; kwargs...) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns

@@ -33,6 +33,7 @@ export WorkCostOracle
 
 export AbstractNetCostModel
 export AffineNetCostModel
+export AffineFillNetCostModel
 export NetCostOracle
 export AbstractSymCostModel
 export AffineSymCostModel
