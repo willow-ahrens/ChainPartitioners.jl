@@ -19,10 +19,10 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
 
         spl = Vector{Int}(undef, n + 1) # Column split locations
         if x_net isa Nothing
-            x_net = Ref(Vector{Int}(undef, n + 1)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
+            x_net = Ref(Vector{Int}(undef, n)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
         else
             @assert x_net isa Ref{Vector{Int}}
-            x_net[] = Vector{Int}(undef, n + 1) # x_net[j] is the corresponding number of distinct nonzero entries in the part
+            x_net[] = Vector{Int}(undef, n) # x_net[j] is the corresponding number of distinct nonzero entries in the part
         end
 
         d = A_pos[2] - A_pos[1] #The number of distinct values in the part
@@ -66,6 +66,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
             end
         end
         K += 1
+        x_net[][K] = d
         spl[K + 1] = n + 1
         resize!(spl, K + 1)
         resize!(x_net[], K)
