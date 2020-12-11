@@ -1,3 +1,10 @@
+struct ProductBlockCost{R, α_Row, α_Col, β_Row, β_Col}
+    α_row::α_Row
+    α_col::α_Col
+    β_row::β_Row
+    β_col::β_Col
+end
+
 struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     α::Tv
     β_width::Tv
@@ -7,7 +14,9 @@ end
 
 @inline cost_type(::Type{AffineNetCostModel{Tv}}) where {Tv} = Tv
 
-struct TotalRectilinearCostModel{Tv, F}
+
+struct RectilinearCostModel{Tv, F}
+
     α
     β_width::Tv
     f::F
