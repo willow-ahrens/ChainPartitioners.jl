@@ -1,167 +1,115 @@
-struct ProductBlockCost{R, α_Row, α_Col, β_Row, β_Col}
+struct BlockBasisCostModel{R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
     α_row::α_Row
     α_col::α_Col
     β_row::β_Row
     β_col::β_Col
 end
 
-struct AffineNetCostModel{Tv} <: AbstractNetCostModel
-    α::Tv
-    β_width::Tv
-    β_work::Tv
-    β_net::Tv
-end
+@inline cost_type(::Type{BlockBasisCostModel{Tv, F}}) where {Tv, F} = #WTF goes here? #promote_type(Tv, cost_type(F))
 
-@inline cost_type(::Type{AffineNetCostModel{Tv}}) where {Tv} = Tv
-
-
-struct RectilinearCostModel{Tv, F}
-
-    α
-    β_width::Tv
-    f::F
-end
-
-@inline cost_type(::Type{TotalRectilinearCostModel{Tv, F}}) where {Tv, F} = promote_type(Tv, cost_type(F))
-
-#Large K regime, assumes blocks are small, only evaluates blocks with nonzeros in them in stripe queries
-struct RectilinearCostOracle{Ti, Mdl<:RectilinearCostModel} <: AbstractOracleCost{Mdl}
-    Π::DomainPartition{Ti}
-    net::SparsePrefixMatrix{Ti}
+struct BlockBasisCostOracle{Tv, Mdl<:BlockBasisCostModel} <: AbstractOracleCost{Mdl}
+    cst::Matrix{Tv}
     mdl::Mdl
 end
 
-#Small K regime, evaluates all blocks in stripe queries, linear time construction, log time query
-struct BottleneckRectilinearCostOracle{Ti, Mdl<:BottleneckRectilinearCostModel} <: AbstractOracleCost{Mdl}
-    Π::DomainPartition{Ti}
-    net::SparsePrefixMatrix{Ti}
-    mdl::Mdl
+@inline cost_type(::Type{BlockBasisCostOracle{Tv}}) where {Tv} = Tv
+
+@propagate_inbounds block_basis(f::F, w) where {F} = f(w)
+@propagate_inbounds block_basis(f::AbstractNumber, w) = f
+@propagate_inbounds block_basis(f::Tuple, w) = f[w]
+@propagate_inbounds block_basis(f::AbstractArray, w) = f[w]
+
+function oracle_stripe(mdl::BlockBasisCostModel{R}, A::SparseMatrixCSC{Ti, Tv}, Π; net=nothing, adj_A=nothing, kwargs...) where {Ti, Tv}
+    @inbounds begin
+        m, n = size(A)
+        A_pos = A.colptr
+        A_idx = A.rowval
+
+        Π_asg = convert(MapPartition, Π).asg
+        Π_spl = convert(DomainPartition, Π).spl
+        K = length(Π)
+        hst = fill(n + 1, K)
+        Tc = cost_type(mdl)
+        Δ = zeros(Tc, R, n + 1)
+        d = zeros(Tc, R)
+        cst_β = zeros(Tc, w_max, n)
+        for j = n:-1:1
+            for q = A_pos[j] : A_pos[j + 1] - 1
+                i = A_idx[q]
+                k = Π_asg[i]
+                u = Π_spl[k + 1] - Π_spl[k]
+                if hst[k] > j
+                    for r = 1:R
+                        Δ[r, hst[k]] -= block_basis(mdl.β_row[r], u)
+                    end
+                    for r = 1:R
+                        Δ[r, j] += block_basis(mdl.β_row[r], u)
+                    end
+                end
+                hst[k] = j
+            end
+            zero!(d)
+            for j′ = j + 1:min(j + w_max + 1, n + 1)
+                w = j′ - j
+                for r = 1:R
+                    d[r] += Δ[r, j] 
+                end
+                c = zero(Tv)
+                for r = 1:R
+                    c += d[r] * block_basis(mdl.β_col[r], w)
+                end
+                cst[j, w] = c + block_basis(mdl.α_col, w)
+            end
+        end
+
+        return BlockBasisOracle(cst_β, mdl)
+    end
 end
 
+function total_value(A::SparseMatrixCSC, Π, Φ::DomainPartition, mdl::BlockBasisCostModel) where {G}
+    @inbounds begin
+        m, n = size(A)
+        A_pos = A.colptr
+        A_idx = A.rowval
 
+        Π_asg = convert(MapPartition, Π).asg
+        Π_spl = convert(DomainPartition, Π).spl
+        K = length(Π)
+        L = length(Φ)
+        hst = fill(n + 1, K)
+        Tc = cost_type(mdl)
+        Δ = zeros(Tc, R, n + 1)
+        d = zeros(Tc, R)
+        cst_β = zeros(Tc, w_max, n)
+        for l = 1:L
+            w = Φ.spl[l + 1] - Φ.spl[l]
+            for _j = Φ.spl[l] : Φ.spl[l + 1] - 1
+                j = Φ.prm[_j]
+                for q = A_pos[j] : A_pos[j + 1] - 1
+                    i = A_idx[q]
+                    k = Π_asg[i]
+                    u = Π_spl[k + 1] - Π_spl[k]
+                    if hst[k] > l
+                        for r = 1:R
+                            c += block_basis(mdl.β_row[r], u) * block_basis(mdl.β_col[r], w)
+                        end
+                    end
+                    hst[k] = l
+                end
+            end
+        end
+
+        return c
+    end
+end
 
 #=
-function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:AffineCommCostModel})
-    m, n = size(A)
-    N = nnz(A)
-    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_comm * ocl.net[1, end]
-    c_lo = mdl.α + fld(mdl.β_width * n + mdl.β_work * N, K)
-    return (c_lo, c_hi)
-end
-
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineCommCostModel)
-    @inbounds begin
-        m, n = size(A)
-        N = nnz(A)
-        hst = falses(m)
-        x_comm = 0
-        for j = 1:n
-            for q = A.colptr[j]:A.colptr[j+1]-1
-                i = A.rowval[q]
-                if !hst[i]
-                    x_comm += 1
-                end
-                hst[i] = true
-            end
-        end
-        c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_comm * x_comm
-        c_lo = mdl.α + fld(mdl.β_width * n + mdl.β_work * N, K)
-        return (c_lo, c_hi)
+total_partition_value(Π, mdl::BlockBasisCostModel)
+    c_α = zero(Tv)
+    for k = 1:K
+        u = Π_spl[k + 1] - Π_spl[k]
+        c_α += block_basis(mdl.α_row, u)
     end
+    return c_α
 end
 =#
-
-function oracle_stripe(mdl::AbstractCommCostModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
-    @inbounds begin
-        m, n = size(A)
-        pos = A.colptr
-        if net === nothing
-            net = rownetcount(A; kwargs...)
-        end
-        lcr = localrownetcount(A, convert(MapPartition, Π); kwargs...)
-        return CommCostOracle(pos, net, lcr, mdl)
-    end
-end
-
-@inline function (cst::CommCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
-    @inbounds begin
-        w = cst.pos[j′] - cst.pos[j]
-        d = cst.net[j, j′]
-        l = cst.lcr[j, j′, k]
-        return cst.mdl(j′ - j, w, l, d - l, k)
-    end
-end
-
-compute_objective(g, A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
-    compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
-
-function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G}
-    @assert Φ.K == Π.K
-    cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    hst = zeros(m)
-    for k = 1:Π.K
-        j = Φ.spl[k]
-        j′ = Φ.spl[k + 1]
-        x_width = j′ - j
-        x_work = 0
-        x_local = 0
-        x_comm = 0
-        for _j = j:(j′ - 1)
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += q′ - q
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < j
-                    if Π.asg[i] == k
-                        x_local += 1
-                    else
-                        x_comm += 1
-                    end
-                end
-                hst[i] = j
-            end
-        end
-        cst = g(cst, mdl(x_width, x_work, x_local, x_comm, k))
-    end
-    return cst
-end
-
-function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel) where {G}
-    @assert Φ.K == Π.K
-    cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    hst = zeros(m)
-    for k = 1:Π.K
-        s = Φ.spl[k]
-        s′ = Φ.spl[k + 1]
-        x_width = s′ - s
-        x_work = 0
-        x_local = 0
-        x_comm = 0
-        for _s = s:(s′ - 1)
-            _j = Φ.prm[_s]
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += q′ - q
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < s
-                    if Π.asg[i] == k
-                        x_local += 1
-                    else
-                        x_comm += 1
-                    end
-                end
-                hst[i] = s
-            end
-        end
-        cst = g(cst, mdl(x_width, x_work, x_local, x_comm, k))
-    end
-    return cst
-end
-
-function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
-    return compute_objective(g, A, Π, convert(DomainPartition, Φ), mdl)
-end
