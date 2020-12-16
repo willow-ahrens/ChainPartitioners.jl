@@ -17,7 +17,7 @@ function bound_stripe(A, K, Π, mdl)
 end
 
 @inline cost_type(mdl) = cost_type(typeof(mdl))
-@inline cost_type(::Type) = Any
+@inline cost_type(::Type) = error()
 @inline cost_type(::Type{<:AbstractOracleCost{Mdl}}) where {Mdl} = cost_type(Mdl)
 @inline objective_identity(::typeof(+), T) = zero(T)
 @inline objective_identity(::typeof(max), T) = typemin(T)

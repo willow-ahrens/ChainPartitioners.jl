@@ -75,6 +75,8 @@ export DynamicTotalChunker
 export OverlapChunker
 export StrictChunker
 
+export BlockComponentCostModel
+
 export MetisPartitioner
 export metis_scheme_recursive_bisection
 export metis_scheme_direct_k_way
@@ -128,6 +130,7 @@ include("Costs.jl")
 include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
+include("RectilinearCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
 include("DynamicChunker.jl")
