@@ -20,7 +20,7 @@ end
 
 @inline (ocl::BlockComponentCostOracle)(j, j′, k) = ocl(j, j′)
 @inline function (ocl::BlockComponentCostOracle{Tv, Mdl})(j, j′) where {Tv, Mdl}
-    @inbounds begin
+    begin
         w = j′ - j
         return ocl.cst[w, j]
     end
@@ -65,7 +65,7 @@ function oracle_stripe(mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{T
             for j′ = j + 1:min(j + w_max, n + 1)
                 w = j′ - j
                 for r = 1:R
-                    d[r] += Δ[r, j] 
+                    d[r] += Δ[r, j′ - 1] 
                 end
                 c = zero(Tv)
                 for r = 1:R
@@ -79,21 +79,19 @@ function oracle_stripe(mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{T
     end
 end
 
-function total_value(A::SparseMatrixCSC, Π, Φ::DomainPartition, mdl::BlockComponentCostModel) where {G}
+function total_value(A::SparseMatrixCSC, Π, Φ, mdl::BlockComponentCostModel{Tc, R}) where {Tc, R}
     @inbounds begin
         m, n = size(A)
         A_pos = A.colptr
         A_idx = A.rowval
 
+        Φ = convert(DomainPartition, Φ)
         Π_asg = convert(MapPartition, Π).asg
         Π_spl = convert(DomainPartition, Π).spl
         K = length(Π)
         L = length(Φ)
-        hst = fill(n + 1, K)
-        Tc = cost_type(mdl)
-        Δ = zeros(Tc, R, n + 1)
-        d = zeros(Tc, R)
-        cst_β = zeros(Tc, w_max, n)
+        hst = zeros(Int, K)
+        c = zero(Tc)
         for l = 1:L
             w = Φ.spl[l + 1] - Φ.spl[l]
             c += block_component(mdl.α_col, w)
@@ -103,7 +101,7 @@ function total_value(A::SparseMatrixCSC, Π, Φ::DomainPartition, mdl::BlockComp
                     i = A_idx[q]
                     k = Π_asg[i]
                     u = Π_spl[k + 1] - Π_spl[k]
-                    if hst[k] > l
+                    if hst[k] < l
                         for r = 1:R
                             c += block_component(mdl.β_row[r], u) * block_component(mdl.β_col[r], w)
                         end

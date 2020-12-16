@@ -70,6 +70,8 @@ export GreedyBottleneckPartitioner
 
 export pack_stripe
 export pack_plaid
+export DisjointPacker
+export AlternatingPacker
 export EquiChunker
 export DynamicTotalChunker
 export OverlapChunker
@@ -133,6 +135,7 @@ include("EnvelopeCosts.jl")
 include("RectilinearCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
+include("AlternatingPacker.jl")
 include("DynamicChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")

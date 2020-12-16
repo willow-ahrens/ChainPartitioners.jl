@@ -3,7 +3,7 @@ struct OverlapChunker
     w_max::Int
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...; x_net = nothing) where {Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...; x_net = nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns

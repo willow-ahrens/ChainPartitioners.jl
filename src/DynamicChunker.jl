@@ -3,7 +3,7 @@ struct DynamicTotalChunker{F}
     w_max::Int
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...) where {F, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -17,9 +17,9 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
         for j = n:-1:1
             best_c = cst[j + 1] + f(j, j + 1)
             best_j′ = j + 1
-            for j′ = j + 2 : min(j + w_max, n)
+            for j′ = j + 2 : min(j + w_max, n + 1)
                 c = cst[j′] + f(j, j′) 
-                if c < cst[j]
+                if c < best_c
                     best_c = c
                     best_j′ = j′
                 end
@@ -42,7 +42,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
     end
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; x_net = nothing) where {F<:AbstractNetCostModel, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; x_net = nothing, kwargs...) where {F<:AbstractNetCostModel, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
