@@ -72,6 +72,7 @@ export pack_stripe
 export pack_plaid
 export DisjointPacker
 export AlternatingPacker
+export SymmetricPacker
 export EquiChunker
 export DynamicTotalChunker
 export OverlapChunker
