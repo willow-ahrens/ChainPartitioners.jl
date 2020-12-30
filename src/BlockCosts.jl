@@ -1,3 +1,17 @@
+struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
+    w_max::Int
+    α_col::α_Col
+    β_col::β_Col
+end
+
+function ColumnBlockComponentCostModel{Tv}(w_max, α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
+    return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(w_max, α_col, β_col)
+end
+
+@inline cost_type(::Type{<:ColumnBlockComponentCostModel{Tv}}) where {Tv} = Tv
+
+(mdl::ColumnBlockComponentCostModel{Tv, α_Col, β_Col})(x_width, x_work, x_net) where {Tv, α_Col, β_Col} = block_component(mdl.α_col, x_width) + x_net * block_component(mdl.β_col, x_width)
+
 struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
     u_max::Int
     w_max::Int

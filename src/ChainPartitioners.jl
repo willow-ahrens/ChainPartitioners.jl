@@ -33,7 +33,6 @@ export WorkCostOracle
 
 export AbstractNetCostModel
 export AffineNetCostModel
-export AffineFillNetCostModel
 export NetCostOracle
 export AbstractSymCostModel
 export AffineSymCostModel
@@ -79,6 +78,7 @@ export OverlapChunker
 export StrictChunker
 
 export BlockComponentCostModel
+export ColumnBlockComponentCostModel
 
 export MetisPartitioner
 export metis_scheme_recursive_bisection
@@ -133,7 +133,7 @@ include("Costs.jl")
 include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
-include("RectilinearCosts.jl")
+include("BlockCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
 include("AlternatingPacker.jl")
