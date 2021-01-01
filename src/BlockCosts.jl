@@ -1,11 +1,11 @@
 struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
-    w_max::Int
+    W::Int
     α_col::α_Col
     β_col::β_Col
 end
 
-function ColumnBlockComponentCostModel{Tv}(w_max, α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
-    return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(w_max, α_col, β_col)
+function ColumnBlockComponentCostModel{Tv}(W, α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
+    return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(W, α_col, β_col)
 end
 
 @inline cost_type(::Type{<:ColumnBlockComponentCostModel{Tv}}) where {Tv} = Tv
@@ -13,16 +13,20 @@ end
 (mdl::ColumnBlockComponentCostModel{Tv, α_Col, β_Col})(x_width, x_work, x_net) where {Tv, α_Col, β_Col} = block_component(mdl.α_col, x_width) + x_net * block_component(mdl.β_col, x_width)
 
 struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
-    u_max::Int
-    w_max::Int
+    U::Int
+    W::Int
     α_row::α_Row
     α_col::α_Col
     β_row::β_Row
     β_col::β_Col
 end
 
-function BlockComponentCostModel{Tv}((u_max, w_max), α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
-    return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(u_max, w_max, α_row, α_col, β_row, β_col)
+function Base.permutedims(cst::BlockComponentCostModel{Tv}) where {Tv}
+    return BlockComponentCostModel{Tv}(cst.W, cst.U, cst.α_col, cst.α_row, cst.β_col, cst.β_row)
+end
+
+function BlockComponentCostModel{Tv}(U, W, α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
+    return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(U, W, α_row, α_col, β_row, β_col)
 end
 
 @inline cost_type(::Type{<:BlockComponentCostModel{Tv}}) where {Tv} = Tv
@@ -51,15 +55,15 @@ function oracle_stripe(mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{T
         A_pos = A.colptr
         A_idx = A.rowval
 
-        u_max = mdl.u_max
-        w_max = mdl.w_max
+        U = mdl.U
+        W = mdl.W
         Π_asg = convert(MapPartition, Π).asg
         Π_spl = convert(DomainPartition, Π).spl
         K = length(Π)
         hst = fill(n + 1, K)
         Δ = zeros(Tc, R, n + 1)
         d = zeros(Tc, R)
-        cst = zeros(Tc, w_max, n)
+        cst = zeros(Tc, W, n)
         for j = n:-1:1
             for q = A_pos[j] : A_pos[j + 1] - 1
                 i = A_idx[q]
@@ -76,7 +80,7 @@ function oracle_stripe(mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{T
                 hst[k] = j
             end
             zero!(d)
-            for j′ = j + 1:min(j + w_max, n + 1)
+            for j′ = j + 1:min(j + W, n + 1)
                 w = j′ - j
                 for r = 1:R
                     d[r] += Δ[r, j′ - 1] 
