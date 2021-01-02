@@ -55,3 +55,24 @@ function partition_plaid(A::SparseMatrixCSC, K, method::AlternatingNetPartitione
     end
     return (Π, Φ)
 end
+
+struct SymmetricPartitioner{Mtds}
+    mtds::Mtds
+end
+
+SymmetricPartitioner(mtds...) = new{typeof(mtds)}(mtds)
+
+function partition_plaid(A::SparseMatrixCSC, K, method::SymmetricPartitioner; adj_A = nothing, kwargs...)
+    if adj_A === nothing
+        adj_A = adjointpattern(A)
+    end
+    Π = partition_stripe(A, K, method.mtds[1]; adj_A=adj_A, kwargs...)
+    for (i, mtd) in enumerate(method.mtds[2:end])
+        if isodd(i)
+            Π = partition_stripe(A, K, mtd, Π; adj_A=adj_A, kwargs...)
+        else
+            Π = partition_stripe(adj_A, K, mtd, Π; adj_A=A, kwargs...)
+        end
+    end
+    return (Π, Π)
+end

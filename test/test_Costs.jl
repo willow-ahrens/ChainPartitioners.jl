@@ -4,7 +4,6 @@
     for m = 1:100, K = 1:4
         n = m
         A = dropzeros!(sprand(Int, m, n, 0.125))
-        At = SparseMatrixCSC(A')
         Π = MapPartition(K, rand(1:K, m))
         Φ = SplitPartition(K, [1, sort(rand(1:(n + 1), K - 1))..., n + 1])
 
@@ -52,6 +51,25 @@
             @test bottleneck_value(adj_A, Φ, Π, local_ocl) == bottleneck_value(A, Π, Φ, comm_ocl)
         end
     end
+
+    for m = 1:100, u = 1:4, w = 1:4
+        n = m
+        A = dropzeros!(sprand(Int, m, n, 0.125))
+        adj_A = permutedims(A)
+        Π = pack_stripe(A, EquiChunker(u))
+        Φ = pack_stripe(A, EquiChunker(w))
+        models = (
+            BlockComponentCostModel{Int64}(4, 4, 0, 0, (2, identity), (2, identity)),
+            BlockComponentCostModel{Int64}(4, 4, identity, identity, (2, identity), (2, identity)),
+            )
+        for mdl in models
+            ocl = oracle_stripe(mdl, A, Π)
+            adj_ocl = oracle_stripe(mdl, adj_A, Φ)
+            @test total_value(A, Π, Φ, mdl) == total_value(A, Π, Φ, ocl)
+            @test total_value(adj_A, Φ, Π, mdl) == total_value(adj_A, Φ, Π, adj_ocl)
+        end
+    end
+
 
     #TODO add wrapper cost functions to test that oracle versions of partitioners, bounds, and cost evaluators agree with direct versions.
 

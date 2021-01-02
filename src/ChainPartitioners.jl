@@ -33,7 +33,6 @@ export WorkCostOracle
 
 export AbstractNetCostModel
 export AffineNetCostModel
-export AffineFillNetCostModel
 export NetCostOracle
 export AbstractSymCostModel
 export AffineSymCostModel
@@ -70,10 +69,16 @@ export GreedyBottleneckPartitioner
 
 export pack_stripe
 export pack_plaid
+export DisjointPacker
+export AlternatingPacker
+export SymmetricPacker
 export EquiChunker
 export DynamicTotalChunker
 export OverlapChunker
 export StrictChunker
+
+export BlockComponentCostModel
+export ColumnBlockComponentCostModel
 
 export MetisPartitioner
 export metis_scheme_recursive_bisection
@@ -128,15 +133,16 @@ include("Costs.jl")
 include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
+include("BlockCosts.jl")
 include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
+include("AlternatingPacker.jl")
 include("DynamicChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")
-include("SymmetricPartitioner.jl")
 include("AlternatingPartitioner.jl")
 include("MagneticPartitioner.jl")
 include("Permutations.jl")
