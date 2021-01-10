@@ -264,7 +264,7 @@ function areacount(A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     end
 end
 
-SparseCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = SparseCountedArea(m, n, N, pos, idx; kwargs...)
+SparseCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = SparseCountedArea{Ti}(m, n, N, pos, idx; kwargs...)
 
 function SparseCountedArea{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing) where {Ti}
     @inbounds begin
