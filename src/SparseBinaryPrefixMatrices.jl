@@ -32,8 +32,7 @@ end
 SparseBinaryCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = SparseBinaryCountedArea{Ti, Int}(m, n, N, pos, idx; kwargs...)
 
 function SparseBinaryCountedArea{Ti, Tb}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}) where {Ti, Tb}
-    #@inbounds begin
-    begin
+    @inbounds begin
         #b = branching factor of tree = 1
 
         #H = height of tree
@@ -48,13 +47,16 @@ function SparseBinaryCountedArea{Ti, Tb}(m, n, N, pos::Vector{Ti}, idx::Vector{T
         idx′ = undefs(Ti, N)
 
         for h = H : -1 : 1 #h = level in tree
-            cnt_2 = 0
+            _cnt = 0
             for i′ = 1 : 1 << h : m + 1 #i′ = "quotient" of sorts
                 bkt_1 = 0
                 bkt_2 = 0
                 for q = qos[i′] : qos[min(i′ + (1 << h), end)] - 1 #q = position in current level
                     i = idx[q]
                     d = i >> (h - 1) & 1 #d = a "remainder" of sorts
+                    Q = ((q - 1) >> log2nbits(Tb)) + 1
+                    byt[Q, h] |= d << ((q - 1) & (nbits(Tb) - 1))
+                    cnt[Q + 1, h] = _cnt += d
                     bkt_2 += 1 - d
                 end
                 bkt_1 = qos[i′]
@@ -64,17 +66,11 @@ function SparseBinaryCountedArea{Ti, Tb}(m, n, N, pos::Vector{Ti}, idx::Vector{T
                     d = i >> (h - 1) & 1
                     q′ = ifelse(d == 0, bkt_1, bkt_2)
                     idx′[q′] = i
-                    Q = ((q - 1) >> log2nbits(Tb)) + 1
-                    byt[Q, h] |= d << ((q - 1) & (nbits(Tb) - 1))
-                    cnt[Q + 1, h] = cnt_2 += d
                     bkt_1 += 1 - d
                     bkt_2 += d
                 end
                 qos[min(i′ + 1 << (h - 1), end)] = bkt_1
-                qos[min(i′ + 2 << (h - 1), end)] = bkt_2 #redundant I think?
             end
-
-            #@info h idx cnt[:, h] qos
 
             idx, idx′ = idx′, idx
         end
@@ -85,8 +81,7 @@ end
 #we have removed b′ because increasing it doesn't significantly reduce the storage cost or preprocessing cost of the structure.
 
 function Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb}
-    #@inbounds begin
-    begin
+    @inbounds begin
         H = arg.H
         pos = arg.pos
         qos = arg.qos
