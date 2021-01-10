@@ -9,9 +9,11 @@ using Requires
 export SparseSummedArea
 export SparseSummedRooks
 export SparseCountedArea
+export SparseBinaryCountedArea
 export SparseCountedRooks
 export areasum
 export areacount
+export areacountbinary
 
 export EnvelopeMatrix
 export rowenvelope
@@ -126,6 +128,7 @@ export pattern
 
 include("util.jl")
 include("SparsePrefixMatrices.jl")
+include("SparseBinaryPrefixMatrices.jl")
 include("EnvelopeMatrices.jl")
 include("Partitions.jl")
 include("SparseColorArrays.jl")
