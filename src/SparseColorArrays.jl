@@ -1,20 +1,20 @@
-struct SparseCountedRowNet{Ti} <: AbstractMatrix{Ti}
+struct SparseCountedRowNet{Ti, Lnk} <: AbstractMatrix{Ti}
     n::Int
     pos::Vector{Ti}
-    lnk::SparseCountedArea{Ti}
+    lnk::Lnk
 end
 
 Base.size(arg::SparseCountedRowNet) = (arg.n + 1, arg.n + 1)
 
-struct SparseCountedLocalRowNet{Ti} <: AbstractArray{Ti, 3}
+struct SparseCountedLocalRowNet{Ti, Lnk} <: AbstractArray{Ti, 3}
     n::Int
     m::Int
     N::Int
     K::Int
-    prm::Vector{Int}
-    Πos::Vector{Int}
-    ΔΠos::Vector{Int}
-    lnk::SparseCountedRooks{Ti}
+    prm::Vector{Ti}
+    Πos::Vector{Ti}
+    ΔΠos::Vector{Ti}
+    lnk::Lnk
 end
 
 Base.size(arg::SparseCountedLocalRowNet) = (arg.n + 1, arg.n + 1, arg.K)
@@ -47,7 +47,7 @@ function SparseCountedRowNet{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwar
             end
         end
 
-        return SparseCountedRowNet{Ti}(n, pos, SparseCountedArea{Ti}(n + 1, n + 1, N, pos, idx′; kwargs...))
+        return SparseCountedRowNet(n, pos, SparseCountedArea{Ti}(n + 1, n + 1, N, pos, idx′; kwargs...))
     end
 end
 
@@ -119,7 +119,7 @@ function SparseCountedLocalRowNet{Ti}(m, n, N, K, pos::Vector{Ti}, idx::Vector{T
             Πos[k + 1] = p + 1
         end
 
-        return SparseCountedLocalRowNet{Ti}(n, m, N, K, prm, Πos, ΔΠos, SparseCountedRooks{Ti}(N + m, idx′; kwargs...))
+        return SparseCountedLocalRowNet(n, m, N, K, prm, Πos, ΔΠos, SparseCountedRooks{Ti}(N + m, idx′; kwargs...))
     end
 end
 

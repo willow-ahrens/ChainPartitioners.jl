@@ -13,9 +13,9 @@ end
 
 (mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-struct NetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
+struct NetCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
-    net::SparseCountedRowNet{Ti}
+    net::Net
     mdl::Mdl
 end
 
@@ -147,9 +147,9 @@ end
 
 (mdl::AffineSymCostModel)(x_width, x_work, x_net, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-struct SymCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
+struct SymCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     wrk::Vector{Ti}
-    net::SparseCountedRowNet{Ti}
+    net::Net
     mdl::Mdl
 end
 
@@ -218,7 +218,7 @@ function oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; ne
         N′ = q′ - 1
         resize!(idx′, N′)
 
-        net = SparseCountedRowNet{Ti}(n, pos′, SparseCountedArea{Ti}(n + 1, n + 1, N′, pos′, idx′; kwargs...))
+        net = SparseCountedRowNet(n, pos′, SparseCountedArea{Ti}(n + 1, n + 1, N′, pos′, idx′; kwargs...))
 
         return SymCostOracle(wrk, net, mdl)
     end
@@ -319,10 +319,10 @@ end
 
 (mdl::AffineCommCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 
-struct CommCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
+struct CommCostOracle{Ti, Net, Lcr, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
-    net::SparseCountedRowNet{Ti}
-    lcr::SparseCountedLocalRowNet{Ti}
+    net::Net
+    lcr::Lcr
     mdl::Mdl
 end
 
@@ -478,10 +478,10 @@ function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineLocalCostModel)
     return (c_lo, c_hi)
 end
 
-struct LocalCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
+struct LocalCostOracle{Ti, Lcc, Mdl} <: AbstractOracleCost{Mdl}
     Π::SplitPartition{Ti}
     pos::Vector{Ti}
-    lcc::SparseCountedLocalColNet{Ti}
+    lcc::Lcc
     mdl::Mdl
 end
 
