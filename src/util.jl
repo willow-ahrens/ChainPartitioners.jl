@@ -15,7 +15,7 @@ end
 end
 
 @pure nbits(::Type{T}) where {T} = sizeof(T) * 8
-@pure log2nbits(::Type{T}) where {T} = flrlog2(nbits(T))
+@pure log2nbits(::Type{T}) where {T} = fllog2(nbits(T))
 
 @inline function flpow1m(x::T) where {T <: Integer}
     return (1 << x) - 1

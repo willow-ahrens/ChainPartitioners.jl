@@ -7,11 +7,17 @@ using Random
 using Requires
 
 export SparseSummedArea
-export SparseSummedRooks
 export SparseCountedArea
+export SparseBinaryCountedArea
+export SparseSummedRooks
 export SparseCountedRooks
+export SparseBinaryCountedRooks
 export areasum
+export areasum!
+export rooksum!
 export areacount
+export areacount!
+export rookcount!
 
 export EnvelopeMatrix
 export rowenvelope
