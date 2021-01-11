@@ -15,56 +15,21 @@ end
 
 Base.size(arg::SparseSummedArea) = (arg.m + 1, arg.n + 1)
 
-struct SparseCountedArea{Ti} <: AbstractMatrix{Ti}
-    m::Int
-    n::Int
-    N::Int
-    b::Int
-    b′::Int
-    H::Int
-    pos::Vector{Ti}
-    qos::Vector{Ti}
-    byt::Vector{Ti}
-    cnt::Array{Ti, 3}
-end
-
-Base.size(arg::SparseCountedArea) = (arg.m + 1, arg.n + 1)
-
-struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}
-    N::Int
-    b::Int
-    b′::Int
-    H::Int
-    byt::Vector{Ti}
-    cnt::Array{Ti, 3}
-    wgt::Array{Tv, 2}
-    scn::Array{Tv, 3}
-end
-
-Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
-
-struct SparseCountedRooks{Ti} <: AbstractMatrix{Ti}
-    N::Int
-    b::Int
-    b′::Int
-    H::Int
-    byt::Vector{Ti}
-    cnt::Array{Ti, 3}
-end
-
-Base.size(arg::SparseCountedRooks) = (arg.N + 1, arg.N + 1)
-
 function areasum(A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     (m, n) = size(A)
     N = nnz(A)
     pos = copy(A.colptr)
     idx = copy(A.rowval)
     val = A.nzval
-    return SparseSummedArea{Tv, Ti}(m, n, N, pos, idx, val; kwargs...)
+    return areasum!(m, n, N, pos, idx, val; kwargs...)
 end
 
-SparseSummedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} = SparseSummedArea{Tv, Ti}(m, n, N, pos, idx, val; kwargs...)
+function areasum!(m, n, N, pos, idx, val; kwargs...)
+    return SparseSummedArea(m, n, N, pos, idx, val; kwargs...)
+end
 
+SparseSummedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
+    SparseSummedArea{Tv, Ti}(m, n, N, pos, idx, val; kwargs...)
 function SparseSummedArea{Tv, Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Tv, Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
@@ -256,17 +221,55 @@ function Base.getindex(arg::SparseSummedArea{Tv, Ti}, i::Integer, j::Integer) wh
     end
 end
 
+
+
+struct SparseCountedArea{Ti} <: AbstractMatrix{Ti}
+    m::Int
+    n::Int
+    N::Int
+    b::Int
+    b′::Int
+    H::Int
+    pos::Vector{Ti}
+    qos::Vector{Ti}
+    byt::Vector{Ti}
+    cnt::Array{Ti, 3}
+end
+
+Base.size(arg::SparseCountedArea) = (arg.m + 1, arg.n + 1)
+
+struct SparseBinaryCountedArea{Ti, Tb} <: AbstractMatrix{Ti}
+    m::Int
+    n::Int
+    N::Int
+    H::Int
+    pos::Vector{Ti}
+    qos::Vector{Ti}
+    byt::Array{Tb, 2}
+    cnt::Array{Ti, 2}
+end
+
+Base.size(arg::SparseBinaryCountedArea) = (arg.m + 1, arg.n + 1)
+
 function areacount(A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
-        return SparseCountedArea{Ti}(m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
+        return areacount!(m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
     end
 end
 
-SparseCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = SparseCountedArea(m, n, N, pos, idx; kwargs...)
+function areacount!(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; Tb = Int, b = nothing, kwargs...) where {Ti}
+    if b == 1
+        SparseBinaryCountedArea{Ti, Tb}(m, n, N, pos, idx; kwargs...)
+    else
+        SparseCountedArea{Ti}(m, n, N, pos, idx; b = b, kwargs...)
+    end
+end
 
-function SparseCountedArea{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing) where {Ti}
+SparseCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SparseCountedArea{Ti}(m, n, N, pos, idx; kwargs...)
+function SparseCountedArea{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
             if H === nothing
@@ -409,9 +412,115 @@ function Base.getindex(arg::SparseCountedArea{Ti}, i::Integer, j::Integer) where
     end
 end
 
-SparseSummedRooks(N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} = SparseSummedRooks{Ti, Tv}(N, idx, val; kwargs...)
+SparseBinaryCountedArea(m, n, N, pos, idx; kwargs...) =
+    SparseBinaryCountedArea{UInt}(m, n, N, pos, idx; kwargs...)
+SparseBinaryCountedArea{Tb}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    SparseBinaryCountedArea{Tb, Ti}(m, n, N, pos, idx; kwargs...)
+function SparseBinaryCountedArea{Tb, Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+    @inbounds begin
+        #b = branching factor of tree = 1
 
-function SparseSummedRooks{Ti, Tv}(N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Ti, Tv}
+        #H = height of tree
+        H = cllog2(m + 1)
+
+        qos = zeros(Ti, m + 2)
+        qos[1] = 1
+        qos[end] = N + 1
+        cnt = zeros(Ti, 1 + cld(N, nbits(Tb)), H) #cnt = cached cumulative counts
+        
+        byt = zeros(Tb, 1 + cld(N, nbits(Tb)), H)
+        idx′ = undefs(Ti, N)
+
+        for h = H : -1 : 1 #h = level in tree
+            _cnt = 0
+            for i′ = 1 : 1 << h : m + 1 #i′ = "quotient" of sorts
+                bkt_1 = 0
+                bkt_2 = 0
+                for q = qos[i′] : qos[min(i′ + (1 << h), end)] - 1 #q = position in current level
+                    i = idx[q]
+                    d = i >> (h - 1) & 1 #d = a "remainder" of sorts
+                    Q = ((q - 1) >> log2nbits(Tb)) + 1
+                    byt[Q, h] |= d << ((q - 1) & (nbits(Tb) - 1))
+                    cnt[Q + 1, h] = _cnt += d
+                    bkt_2 += 1 - d
+                end
+                bkt_1 = qos[i′]
+                bkt_2 += bkt_1
+                for q = qos[i′] : qos[min(i′ + (1 << h), end)] - 1
+                    i = idx[q]
+                    d = i >> (h - 1) & 1
+                    q′ = ifelse(d == 0, bkt_1, bkt_2)
+                    idx′[q′] = i
+                    bkt_1 += 1 - d
+                    bkt_2 += d
+                end
+                qos[min(i′ + 1 << (h - 1), end)] = bkt_1
+            end
+
+            idx, idx′ = idx′, idx
+        end
+        return SparseBinaryCountedArea{Ti, Tb}(m, n, N, H, pos, qos, byt, cnt)
+    end
+end
+
+#we have removed b′ because increasing it doesn't significantly reduce the storage cost or preprocessing cost of the structure.
+
+function Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb}
+    @inbounds begin
+        H = arg.H
+        pos = arg.pos
+        qos = arg.qos
+        byt = arg.byt
+        cnt = arg.cnt
+
+        Δq = pos[j] - 1
+        i = Ti(i - 1)::Ti
+        s = Ti(0)
+        for h = H : -1 : 1
+            i′ = i & ~(1 << h - 1) + 1
+            q₁ = qos[i′] - 1
+            q₂ = q₁ + Δq
+            d = i >> (h - 1) & Ti(1)
+
+            Q₁ = (q₁ >> log2nbits(Tb)) + 1
+            Q₂ = (q₂ >> log2nbits(Tb)) + 1
+            bkt_2 = cnt[Q₂, h] - cnt[Q₁, h]
+            if h == H
+                @assert bkt_2 == sum(count_ones.(byt[Q₁:(Q₂ - 1), h])) "$bkt_2 == $(sum(count_ones.(byt[Q₁:(Q₂ - 1), h])))"
+            end
+            bkt_2 += count_ones(byt[Q₂, h] & ((one(Tb) << (q₂ & (nbits(Tb) - 1))) - 1))
+            bkt_2 -= count_ones(byt[Q₁, h] & ((one(Tb) << (q₁ & (nbits(Tb) - 1))) - 1))
+            bkt_1 = Δq - bkt_2
+            s += ifelse(d == 0, 0, bkt_1)
+            Δq = ifelse(d == 0, bkt_1, bkt_2)
+        end
+
+        return s + Δq
+    end
+end
+
+
+
+struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}
+    N::Int
+    b::Int
+    b′::Int
+    H::Int
+    byt::Vector{Ti}
+    cnt::Array{Ti, 3}
+    wgt::Array{Tv, 2}
+    scn::Array{Tv, 3}
+end
+
+Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
+
+function rooksum!(N, idx, val; kwargs...)
+    return SparseSummedRooks(N, idx, val; kwargs...)
+end
+
+SparseSummedRooks(N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} =
+    SparseSummedRooks{Ti, Tv}(N, idx, val; kwargs...)
+function SparseSummedRooks{Ti, Tv}(N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti, Tv}
     @inbounds begin
         @debug begin
             @assert length(idx) == N
@@ -578,9 +687,36 @@ function Base.getindex(arg::SparseSummedRooks{Ti, Tv}, i::Integer, j::Integer) w
     end
 end
 
-SparseCountedRooks(N, idx::Vector{Ti}; kwargs...) where {Ti} = SparseCountedRooks{Ti}(N, idx; kwargs...)
 
-function SparseCountedRooks{Ti}(N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing) where {Ti}
+
+struct SparseCountedRooks{Ti} <: AbstractMatrix{Ti}
+    N::Int
+    b::Int
+    b′::Int
+    H::Int
+    byt::Vector{Ti}
+    cnt::Array{Ti, 3}
+end
+
+Base.size(arg::SparseCountedRooks) = (arg.N + 1, arg.N + 1)
+
+
+function rookcount!(N, idx; kwargs...)
+    SparseCountedRooks(N, idx; kwargs...)
+end
+#=
+function rookcount!(N, idx; Tb = UInt8, b = nothing, kwargs...)
+    if b == 1
+        SparseBinaryCountedRooks(N, idx; Tb = UInt8, kwargs...)
+    else
+        SparseCountedRooks(N, idx; b = b, kwargs...)
+    end
+end
+=#
+
+SparseCountedRooks(N, idx::Vector{Ti}; kwargs...) where {Ti} =
+    SparseCountedRooks{Ti}(N, idx; kwargs...)
+function SparseCountedRooks{Ti}(N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         @debug begin
             @assert length(idx) == N

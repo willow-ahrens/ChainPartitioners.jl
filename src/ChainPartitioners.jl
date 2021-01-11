@@ -128,7 +128,6 @@ export pattern
 
 include("util.jl")
 include("SparsePrefixMatrices.jl")
-include("SparseBinaryPrefixMatrices.jl")
 include("EnvelopeMatrices.jl")
 include("Partitions.jl")
 include("SparseColorArrays.jl")

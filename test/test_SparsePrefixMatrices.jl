@@ -6,7 +6,9 @@
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
                 C = areacount(A, H = H)
+                @test typeof(C) <: SparseCountedArea
                 S = areasum(A, H = H)
+                @test typeof(S) <: SparseSummedArea
                 @testset "H = $H, m = $m" begin
                     for _ = 1:trials
                         i = rand(0:m)
@@ -33,7 +35,9 @@
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
                 RC = SparseCountedRooks(N, copy(idx), H = H)
+                @test typeof(RC) <: SparseCountedRooks
                 RS = SparseSummedRooks(N, copy(idx), B.nzval, H = H)
+                @test typeof(RS) <: SparseSummedRooks
                 @testset "H = $H, N = $N" begin
                     for _ = 1:trials
                         i = rand(0:N)
@@ -59,7 +63,8 @@
         for m = 1:40
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacountbinary(A)
+                C = areacount(A, b=1)
+                @test typeof(C) <: SparseBinaryCountedArea
                 @testset "m = $m" begin
                     for _ = 1:trials
                         i = rand(0:m)
