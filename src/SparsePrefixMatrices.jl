@@ -485,9 +485,6 @@ function Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Inte
             Q₁ = (q₁ >> log2nbits(Tb)) + 1
             Q₂ = (q₂ >> log2nbits(Tb)) + 1
             bkt_2 = cnt[Q₂, h] - cnt[Q₁, h]
-            if h == H
-                @assert bkt_2 == sum(count_ones.(byt[Q₁:(Q₂ - 1), h])) "$bkt_2 == $(sum(count_ones.(byt[Q₁:(Q₂ - 1), h])))"
-            end
             bkt_2 += count_ones(byt[Q₂, h] & ((one(Tb) << (q₂ & (nbits(Tb) - 1))) - 1))
             bkt_2 -= count_ones(byt[Q₁, h] & ((one(Tb) << (q₁ & (nbits(Tb) - 1))) - 1))
             bkt_1 = Δq - bkt_2
@@ -700,11 +697,15 @@ end
 
 Base.size(arg::SparseCountedRooks) = (arg.N + 1, arg.N + 1)
 
-
-function rookcount!(N, idx; kwargs...)
-    SparseCountedRooks(N, idx; kwargs...)
+struct SparseBinaryCountedRooks{Tb, Ti} <: AbstractMatrix{Ti}
+    N::Int
+    H::Int
+    byt::Array{Tb, 2}
+    cnt::Array{Ti, 2}
 end
-#=
+
+Base.size(arg::SparseBinaryCountedRooks) = (arg.N + 1, arg.N + 1)
+
 function rookcount!(N, idx; Tb = UInt8, b = nothing, kwargs...)
     if b == 1
         SparseBinaryCountedRooks(N, idx; Tb = UInt8, kwargs...)
@@ -712,7 +713,6 @@ function rookcount!(N, idx; Tb = UInt8, b = nothing, kwargs...)
         SparseCountedRooks(N, idx; b = b, kwargs...)
     end
 end
-=#
 
 SparseCountedRooks(N, idx::Vector{Ti}; kwargs...) where {Ti} =
     SparseCountedRooks{Ti}(N, idx; kwargs...)
@@ -851,5 +851,75 @@ function Base.getindex(arg::SparseCountedRooks{Ti}, i::Integer, j::Integer) wher
             #s += d′ <= d
         end
         return s
+    end
+end
+
+SparseBinaryCountedRooks(N, idx; kwargs...) =
+    SparseBinaryCountedRooks{UInt}(N, idx; kwargs...)
+SparseBinaryCountedRooks{Tb}(N, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    SparseBinaryCountedRooks{Tb, Ti}(N, idx; kwargs...)
+function SparseBinaryCountedRooks{Tb, Ti}(N, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+    @inbounds begin
+        #b = branching factor of tree = 1
+
+        #H = height of tree
+        H = cllog2(N + 1)
+
+        cnt = zeros(Ti, 1 + cld(N, nbits(Tb)), H) #cnt = cached cumulative counts
+        
+        byt = zeros(Tb, 1 + cld(N, nbits(Tb)), H)
+        idx′ = undefs(Ti, N)
+
+        for h = H : -1 : 1 #h = level in tree
+            _cnt = 0
+            for i′ = 1 : 1 << h : N + 1 #i′ = "quotient" of sorts
+                bkt_1 = max(i′ - 1, 1)
+                bkt_2 = max(i′ + 1 << (h - 1) - 1, 1)
+                for q = max(i′ - 1, 1) : min(i′ + (1 << h) - 1, N + 1) - 1
+                    i = idx[q]
+                    d = i >> (h - 1) & 1
+                    q′ = ifelse(d == 0, bkt_1, bkt_2)
+                    idx′[q′] = i
+                    bkt_1 += 1 - d
+                    bkt_2 += d
+
+                    Q = ((q - 1) >> log2nbits(Tb)) + 1
+                    byt[Q, h] |= d << ((q - 1) & (nbits(Tb) - 1))
+                    cnt[Q + 1, h] = _cnt += d
+                end
+            end
+
+            idx, idx′ = idx′, idx
+        end
+        return SparseBinaryCountedRooks{Tb, Ti}(N, H, byt, cnt)
+    end
+end
+
+function Base.getindex(arg::SparseBinaryCountedRooks{Tb, Ti}, i::Integer, j::Integer) where {Ti, Tb}
+    @inbounds begin
+        H = arg.H
+        byt = arg.byt
+        cnt = arg.cnt
+
+        Δq = j - 1
+        i = Ti(i - 1)::Ti
+        s = Ti(0)
+        for h = H : -1 : 1
+            i′ = i & ~(1 << h - 1) + 1
+            q₁ = max(i′ - 1, 1) - 1
+            q₂ = q₁ + Δq
+            d = i >> (h - 1) & Ti(1)
+
+            Q₁ = (q₁ >> log2nbits(Tb)) + 1
+            Q₂ = (q₂ >> log2nbits(Tb)) + 1
+            bkt_2 = cnt[Q₂, h] - cnt[Q₁, h]
+            bkt_2 += count_ones(byt[Q₂, h] & ((one(Tb) << (q₂ & (nbits(Tb) - 1))) - 1))
+            bkt_2 -= count_ones(byt[Q₁, h] & ((one(Tb) << (q₁ & (nbits(Tb) - 1))) - 1))
+            bkt_1 = Δq - bkt_2
+            s += ifelse(d == 0, 0, bkt_1)
+            Δq = ifelse(d == 0, bkt_1, bkt_2)
+        end
+
+        return s + Δq
     end
 end

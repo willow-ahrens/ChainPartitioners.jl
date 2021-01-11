@@ -34,9 +34,9 @@
                 for j = 1:N
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
-                RC = SparseCountedRooks(N, copy(idx), H = H)
+                RC = rookcount!(N, copy(idx), H = H)
                 @test typeof(RC) <: SparseCountedRooks
-                RS = SparseSummedRooks(N, copy(idx), B.nzval, H = H)
+                RS = rooksum!(N, copy(idx), B.nzval, H = H)
                 @test typeof(RS) <: SparseSummedRooks
                 @testset "H = $H, N = $N" begin
                     for _ = 1:trials
@@ -78,15 +78,15 @@
                 @test C[m + 1, 1] == 0
                 @test C[m + 1, n + 1] == nnz(A)
 
-                #=
                 N = m
                 idx = randperm(N)
                 B = spzeros(UInt, N, N)
                 for j = 1:N
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
-                RC = SparseCountedRooks(N, copy(idx))
-                @testset "H = $H, N = $N" begin
+                RC = rookcount!(N, copy(idx); b=1)
+                @test typeof(RC) <: SparseBinaryCountedRooks
+                @testset "N = $N" begin
                     for _ = 1:trials
                         i = rand(0:N)
                         j = rand(0:N)
@@ -97,7 +97,6 @@
                 @test RC[1, N + 1] == 0
                 @test RC[N + 1, 1] == 0
                 @test RC[N + 1, N + 1] == sum(B .!= 0)
-                =#
             end
         end
     end
