@@ -178,6 +178,8 @@ end
 
         for (f,) = [
             (ConvexWorkCostModel(-0.7, 0, 1),);
+            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+            (AffineWorkCostModel(0, 0, 0),);
         ]
             Φ = pack_stripe(A, DynamicTotalChunker(f, n))
             c = total_value(A, Φ, f)
@@ -186,7 +188,6 @@ end
                 ConvexTotalChunker(f);
             ]
                 Φ′ = pack_stripe(A, method)
-                println(Φ′)
                 @test issorted(Φ′.spl)
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1

@@ -16,10 +16,8 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
 
         push!(stk, (n + 1, 1))
         for j = n:-1:1
-            #@info "" j stk
             (j′, h) = first(stk)
             if cst′(j, j + 1) ≥ cst′(j, j′)
-                #@info "good"
                 cst[j] = cst′(j, j′)
                 spl[j] = j′
                 if h == j
@@ -35,25 +33,22 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
                     push!(stk, (j + 1, 1))
                 else
                     (j′, h) = first(stk)
-                    @assert cst′(h, j + 1) >= cst′(h, j′)
-                    #@info "test" j j′
-                    h′ = j - 1
-                    while h′ > 0 && cst′(h′, j + 1) < cst′(h′, j′) h′ -= 1 end
-                    h′ += 1
-                    #=
+                    #@assert cst′(h, j + 1) >= cst′(h, j′)
+                    #h′ = j - 1
+                    #while h′ > 0 && cst′(h′, j + 1) < cst′(h′, j′) h′ -= 1 end
+                    #h′ += 1
                     h′_lo = h + 1
-                    h′_hi = j - 1
+                    h′_hi = j
                     while h′_lo <= h′_hi
                         h′ = fld2(h′_lo + h′_hi)
                         if cst′(h′, j + 1) < cst′(h′, j′)
-                            h′_hi = h′ + 1
+                            h′_hi = h′ - 1
                         else
                             h′_lo = h′ + 1
                         end
                     end
+                    #@assert h′ == h′_lo
                     h′ = h′_lo
-                    @info "hmm" h′ j + 1 j′
-                    =#
 
                     if h′ < j
                         push!(stk, (j + 1, h′))
