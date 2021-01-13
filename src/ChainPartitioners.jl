@@ -34,6 +34,9 @@ export AbstractModel
 export AbstractIncreasingModel
 export AbstractDecreasingModel
 
+export ConstrainedCost
+export ConstrainedCostOracle
+
 export AbstractWorkCostModel
 export AffineWorkCostModel
 export WorkCostOracle

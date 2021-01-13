@@ -51,3 +51,36 @@ function compute_objective(g, A, Φ::SplitPartition, mdl::AbstractOracleCost) wh
     end
     return cst
 end
+
+
+
+struct ConstrainedCost{F, W, T}
+    f::F
+    w::W
+    w_max::T
+end
+
+cost_type(::Type{ConstrainedCost{F, W, T}}) where {F, W, T} = cost_type(F)
+
+struct ConstrainedCostOracle{F, W, T}
+    f::F
+    w::W
+    w_max::T
+end
+
+oracle_model(ocl::WorkCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
+
+function oracle_stripe(cst::ConstrainedCost, A::SparseMatrixCSC, args...; kwargs...)
+    return ConstrainedCostOracle(oracle_stripe(cst.f, A, args...; kwargs...), oracle_stripe(cst.w, A, args...; kwargs...), cst.w_max)
+end
+
+@inline function (ocl::ConstrainedCostOracle)(j::Ti, j′::Ti, k...)
+    if ocl.w(j, j′, k...) <= ocl.w_max
+        return ocl.f(j, j′, k...)
+    else
+        return typemax(cost_type(ocl.f))
+    end
+end
+
+bound_stripe(A::SparseMatrixCSC, K, cst::ConstrainedCost) = bound_stripe(A, K, ocl.f)
+bound_stripe(A::SparseMatrixCSC, K, ocl::ConstrainedCostOracle) = bound_stripe(A, K, ocl.f)
