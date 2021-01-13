@@ -14,6 +14,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
 
         cst = Vector{cost_type(f)}(undef, n + 1)
         spl = Vector{Int}(undef, n + 1)
+        cst[n + 1] = zero(cost_type(f))
         for j = n:-1:1
             best_c = cst[j + 1] + f(j, j + 1)
             best_j′ = j + 1
