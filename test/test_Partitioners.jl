@@ -49,6 +49,20 @@ end
 
 LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommCostModel}
 
+
+
+struct ConvexWorkCostModel <: AbstractWorkCostModel
+    α::Float64
+    β_width::Float64
+    β_work::Float64
+end
+
+(mdl::ConvexWorkCostModel)(x_width, x_work) = mdl.α + (x_width * mdl.β_width + x_work * mdl.β_work)^0.8
+
+@inline ChainPartitioners.cost_type(::Type{ConvexWorkCostModel}) = Float64
+
+
+
 @testset "Partitioners" begin
     for A in [
         [
@@ -159,6 +173,24 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1
                 @test total_value(A, Π, Φ′, f) >= total_value(A, Π, Φ, f)
+            end
+        end
+
+        for (f,) = [
+            (ConvexWorkCostModel(-0.7, 0, 1),);
+        ]
+            Φ = pack_stripe(A, DynamicTotalChunker(f, n))
+            c = total_value(A, Φ, f)
+            for method = [
+                DynamicTotalChunker(f, n);
+                ConvexTotalChunker(f);
+            ]
+                Φ′ = pack_stripe(A, method)
+                println(Φ′)
+                @test issorted(Φ′.spl)
+                @test Φ′.spl[1] == 1
+                @test Φ′.spl[end] == n + 1
+                @test total_value(A, Φ′, f) == c
             end
         end
     end

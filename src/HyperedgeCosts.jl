@@ -62,11 +62,11 @@ function oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC; net=nothin
     end
 end
 
-@inline function (cst::NetCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::NetCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net[j, j′]
-        return cst.mdl(j′ - j, w, d, k)
+        return cst.mdl(j′ - j, w, d, k...)
     end
 end
 
@@ -224,11 +224,11 @@ function oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; ne
     end
 end
 
-@inline function (cst::SymCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::SymCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.wrk[j′] - cst.wrk[j]
         d = cst.net[j, j′]
-        return cst.mdl(j′ - j, w, d, k)
+        return cst.mdl(j′ - j, w, d, k...)
     end
 end
 

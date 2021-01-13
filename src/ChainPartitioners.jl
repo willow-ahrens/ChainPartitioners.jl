@@ -4,6 +4,7 @@ using SparseArrays
 using LinearAlgebra
 using Suppressor
 using Random
+using DataStructures
 using Requires
 
 export SparseSummedArea
@@ -80,6 +81,8 @@ export AlternatingPacker
 export SymmetricPacker
 export EquiChunker
 export DynamicTotalChunker
+export ConvexTotalChunker
+export ConcaveTotalChunker
 export OverlapChunker
 export StrictChunker
 
@@ -144,6 +147,7 @@ include("EquiPartitioner.jl")
 include("DynamicSplitter.jl")
 include("AlternatingPacker.jl")
 include("DynamicChunker.jl")
+include("QuadrangleTotalChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")

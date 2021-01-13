@@ -23,10 +23,10 @@ function oracle_stripe(mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...
     return WorkCostOracle(A.colptr, mdl)
 end
 
-@inline function (cst::WorkCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::WorkCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
-        return cst.mdl(j′ - j, w, k)
+        return cst.mdl(j′ - j, w, k...)
     end
 end
 
