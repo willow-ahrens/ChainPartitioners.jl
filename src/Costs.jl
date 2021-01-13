@@ -68,13 +68,13 @@ struct ConstrainedCostOracle{F, W, T}
     w_max::T
 end
 
-oracle_model(ocl::WorkCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
+oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
 
 function oracle_stripe(cst::ConstrainedCost, A::SparseMatrixCSC, args...; kwargs...)
     return ConstrainedCostOracle(oracle_stripe(cst.f, A, args...; kwargs...), oracle_stripe(cst.w, A, args...; kwargs...), cst.w_max)
 end
 
-@inline function (ocl::ConstrainedCostOracle)(j::Ti, j′::Ti, k...)
+@inline function (ocl::ConstrainedCostOracle)(j::Ti, j′::Ti, k...) where {Ti}
     if ocl.w(j, j′, k...) <= ocl.w_max
         return ocl.f(j, j′, k...)
     else
