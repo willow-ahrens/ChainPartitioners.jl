@@ -196,9 +196,10 @@ end
         end
 
         for (f,) = [
-            (ConvexWorkCostModel(-0.7, 0, 1),);
-            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
-            (AffineWorkCostModel(0, 0, 0),);
+            #(ConvexWorkCostModel(-0.7, 0, 1),);
+            #(AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+            #(AffineWorkCostModel(0, 0, 0),);
+            (ConstrainedCost(AffineNetCostModel(-0.5, 0.0, 0.0, 1.0), AffineWorkCostModel(0, 1, 0), 4),);
         ]
             Φ = pack_stripe(A, DynamicTotalChunker(f, n))
             c = total_value(A, Φ, f)
@@ -213,5 +214,6 @@ end
                 @test total_value(A, Φ′, f) == c
             end
         end
+
     end
 end
