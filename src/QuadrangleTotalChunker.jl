@@ -29,6 +29,39 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
     end
 end
 
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker, args...) where {Tv, Ti}
+    @inbounds begin
+        (m, n) = size(A)
+
+        f = oracle_stripe(method.f, A, args...)
+
+        if K == 1
+            return SplitPartition{Ti}(1, [Ti(1), Ti(n + 1)])
+        end
+
+        ftr = Stack{Tuple{Ti, Ti}}(n)
+        ptr = undefs(Ti, n + 1, K - 1)
+        ptr[n + 1, :] .= n + 1
+        cst = fill(typemax(cost_type(f)), n + 1, K - 1)
+        cst[n + 1, :] .= zero(cost_type(f))
+
+        f′₀(j, j′) = f(j, j′, K - 1) + f(j′, n + 1, K)
+        chunk_convex!((@view cst[:, K - 1]), (@view ptr[:, K - 1]), f′₀, 1, n + 1, ftr)
+        for k = K-2:-1:1
+            f′(j, j′) = cst[j′, k] + f(j, j′, k)
+            chunk_convex!((@view cst[:, k]), (@view ptr[:, k]), f′, 1, n + 1, ftr)
+        end
+
+        spl = undefs(Ti, K + 1)
+        spl[1] = 1
+        for k = 2:K
+            spl[k] = ptr[spl[k - 1], k - 1]
+        end
+        spl[K + 1] = n + 1
+        return SplitPartition{Ti}(K, spl) 
+    end
+end
+
 function chunk_convex!(cst, ptr, f′, j₀, j₁, ftr)
     empty!(ftr)
     push!(ftr, (j₁, j₀))
@@ -68,6 +101,10 @@ function chunk_convex!(cst, ptr, f′, j₀, j₁, ftr)
             end
         end
     end
+end
+
+function chunk_convex_constrained!(cst, ptr, f′, w′, j₀, j₁, ftr)
+    
 end
 
 #=
