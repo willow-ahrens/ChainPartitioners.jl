@@ -154,8 +154,8 @@ end
             end
 
             for (f,) = [
-                (ConvexWorkCostModel(-0.7, 0, 1),);
-                (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+                (ConvexWorkCostModel(0, 0, 1),);
+                (AffineNetCostModel(0.0, 0.0, 0.0, 1.0),);
                 (AffineWorkCostModel(0, 0, 0),);
             ]
                 Φ = partition_stripe(A, K, DynamicTotalSplitter(f))
@@ -165,7 +165,6 @@ end
                     ConvexTotalChunker(f);
                 ]
                     Φ′ = partition_stripe(A, K, method)
-                    @info "hmm" Φ Φ′
                     @test issorted(Φ′.spl)
                     @test Φ′.spl[1] == 1
                     @test Φ′.spl[end] == n + 1
