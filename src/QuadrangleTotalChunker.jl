@@ -107,7 +107,6 @@ function chunk_convex!(cst, ptr, f′, j₀, j₁, ftr)
     end
 end
 
-
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
@@ -116,17 +115,21 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         w = oracle_stripe(method.f.w, A, args...)
         w_max = method.f.w_max
 
-        ftr = Stack{Tuple{Ti, Ti}}(n)
+        ftr = Stack{Tuple{Ti, Ti}}(2n)
         σ_j = undefs(Ti, 2n + 2)
         σ_j′ = undefs(Ti, 2n + 2)
         σ_ptr = undefs(Ti, 2n + 2)
-        σ_cst = undefs(cost_type(f), 2n + 2)
+        σ_cst = undefs(cost_type(method.f), 2n + 2)
 
         spl = zeros(Ti, n + 1)
-        cst = fill(typemax(cost_type(f)), n + 1)
+        cst = fill(Inf, n + 1)
         cst[n + 1] = zero(cost_type(f))
         f′(j, j′) = cst[j′] + f(j, j′)
         chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+
+        @info "funky"
+        @info spl
+        @info cst
 
         K = 0
         j = 1
@@ -144,13 +147,12 @@ end
 
 function chunk_convex_constrained!(cst, ptr, f′, w, w_max, J₀, J₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
     j₀ = J₁
-    while j₀ > J₀ && w(j₀ - 1, J₁) < w_max
+    while j₀ > J₀ && w(j₀ - 1, J₁) <= w_max
         j₀ -= 1
     end
     j₁ = J₁
 
     while j₀ >= J₀
-        @info "startup" j₀ j₁
         chunk_convex!(cst, ptr, f′, j₀, j₁, ftr)
 
         if j₀ == J₀
@@ -158,27 +160,24 @@ function chunk_convex_constrained!(cst, ptr, f′, w, w_max, J₀, J₁, ftr, σ
         end
         j = j₀
         I = 1
-        for j′ = j₁:-1:j₀
+        for j′ = j₁-1:-1:j₀
             σ_j[I] = j
             σ_j′[I] = j′
             I += 1
-            while j > J₀ && w(j - 1, j′) < w_max
+            while j > J₀ && w(j - 1, j′) <= w_max
                 j -= 1
                 σ_j[I] = j
                 σ_j′[I] = j′
                 I += 1
             end
         end
-        
-        @info "round2" j₀ j₁ I σ_j[1:I], σ_j′[1:I]
 
         for i = 1:I
-            σ_cst[i] = typemax(eltype(σ_cst))
+            σ_cst[i] = Inf
         end
-        σ_cst[I] = zero(eltype(σ_cst))
         σ_f′(i, i′) = f′(σ_j[i], σ_j′[i′])
         chunk_convex!(σ_cst, σ_ptr, σ_f′, 1, I - 1, ftr)
-        @info "round3" σ_ptr σ_cst
+
         for i = I - 2:-1:1
             if σ_j[i] < j₀
                 cst[σ_j[i]] = σ_cst[i]
@@ -187,6 +186,6 @@ function chunk_convex_constrained!(cst, ptr, f′, w, w_max, J₀, J₁, ftr, σ
         end
         j₁ = j₀
         j₀ = σ_j[I - 1]
-        @info "round4" j₀ j₁
+        #@info "round4" j₀ j₁
     end
 end
