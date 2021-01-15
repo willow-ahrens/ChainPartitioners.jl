@@ -53,31 +53,50 @@ end
 
 
 
-struct ConstrainedCost{F, W, T}
+struct ConstrainedCost{F, W, Tw}
     f::F
     w::W
-    w_max::T
+    w_max::Tw
+    function ConstrainedCost{F, W, Tw}(f::F, w::W, w_max) where {F, W, Tw}
+        @assert Tw == cost_type(W)
+        return new{F, W, Tw}(f, w, w_max)
+    end
 end
 
-cost_type(::Type{ConstrainedCost{F, W, T}}) where {F, W, T} = cost_type(F)
+ConstrainedCost(f::F, w::W, w_max) where {F, W} = ConstrainedCost{F, W, cost_type(W)}(f, w, w_max)
 
-struct ConstrainedCostOracle{F, W, T} <: AbstractOracleCost{ConstrainedCost{F, W, T}}
+cost_type(::Type{ConstrainedCost{F, W, Tw}}) where {F, W, Tw} = cost_type(F)
+
+struct ConstrainedCostOracle{F, W, Tc, Tw} <: AbstractOracleCost{ConstrainedCost{F, W, Tw}}
     f::F
     w::W
-    w_max::T
+    f_max::Tc
+    w_max::Tw
+    function ConstrainedCostOracle{F, W, Tc, Tw}(f::F, w::W, f_max, w_max) where {F, W, Tc, Tw}
+        @assert Tc == cost_type(F)
+        @assert Tw == cost_type(W)
+        return new{F, W, Tw, Tc}(f, w, f_max, w_max)
+    end
 end
+
+ConstrainedCostOracle(f::F, w::W, w_max, f_max) where {F, W} = ConstrainedCostOracle{F, W, cost_type(F), cost_type(W)}(f, w, f_max, w_max)
 
 oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
 
-function oracle_stripe(cst::ConstrainedCost, A::SparseMatrixCSC, args...; kwargs...)
-    return ConstrainedCostOracle(oracle_stripe(cst.f, A, args...; kwargs...), oracle_stripe(cst.w, A, args...; kwargs...), cst.w_max)
+function oracle_stripe(cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
+    (m, n) = size(A)
+    f = oracle_stripe(cst.f, A, args...; kwargs...)
+    f_max = f(1, n + 1) + true #TODO this is a reasonable hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
+    w = oracle_stripe(cst.w, A, args...; kwargs...)
+    w_max = cst.w_max
+    return ConstrainedCostOracle(f, w, f_max, w_max)
 end
 
 @inline function (ocl::ConstrainedCostOracle)(j::Ti, j′::Ti, k...) where {Ti}
     if ocl.w(j, j′, k...) <= ocl.w_max
         return ocl.f(j, j′, k...)
     else
-        return typemax(cost_type(ocl.f))
+        return ocl.f_max
     end
 end
 

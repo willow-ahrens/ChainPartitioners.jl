@@ -41,7 +41,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
 
         ftr = Stack{Tuple{Ti, Ti}}(n)
         ptr = undefs(Ti, n + 1, K - 1)
-        ptr[n + 1, :] .= n + 2
         cst = fill(typemax(cost_type(f)), n + 2, K - 1)
         cst[n + 2, :] .= zero(cost_type(f))
 
@@ -122,7 +121,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         σ_cst = undefs(cost_type(method.f), 2n + 2)
 
         spl = zeros(Ti, n + 1)
-        cst = fill(Inf, n + 1)
+        cst = fill(typemax(cost_type(f)), n + 1)
         cst[n + 1] = zero(cost_type(f))
         f′(j, j′) = cst[j′] + f(j, j′)
         chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
@@ -141,6 +140,75 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         end
         spl[K + 1] = j
         resize!(spl, K + 1)
+        return SplitPartition{Ti}(K, spl) 
+    end
+end
+
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
+    @inbounds begin
+        (m, n) = size(A)
+
+        f = oracle_stripe(method.f.f, A, args...)
+        w = oracle_stripe(method.f.w, A, args...)
+        w_max = method.f.w_max
+
+        if K == 1
+            return SplitPartition{Ti}(1, [Ti(1), Ti(n + 1)])
+        end
+
+        ftr = Stack{Tuple{Ti, Ti}}(2n)
+        σ_j = undefs(Ti, 2n + 2)
+        σ_j′ = undefs(Ti, 2n + 2)
+        σ_ptr = undefs(Ti, 2n + 2)
+        σ_cst = undefs(cost_type(method.f), 2n + 2)
+        j_lo = undefs(Ti, K + 1)
+        j′ = n + 1
+        for k = K:-1:1
+            j = j′
+            while j - 1 <= 1 && w(j - 1, j′, k) <= w_max
+                j -= 1
+            end
+            j_lo[k] = j
+            j′ = j
+        end
+        j′_hi = undefs(Ti, K)
+        j = 1
+        for k = 1:K
+            j′ = j
+            while j′ + 1 <= n + 1 && w(j, j′ + 1, k) <= w_max
+                j′ += 1
+            end
+            j′_hi[k] = j′
+            j = j′
+        end
+        pos = undefs(Ti, K + 1)
+        pos[1] = 1
+        for k = 1:K
+            @info j′_lo[k] j_hi[k]
+            pos[k + 1] = pos[k] + (1 + j′_hi[k] - j_lo[k])
+        end
+        println(pos[end])
+        ptr = undefs(Ti, pos[end] - 1)
+        cst = fill(typemax(cost_type(f)), pos[end] - 1)
+
+        for q = pos[K]:pos[K + 1] - 1
+            j = j_lo[K] + (q - pos[K])
+            cst[q] .= f(j, n + 1)
+            ptr[q] .= n + 1
+        end
+
+        for k = K-1:-1:1
+            cst[pos[k + 1] - 1] = zero(cost_type(f))
+            f′(j, j′) = cst[pos[k] + j′ - j_lo[k]] + f(j, j′ - 1, k)
+            chunk_convex_constrained!((@view cst[pos[k], pos[k + 1] - 1]), (@view ptr[pos[k], pos[k + 1] - 1]), f′, w, w_max, j_lo[k], j_hi[k] + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+        end
+
+        spl = undefs(Ti, K + 1)
+        spl[1] = 1
+        for k = 2:K
+            spl[k] = ptr[pos[k - 1] + spl[k - 1] - j_lo[k - 1]] - 1
+        end
+        spl[K + 1] = n + 1
         return SplitPartition{Ti}(K, spl) 
     end
 end
@@ -173,7 +241,7 @@ function chunk_convex_constrained!(cst, ptr, f′, w, w_max, J₀, J₁, ftr, σ
         end
 
         for i = 1:I
-            σ_cst[i] = Inf
+            σ_cst[i] = typemax(eltype(cst))
         end
         #have i < i′
         #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
