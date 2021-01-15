@@ -127,9 +127,9 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         f′(j, j′) = cst[j′] + f(j, j′)
         chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
 
-        @info "funky"
-        @info spl
-        @info cst
+        #@info "funky"
+        #@info spl
+        #@info cst
 
         K = 0
         j = 1
@@ -160,30 +160,45 @@ function chunk_convex_constrained!(cst, ptr, f′, w, w_max, J₀, J₁, ftr, σ
         end
         j = j₀
         I = 1
-        for j′ = j₁-1:-1:j₀
+        for j′ = j₁:-1:j₀
             σ_j[I] = j
-            σ_j′[I] = j′
             I += 1
+            σ_j′[I] = j′
             while j > J₀ && w(j - 1, j′) <= w_max
                 j -= 1
                 σ_j[I] = j
-                σ_j′[I] = j′
                 I += 1
+                σ_j′[I] = j′
             end
         end
 
         for i = 1:I
             σ_cst[i] = Inf
         end
-        σ_f′(i, i′) = f′(σ_j[i], σ_j′[i′])
-        chunk_convex!(σ_cst, σ_ptr, σ_f′, 1, I - 1, ftr)
+        #have i < i′
+        #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
+        #i < i′ >σ_j[I - i] 
+        #also need j <= j′ # but this is satisfied for any i, i′ since rand(σ_j) < rand(σ_j′)
 
-        for i = I - 2:-1:1
+        σ_f′(i, i′) = f′(σ_j[i], σ_j′[i′])
+        chunk_convex!(σ_cst, σ_ptr, σ_f′, 2, I, ftr)
+
+        for i = I-1:-1:2
+            #@info σ_j[i] σ_j′[i] I σ_ptr[i] σ_cst[i]
+            #@assert σ_j′[σ_ptr[i]] - σ_j[i] <= w_max
             if σ_j[i] < j₀
                 cst[σ_j[i]] = σ_cst[i]
                 ptr[σ_j[i]] = σ_j′[σ_ptr[i]]
             end
         end
+
+        #=
+        for j = σ_j[I - 1]:j₀
+            @info "hmm" j₀ j₁ j ptr[j] w_max f′(j, ptr[j]) minimum(j′ -> j′ - j > w_max ? Inf : f′(j, j′), j₀:j₁) 
+            @assert f′(j, ptr[j]) ≈ minimum(j′ -> j′ - j > w_max ? Inf : f′(j, j′), j₀:j₁) 
+        end
+        =#
+
         j₁ = j₀
         j₀ = σ_j[I - 1]
         #@info "round4" j₀ j₁

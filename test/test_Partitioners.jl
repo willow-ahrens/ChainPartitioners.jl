@@ -196,12 +196,19 @@ end
         end
 
         for (f,) = [
-            #(ConvexWorkCostModel(-0.7, 0, 1),);
-            #(AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
-            #(AffineWorkCostModel(0, 0, 0),);
-            (ConstrainedCost(AffineNetCostModel(-0.5, 0.0, 0.0, 1.0), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConvexWorkCostModel(0.0, 0, 1),);
+            (ConvexWorkCostModel(-0.7, 0, 1),);
+            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+            (AffineNetCostModel(0, 0, 0, 1),);
+            (AffineWorkCostModel(0, 0, 0),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
+            (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
         ]
-            Φ = pack_stripe(A, DynamicTotalChunker(f, n))
+            Φ = pack_stripe(A, DynamicTotalChunker(f, n + 1))
             c = total_value(A, Φ, f)
             for method = [
                 DynamicTotalChunker(f, n);
