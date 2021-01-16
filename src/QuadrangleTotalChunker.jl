@@ -2,6 +2,10 @@ struct ConvexTotalChunker{F}
     f::F
 end
 
+#TODO the reversening.
+#TODO add reference partitioners to test optimized constrained dynamic ones.
+#TODO add optimized constrained dynamic partitioner before optimized convex one.
+
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
@@ -44,6 +48,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         cst = fill(typemax(cost_type(f)), n + 2, K - 1)
         cst[n + 2, :] .= zero(cost_type(f))
 
+        #TODO handle zero-length jumps through initialization, rather than indexing
         f′₀(j, j′) = f(j, j′ - 1, K - 1) + f(j′ - 1, n + 1, K)
         chunk_convex!((@view cst[:, K - 1]), (@view ptr[:, K - 1]), f′₀, 1, n + 2, ftr)
         for k = K-2:-1:1
