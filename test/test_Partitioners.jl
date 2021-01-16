@@ -157,12 +157,12 @@ end
                 (ConvexWorkCostModel(0, 0, 1),);
                 (AffineNetCostModel(0.0, 0.0, 0.0, 1.0),);
                 (AffineWorkCostModel(0, 0, 0),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+                #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+                #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+                #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+                #(ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
+                #(ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
+                #(ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
             ]
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
                 c = total_value(A, Φ, f)
@@ -202,14 +202,14 @@ end
         end
 
         for (f,) = [
-            (ConvexWorkCostModel(0.0, 0, 1),);
-            (ConvexWorkCostModel(-0.7, 0, 1),);
-            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
-            (AffineNetCostModel(0, 0, 0, 1),);
-            (AffineWorkCostModel(0, 0, 0),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            #(ConvexWorkCostModel(0.0, 0, 1),);
+            #(ConvexWorkCostModel(-0.7, 0, 1),);
+            #(AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+            #(AffineNetCostModel(0, 0, 0, 1),);
+            #(AffineWorkCostModel(0, 0, 0),);
+            #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+            #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+            #(ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
             (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
@@ -217,6 +217,7 @@ end
             Φ = pack_stripe(A, ReferenceTotalChunker(f, n))
             c = total_value(A, Φ, f)
             for method = [
+                ReferenceTotalChunker(f, n);
                 DynamicTotalChunker(f, n);
                 ConvexTotalChunker(f);
             ]

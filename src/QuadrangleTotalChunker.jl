@@ -13,7 +13,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
 
         ftr = Stack{Tuple{Ti, Ti}}(n)
         spl = zeros(Ti, n + 1)
-        cst = fill(typemax(cost_type(f)), n + 1)
+        cst = fill(Inf, n + 1)
         cst[n + 1] = zero(cost_type(f))
         f′(j, j′) = cst[j′] + f(j, j′)
         chunk_convex!(cst, spl, f′, 1, n + 1, ftr)

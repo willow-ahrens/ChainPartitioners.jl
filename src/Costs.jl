@@ -86,7 +86,7 @@ oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), 
 function oracle_stripe(cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
     (m, n) = size(A)
     f = oracle_stripe(cst.f, A, args...; kwargs...)
-    f_max = f(1, n + 1) + true #TODO this is a reasonable hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
+    f_max = f(1, n + 1) + Inf #TODO this is a reasonable hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
     w = oracle_stripe(cst.w, A, args...; kwargs...)
     w_max = cst.w_max
     return ConstrainedCostOracle(f, w, f_max, w_max)
