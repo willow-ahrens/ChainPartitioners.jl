@@ -165,7 +165,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         j′ = n + 1
         for k = K:-1:1
             j = j′
-            while j - 1 <= 1 && w(j - 1, j′, k) <= w_max
+            while j - 1 >= 1 && w(j - 1, j′, k) <= w_max
                 j -= 1
             end
             j_lo[k] = j
@@ -184,29 +184,34 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         pos = undefs(Ti, K + 1)
         pos[1] = 1
         for k = 1:K
-            @info j′_lo[k] j_hi[k]
+            if j′_hi[k] <= j_lo[k]
+                spl = ones(Ti, K + 1)
+                spl[end] = n + 1
+                return SplitPartition(K, spl)
+                #ArgumentError("infeasible") #TODO infeasibility
+            end
             pos[k + 1] = pos[k] + (1 + j′_hi[k] - j_lo[k])
         end
-        println(pos[end])
         ptr = undefs(Ti, pos[end] - 1)
         cst = fill(typemax(cost_type(f)), pos[end] - 1)
 
         for q = pos[K]:pos[K + 1] - 1
             j = j_lo[K] + (q - pos[K])
-            cst[q] .= f(j, n + 1)
-            ptr[q] .= n + 1
+            cst[q] = f(j, n + 1)
+            ptr[q] = n + 1
         end
 
         for k = K-1:-1:1
             cst[pos[k + 1] - 1] = zero(cost_type(f))
-            f′(j, j′) = cst[pos[k] + j′ - j_lo[k]] + f(j, j′ - 1, k)
-            chunk_convex_constrained!((@view cst[pos[k], pos[k + 1] - 1]), (@view ptr[pos[k], pos[k + 1] - 1]), f′, w, w_max, j_lo[k], j_hi[k] + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+            #we need to set infeasible costs from level k + 1 to be inf and allocate space for those. Note that the cost is still convex.
+            f′(i, i′) = cst[pos[k + 1] + i′ - 1] + f(j_lo[k] + i - 1, j_lo[k] + i′ - 2, k)
+            chunk_convex_constrained!((@view cst[pos[k]:pos[k + 1] - 1]), (@view ptr[pos[k]:pos[k + 1] - 1]), f′, w, w_max, 1, j′_hi[k] - j_lo[k] + 2, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
         end
 
         spl = undefs(Ti, K + 1)
         spl[1] = 1
         for k = 2:K
-            spl[k] = ptr[pos[k - 1] + spl[k - 1] - j_lo[k - 1]] - 1
+            spl[k] = ptr[pos[k - 1] + spl[k - 1] + j_lo[k - 1]] - 1
         end
         spl[K + 1] = n + 1
         return SplitPartition{Ti}(K, spl) 
