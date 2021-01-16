@@ -82,7 +82,7 @@ end
                 m == n ? FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
                     (DynamicBottleneckSplitter(f), 0);
@@ -115,7 +115,7 @@ end
                 m == n ? FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
                     (DynamicBottleneckSplitter(f), 0);
@@ -139,7 +139,7 @@ end
                 m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicTotalSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceTotalSplitter(f), Π)
                 c = total_value(A, Π, Φ, f)
                 for (method, ϵ) = [
                     (DynamicTotalSplitter(f), 0);
@@ -164,11 +164,11 @@ end
                 (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
                 (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
             ]
-                Φ = partition_stripe(A, K, DynamicTotalSplitter(f))
+                Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
                 c = total_value(A, Φ, f)
                 for method = [
                     DynamicTotalSplitter(f);
-                    ConvexTotalChunker(f);
+                    #ConvexTotalChunker(f);
                 ]
                     Φ′ = partition_stripe(A, K, method)
                     @test issorted(Φ′.spl)
@@ -183,7 +183,7 @@ end
             (AffineNetCostModel(0, 3, 1, 3), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
-            Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
+            Φ = pack_stripe(A, ReferenceTotalChunker(f, w_max), Π)
             c = total_value(A, Π, Φ, f)
             for method = [
                 DynamicTotalChunker(f, w_max);
@@ -214,7 +214,7 @@ end
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
             (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
         ]
-            Φ = pack_stripe(A, DynamicTotalChunker(f, n + 1))
+            Φ = pack_stripe(A, ReferenceTotalChunker(f, n))
             c = total_value(A, Φ, f)
             for method = [
                 DynamicTotalChunker(f, n);

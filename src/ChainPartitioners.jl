@@ -66,6 +66,8 @@ export bound_stripe
 export partition_stripe
 export partition_plaid
 export EquiSplitter
+export ReferenceBottleneckSplitter
+export ReferenceTotalSplitter
 export DynamicBottleneckSplitter
 export DynamicTotalSplitter
 export BisectIndexBottleneckSplitter
@@ -83,6 +85,7 @@ export DisjointPacker
 export AlternatingPacker
 export SymmetricPacker
 export EquiChunker
+export ReferenceTotalChunker
 export DynamicTotalChunker
 export ConvexTotalChunker
 export ConcaveTotalChunker
@@ -153,6 +156,7 @@ include("DynamicChunker.jl")
 include("QuadrangleTotalChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
+include("ReferenceSplitter.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")

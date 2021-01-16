@@ -2,7 +2,6 @@ struct ConvexTotalChunker{F}
     f::F
 end
 
-#TODO the reversening.
 #TODO add reference partitioners to test optimized constrained dynamic ones.
 #TODO add optimized constrained dynamic partitioner before optimized convex one.
 
