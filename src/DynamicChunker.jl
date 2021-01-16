@@ -29,6 +29,10 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
             spl[j] = best_j′
         end
 
+        #@info "naive"
+        #@info spl
+        #@info cst
+
         K = 0
         j = 1
         while j != n + 1

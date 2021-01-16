@@ -130,7 +130,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         f′(j, j′) = cst[j′] + f(j, j′)
         chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
 
-        #@info "funky"
+        #@info "funky" w_max
         #@info spl
         #@info cst
 
@@ -191,8 +191,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
             if j′_hi[k] <= j_lo[k]
                 spl = ones(Ti, K + 1)
                 spl[end] = n + 1
+                throw(ArgumentError("infeasible")) #TODO infeasibility
                 return SplitPartition(K, spl)
-                #ArgumentError("infeasible") #TODO infeasibility
             end
             pos[k + 1] = pos[k] + (1 + j′_hi[k] - j_lo[k])
         end

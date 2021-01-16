@@ -75,18 +75,18 @@ struct ConstrainedCostOracle{F, W, Tc, Tw} <: AbstractOracleCost{ConstrainedCost
     function ConstrainedCostOracle{F, W, Tc, Tw}(f::F, w::W, f_max, w_max) where {F, W, Tc, Tw}
         @assert Tc == cost_type(F)
         @assert Tw == cost_type(W)
-        return new{F, W, Tw, Tc}(f, w, f_max, w_max)
+        return new{F, W, Tc, Tw}(f, w, f_max, w_max)
     end
 end
 
-ConstrainedCostOracle(f::F, w::W, w_max, f_max) where {F, W} = ConstrainedCostOracle{F, W, cost_type(F), cost_type(W)}(f, w, f_max, w_max)
+ConstrainedCostOracle(f::F, w::W, f_max, w_max) where {F, W} = ConstrainedCostOracle{F, W, cost_type(F), cost_type(W)}(f, w, f_max, w_max)
 
 oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
 
 function oracle_stripe(cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
     (m, n) = size(A)
     f = oracle_stripe(cst.f, A, args...; kwargs...)
-    f_max = f(1, n + 1) + true #TODO this is a reasonable hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
+    f_max = f(1, n + 1) + 1000 #TODO this is a hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
     w = oracle_stripe(cst.w, A, args...; kwargs...)
     w_max = cst.w_max
     return ConstrainedCostOracle(f, w, f_max, w_max)
