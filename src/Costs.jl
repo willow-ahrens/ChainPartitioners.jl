@@ -53,6 +53,31 @@ end
 
 
 
+struct Extended{T}
+    i::Bool
+    x::T
+end
+
+
+infinity(::Type{Float16}) = Inf16
+infinity(::Type{Float32}) = Inf32
+infinity(::Type{Float64}) = Inf64
+infinity(::Extended{T}) where {T} = Extended(true, zero(T))
+infinity(T) = Extended(true, zero(T))
+
+extend(T::Type) = typeof(infinity(T))
+#TODO use convert here
+extend(x) = (x isa extend(typeof(x))) ? x : Extended(false, x)
+
+#Base.zero(::Extended{T}) where {T} = extend(zero(T))
+Base.zero(::Type{Extended{T}}) where {T} = extend(zero(T))
+Base.:+(a::Extended, b::Extended) = Extended(a.i | b.i, a.x + b.x)
+Base.:*(a::Extended, b::Extended) = Extended(a.i | b.i, a.x * b.x)
+Base.typemax(::Type{Extended{T}}) where {T} = infinity(T)
+Base.typemin(::Type{Extended{T}}) where {T} = extend(typemin(T))
+Base.:<(a::Extended, b::Extended) = (!a.i && b.i) || ((!a.i && !b.i) && (a.x < b.x))
+Base.:(==)(a::Extended, b::Extended) = (a.i && b.i) || ((!a.i && !b.i) && (a.x == b.x))
+
 struct ConstrainedCost{F, W, Tw}
     f::F
     w::W
@@ -65,40 +90,38 @@ end
 
 ConstrainedCost(f::F, w::W, w_max) where {F, W} = ConstrainedCost{F, W, cost_type(W)}(f, w, w_max)
 
-cost_type(::Type{ConstrainedCost{F, W, Tw}}) where {F, W, Tw} = cost_type(F)
+cost_type(::Type{ConstrainedCost{F, W, Tw}}) where {F, W, Tw} = extend(cost_type(F))
 
-struct ConstrainedCostOracle{F, W, Tc, Tw} <: AbstractOracleCost{ConstrainedCost{F, W, Tw}}
+struct ConstrainedCostOracle{F, W, Tw} <: AbstractOracleCost{ConstrainedCost{F, W, Tw}}
     f::F
     w::W
-    f_max::Tc
     w_max::Tw
-    function ConstrainedCostOracle{F, W, Tc, Tw}(f::F, w::W, f_max, w_max) where {F, W, Tc, Tw}
-        @assert Tc == cost_type(F)
+    function ConstrainedCostOracle{F, W, Tw}(f::F, w::W, w_max) where {F, W, Tw}
         @assert Tw == cost_type(W)
-        return new{F, W, Tc, Tw}(f, w, f_max, w_max)
+        return new{F, W, Tw}(f, w, w_max)
     end
 end
 
-ConstrainedCostOracle(f::F, w::W, f_max, w_max) where {F, W} = ConstrainedCostOracle{F, W, cost_type(F), cost_type(W)}(f, w, f_max, w_max)
+ConstrainedCostOracle(f::F, w::W, w_max) where {F, W} = ConstrainedCostOracle{F, W, cost_type(W)}(f, w, w_max)
 
 oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
 
 function oracle_stripe(cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
     (m, n) = size(A)
     f = oracle_stripe(cst.f, A, args...; kwargs...)
-    f_max = f(1, n + 1) + 1000 #TODO this is a hack. The safest alternatitive is to introduce a wrapper numerical type which encodes infeasibility.
     w = oracle_stripe(cst.w, A, args...; kwargs...)
     w_max = cst.w_max
-    return ConstrainedCostOracle(f, w, f_max, w_max)
+    return ConstrainedCostOracle(f, w, w_max)
 end
 
 @inline function (ocl::ConstrainedCostOracle)(j::Ti, j′::Ti, k...) where {Ti}
     if ocl.w(j, j′, k...) <= ocl.w_max
-        return ocl.f(j, j′, k...)
+        return extend(ocl.f(j, j′, k...))
     else
-        return ocl.f_max
+        return infinity(cost_type(ocl.f))
     end
 end
 
+#TODO not sure about these two...
 bound_stripe(A::SparseMatrixCSC, K, cst::ConstrainedCost) = bound_stripe(A, K, ocl.f)
 bound_stripe(A::SparseMatrixCSC, K, ocl::ConstrainedCostOracle) = bound_stripe(A, K, ocl.f)

@@ -122,7 +122,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         σ_j = undefs(Ti, 2n + 2)
         σ_j′ = undefs(Ti, 2n + 2)
         σ_ptr = undefs(Ti, 2n + 2)
-        σ_cst = undefs(cost_type(method.f), 2n + 2)
+        σ_cst = undefs(cost_type(f), 2n + 2)
 
         spl = zeros(Ti, n + 1)
         cst = fill(typemax(cost_type(f)), n + 1)
