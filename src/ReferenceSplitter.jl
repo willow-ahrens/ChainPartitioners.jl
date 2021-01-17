@@ -15,8 +15,7 @@ partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ReferenceBottleneckSplit
 
 struct ReferenceTotalChunker{F}
     f::F
-    w_max::Int
 end
 
 pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ReferenceTotalChunker{F}, args...; kwargs...) where {Tv, Ti, F} =
-    invoke(pack_stripe, Tuple{SparseMatrixCSC{Tv, Ti}, DynamicTotalChunker, Vararg}, A, DynamicTotalChunker(method.f, method.w_max), args...; kwargs...)
+    invoke(pack_stripe, Tuple{SparseMatrixCSC{Tv, Ti}, DynamicTotalChunker, Vararg}, A, DynamicTotalChunker(method.f), args...; kwargs...)

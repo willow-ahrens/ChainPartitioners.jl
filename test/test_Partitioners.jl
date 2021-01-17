@@ -180,13 +180,13 @@ end
         end
 
         for (f, w_max) = [
-            (AffineNetCostModel(0, 3, 1, 3), 4);
+            (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), AffineWorkCostModel(0, 1, 0), 4), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
-            Φ = pack_stripe(A, ReferenceTotalChunker(f, w_max), Π)
+            Φ = pack_stripe(A, ReferenceTotalChunker(f), Π)
             c = total_value(A, Π, Φ, f)
             for method = [
-                DynamicTotalChunker(f, w_max);
+                DynamicTotalChunker(f);
                 StrictChunker(w_max);
                 OverlapChunker(0.9, w_max);
                 OverlapChunker(0.8, w_max);
@@ -214,18 +214,18 @@ end
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
             (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
         ]
-            Φ = pack_stripe(A, ReferenceTotalChunker(f, n))
+            Φ = pack_stripe(A, ReferenceTotalChunker(f))
             c = total_value(A, Φ, f)
             for method = [
-                ReferenceTotalChunker(f, n);
-                DynamicTotalChunker(f, n);
+                ReferenceTotalChunker(f);
+                DynamicTotalChunker(f);
                 ConvexTotalChunker(f);
             ]
                 Φ′ = pack_stripe(A, method)
                 @test issorted(Φ′.spl)
                 @test Φ′.spl[1] == 1
                 @test Φ′.spl[end] == n + 1
-                @test total_value(A, Φ′, f) == c
+                @test total_value(A, Φ′, f) ≈ c
             end
         end
 
