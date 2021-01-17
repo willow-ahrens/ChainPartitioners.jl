@@ -18,4 +18,4 @@ struct ReferenceTotalChunker{F}
 end
 
 pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ReferenceTotalChunker{F}, args...; kwargs...) where {Tv, Ti, F} =
-    invoke(pack_stripe, Tuple{SparseMatrixCSC{Tv, Ti}, DynamicTotalChunker, Vararg}, A, DynamicTotalChunker(method.f), args...; kwargs...)
+    invoke(pack_stripe, Tuple{SparseMatrixCSC{Tv, Ti}, DynamicTotalChunker{<:Any}, Vararg}, A, DynamicTotalChunker(method.f), args...; kwargs...)
