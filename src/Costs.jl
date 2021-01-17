@@ -77,6 +77,7 @@ Base.typemax(::Type{Extended{T}}) where {T} = infinity(T)
 Base.typemin(::Type{Extended{T}}) where {T} = extend(typemin(T))
 Base.:<(a::Extended, b::Extended) = (!a.i && b.i) || ((!a.i && !b.i) && (a.x < b.x))
 Base.:(==)(a::Extended, b::Extended) = (a.i && b.i) || ((!a.i && !b.i) && (a.x == b.x))
+Base.isapprox(a::Extended, b::Extended; kwargs...) = (a.i && b.i) || ((!a.i && !b.i) && isapprox(a.x, b.x; kwargs...))
 
 struct ConstrainedCost{F, W, Tw}
     f::F
