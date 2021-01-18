@@ -126,3 +126,25 @@ end
 #TODO not sure about these two...
 bound_stripe(A::SparseMatrixCSC, K, cst::ConstrainedCost) = bound_stripe(A, K, ocl.f)
 bound_stripe(A::SparseMatrixCSC, K, ocl::ConstrainedCostOracle) = bound_stripe(A, K, ocl.f)
+
+struct Infeasible end
+
+struct Feasible end
+
+Base.:<(::Feasible, ::Feasible) = false
+Base.:<(::Feasible, ::Infeasible) = true
+Base.:<(::Infeasible, ::Infeasible) = false
+Base.:<(::Infeasible, ::Feasible) = false
+Base.:(==)(::Feasible, ::Feasible) = true
+Base.:(==)(::Feasible, ::Infeasible) = false
+Base.:(==)(::Infeasible, ::Feasible) = false
+Base.:(==)(::Infeasible, ::Infeasible) = true
+
+struct FeasibleCost end
+
+@inline (::FeasibleCost)() = Feasible()
+@inline cost_type(::Type{FeasibleCost}) = Feasible
+oracle_model(::FeasibleCost) = FeasibleCost()
+oracle_stripe(::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
+@inline (::FeasibleCost)(j, j′, k...) = Feasible()
+bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = Feasible()
