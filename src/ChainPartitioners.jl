@@ -140,23 +140,29 @@ export perm
 export pattern
 
 include("util.jl")
-include("SparsePrefixMatrices.jl")
-include("EnvelopeMatrices.jl")
+
 include("Partitions.jl")
+
+include("EnvelopeMatrices.jl")
+include("SparsePrefixMatrices.jl")
 include("SparseColorArrays.jl")
+
 include("Costs.jl")
+
 include("WorkCosts.jl")
 include("HyperedgeCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
-include("EquiPartitioner.jl")
+
 include("DynamicSplitter.jl")
-include("AlternatingPacker.jl")
 include("DynamicChunker.jl")
+include("ReferenceSplitter.jl")
+
+include("EquiPartitioner.jl")
+include("AlternatingPacker.jl")
 include("QuadrangleTotalChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
-include("ReferenceSplitter.jl")
 include("BisectIndexBottleneckSplitter.jl")
 include("BisectCostBottleneckSplitter.jl")
 include("LazyBisectCostBottleneckSplitter.jl")

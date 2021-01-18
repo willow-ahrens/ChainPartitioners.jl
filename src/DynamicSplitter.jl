@@ -35,15 +35,18 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 end
             end
         end
-
-        spl = zeros(Ti, K + 1)
-        spl[end] = n + 1
-        for k = K:-1:1
-            spl[k] = ptr[k, spl[k + 1]]
-        end
-
-        return SplitPartition(K, spl)
+        return unravel_splits(K, n, ptr)
     end
+end
+
+function unravel_splits(K, n, ptr)
+    spl = zeros(eltype(ptr), K + 1)
+    spl[end] = n + 1
+    for k = K:-1:1
+        spl[k] = ptr[k, spl[k + 1]]
+    end
+
+    return SplitPartition(K, spl)
 end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
@@ -120,13 +123,16 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 end
             end
         end
-
-        spl = zeros(Ti, K + 1)
-        spl[end] = n + 1
-        for k = K:-1:1
-            spl[k] = ptr[pos[k] + spl[k + 1] - j_lo[k + 1]]
-        end
-
-        return SplitPartition(K, spl)
+        return unravel_constrained_splits(K, n, pos, ptr, j_lo)
     end
+end
+
+function unravel_constrained_splits(K, n, pos, ptr, j_lo)
+    spl = zeros(eltype(ptr), K + 1)
+    spl[end] = n + 1
+    for k = K:-1:1
+        spl[k] = ptr[pos[k] + spl[k + 1] - j_lo[k + 1]]
+    end
+
+    return SplitPartition(K, spl)
 end
