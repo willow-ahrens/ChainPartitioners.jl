@@ -6,23 +6,6 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker, ar
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
 end
 
-function unravel_chunks!(spl, n)
-    K = 0
-    j′ = n + 1
-    while j′ != 1
-        j = spl[j′]
-        spl[end - K] = j′
-        K += 1
-        j′ = j
-    end
-    spl[1] = 1
-    for k = 1:K
-        spl[k + 1] = spl[end - K + k]
-    end
-    resize!(spl, K + 1)
-    return SplitPartition(K, spl)
-end
-
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost}, args...; kwargs...) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
@@ -58,6 +41,23 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
 
         return unravel_chunks!(spl, n)
     end
+end
+
+function unravel_chunks!(spl, n)
+    K = 0
+    j′ = n + 1
+    while j′ != 1
+        j = spl[j′]
+        spl[end - K] = j′
+        K += 1
+        j′ = j
+    end
+    spl[1] = 1
+    for k = 1:K
+        spl[k + 1] = spl[end - K + k]
+    end
+    resize!(spl, K + 1)
+    return SplitPartition(K, spl)
 end
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:AbstractNetCostModel, Tv, Ti}
