@@ -11,7 +11,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
 
         f = oracle_stripe(method.f, A, args...)
 
-        ftr = Stack{Tuple{Ti, Ti}}(n)
+        ftr = CircularDeque{Tuple{Ti, Ti}}(n + 1)
         spl = zeros(Ti, n + 1)
         cst = fill(typemax(cost_type(f)), n + 1)
         cst[1] = zero(cost_type(f))
@@ -116,11 +116,11 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         w = oracle_stripe(method.f.w, A, args...)
         w_max = method.f.w_max
 
-        ftr = Stack{Tuple{Ti, Ti}}(2n)
-        σ_j = undefs(Ti, 2n + 2)
-        σ_j′ = undefs(Ti, 2n + 2)
-        σ_ptr = undefs(Ti, 2n + 2)
-        σ_cst = undefs(cost_type(f), 2n + 2)
+        ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
+        σ_j = undefs(Ti, 2n + 1)
+        σ_j′ = undefs(Ti, 2n + 1)
+        σ_ptr = undefs(Ti, 2n + 1)
+        σ_cst = undefs(cost_type(f), 2n + 1)
 
         spl = zeros(Ti, n + 1)
         cst = fill(typemax(cost_type(f)), n + 1)
@@ -222,33 +222,29 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
 
         if j′₁  == J′₁
-            #@info "hello" j₀ J′₁
             break
         end
         j′ = j′₁
         I = 1
-        for j = j₀ + 1 : j′₁ #j₀ is redundant, be we just deal with it, whatever.
-            σ_j′[I] = j′
-            I += 1
-            σ_j[I] = j
-            while j′ < J′₁ && w(j, j′ + 1) <= w_max
-                j′ += 1
+        for j = j₀ + 1 : j′₁ # j = j₀ is redundant, as is j′ = j′₁.
+            if j′ > j′₁
                 σ_j′[I] = j′
                 I += 1
                 σ_j[I] = j
             end
+            while j′ < J′₁ && w(j, j′ + 1) <= w_max
+                j′ += 1
+                #if j′ > j′₁
+                    σ_j′[I] = j′
+                    I += 1
+                    σ_j[I] = j
+                #end
+            end
         end
-        #=
-        while j′ < J′₁ && w(j′₁, j′ + 1) <= w_max
-            j′ += 1
-        end
-        =#
 
         for i = 2:I-1
             σ_cst[i] = typemax(eltype(cst))
         end
-        #@info "wut?" I σ_j[1:I-1] σ_j′[1:I-1] σ_cst[1:I - 1]
-
         #have i < i′
         #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
         #also need j < j′ but this is satisfied for any i, i′ since rand(σ_j) < rand(σ_j′)
@@ -256,25 +252,12 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         σ_f(i, i′) = f(σ_j[I - i], σ_j′[I - i′])
         chunk_convex!(σ_cst, σ_ptr, σ_f, 1, I - 1, ftr)
 
-        #@info "wut?" I σ_j[2:I - 1] σ_j′[1:I-2] σ_ptr[2:I - 1]
         for i′ = 2:I - 1
-            #@info "wut?" σ_j[i] σ_j′[i] I σ_ptr[i] σ_cst[i]
-            #@assert σ_j′[σ_ptr[i]] - σ_j[i] <= w_max
-            if σ_j′[I - i′] > j′₁
-                cst[σ_j′[I - i′]] = σ_cst[i′]
-                ptr[σ_j′[I - i′]] = σ_j[I - σ_ptr[i′]]
-            end
+            cst[σ_j′[I - i′]] = σ_cst[i′]
+            ptr[σ_j′[I - i′]] = σ_j[I - σ_ptr[i′]]
         end
-
-        #=
-        for j = σ_j[I - 1]:j₀
-            @info "hmm" j₀ j₁ j ptr[j] w_max f′(j, ptr[j]) minimum(j′ -> j′ - j > w_max ? Inf : f′(j, j′), j₀:j₁) 
-            @assert f′(j, ptr[j]) ≈ minimum(j′ -> j′ - j > w_max ? Inf : f′(j, j′), j₀:j₁) 
-        end
-        =#
 
         j₀ = j′₁
         j′₁ = σ_j′[I - 1]
-        #@info "round4" j₀ j₁
     end
 end
