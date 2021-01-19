@@ -19,7 +19,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         f = oracle_stripe(method.f, A, args...)
         g = _dynamic_splitter_combine(method)
 
-        ptr = zeros(Ti, K + 1, n + 1)
+        ptr = zeros(Ti, K, n + 1)
         cst = fill(typemax(cost_type(f)), K, n + 1)
 
         for j′ = 1:n + 1
