@@ -227,7 +227,7 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         end
         j′ = j′₁
         I = 1
-        for j = j₀ : j′₁ #j₀ is redundant, be we just deal with it, whatever.
+        for j = j₀ + 1 : j′₁ #j₀ is redundant, be we just deal with it, whatever.
             σ_j′[I] = j′
             I += 1
             σ_j[I] = j
@@ -244,9 +244,8 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         end
         =#
 
-        for i = 1:I
+        for i = 2:I-1
             σ_cst[i] = typemax(eltype(cst))
-            σ_ptr[i] = zero(eltype(σ_ptr))
         end
         #@info "wut?" I σ_j[1:I-1] σ_j′[1:I-1] σ_cst[1:I - 1]
 
