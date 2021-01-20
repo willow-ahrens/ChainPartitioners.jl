@@ -67,6 +67,7 @@ end
     for A in [
         [
             matrices["LPnetlib/lpi_itest6"],
+            SparseMatrixCSC(matrices["HB/can_292"]),
         ];
         reshape([sprand(m, n, 0.1) for m = [1, 2, 3, 4, 8], n = [1, 2, 3, 4, 8], trial = 1:4], :);
     ]

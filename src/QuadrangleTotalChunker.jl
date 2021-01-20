@@ -85,6 +85,7 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
                 while h_ref < h_hi && f(j′ - 1, h_ref + 1) < f(j, h_ref + 1)
                     h_ref += 1
                 end
+                h = h_ref
                 =#
                 while h_lo <= h_hi
                     h = fld2(h_lo + h_hi)
@@ -106,6 +107,18 @@ end
 
 #=
 function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
+    @inbounds begin
+        for a = j₀:j′₁
+            for b = a:j′₁
+                for c = b + 1:j′₁
+                    for d = c:j′₁
+                        @assert f(a, c) + f(b, d) >= f(a, d) + f(b, c)
+                    end
+                end
+            end
+        end
+    end
+    
     @inbounds begin
         for j′ = j₀ + 1:j′₁
             for j = j₀:j′-1
