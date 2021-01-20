@@ -232,6 +232,50 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
 end
 =#
 
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
+    begin
+        (m, n) = size(A)
+
+        f = oracle_stripe(method.f, A, args...)
+        w = f.w
+        w_max = method.f.w_max
+
+        ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
+        σ_j = undefs(Ti, 2n + 1)
+        σ_j′ = undefs(Ti, 2n + 1)
+        σ_ptr = undefs(Ti, 2n + 1)
+        σ_cst = undefs(cost_type(f), 2n + 1)
+
+        (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
+
+        if j′_hi[K] < n + 1
+            spl = ones(Ti, K + 1)
+            spl[end] = n + 1
+            #TODO throw(ArgumentError("infeasible"))
+            return SplitPartition(K, spl)
+        end
+
+        ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), n + 1, K, j′_lo, j′_hi)
+        cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
+
+        for j′ = j′_lo[1] : j′_hi[1]
+            cst[j′, 1] = f(1, j′, 1)
+            ptr[j′, 1] = 1
+        end
+
+        for k = 2:K
+            f′(j, j′) = cst[j, k - 1] + extend(f.f(j, j′, k))
+            for j′ = j′_lo[k]:j′_hi[k]
+                cst[j′, k] = f′(j′, j′)
+                ptr[j′, k] = j′ 
+            end
+            chunk_convex_constrained!((@view cst[:, k]), (@view ptr[:, k]), f′, w, w_max, j′_lo[k - 1], j′_hi[k], ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+        end
+
+        return unravel_splits(K, n, PermutedDimsArray(ptr, (2, 1)))
+    end
+end
+
 function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
     j′₁ = J₀ + 1
     while j′₁ < J′₁ && w(J₀, j′₁ + 1) <= w_max
