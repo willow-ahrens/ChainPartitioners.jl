@@ -14,34 +14,30 @@ end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter, args...) where {Tv, Ti}
     @inbounds begin
+        (m, n) = size(A)
+
         f = oracle_stripe(method.f, A, args...; b = 1)
         g = _dynamic_splitter_combine(method)
 
-        _partition_stripe_dynamic_generic(A, K, f, g)
-    end
-end
+        @stabilize Tv Ti A m n K f g begin
+            ptr = zeros(Ti, K, n + 1)
+            cst = fill(typemax(cost_type(f)), K, n + 1)
 
-function _partition_stripe_dynamic_generic(A::SparseMatrixCSC{Tv, Ti}, K, f, g) where {Tv, Ti}
-    @inbounds begin
-        (m, n) = size(A)
-
-        ptr = zeros(Ti, K, n + 1)
-        cst = fill(typemax(cost_type(f)), K, n + 1)
-
-        for j′ = 1:n + 1
-            cst[1, j′] = f(1, j′, 1)
-            ptr[1, j′] = 1
-            for j = 1:j′
-                for k = 2:K
-                    c_lo = f(j, j′, k)
-                    if g(cst[k - 1, j], c_lo) <= cst[k, j′]
-                        cst[k, j′] = g(cst[k - 1, j], c_lo)
-                        ptr[k, j′] = j
+            for j′ = 1:n + 1
+                cst[1, j′] = f(1, j′, 1)
+                ptr[1, j′] = 1
+                for j = 1:j′
+                    for k = 2:K
+                        c_lo = f(j, j′, k)
+                        if g(cst[k - 1, j], c_lo) <= cst[k, j′]
+                            cst[k, j′] = g(cst[k - 1, j], c_lo)
+                            ptr[k, j′] = j
+                        end
                     end
                 end
             end
+            return unravel_splits(K, n, ptr)
         end
-        return unravel_splits(K, n, ptr)
     end
 end
 
@@ -132,53 +128,50 @@ end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
+        (m, n) = size(A)
+
         f = oracle_stripe(method.f, A, args...; b = 1)
         w = f.w
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)
-        _partition_stripe_dynamic_constrained(A, K, f, w, w_max, g)
-    end
-end
 
-function _partition_stripe_dynamic_constrained(A::SparseMatrixCSC{Tv, Ti}, K, f, w, w_max, g) where {Tv, Ti}
-    @inbounds begin
-        (m, n) = size(A)
+        @stabilize Tv Ti A m n f w w_max g begin
+            (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 
-        (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
+            if j′_hi[K] < n + 1
+                spl = ones(Ti, K + 1)
+                spl[end] = n + 1
+                #TODO throw(ArgumentError("infeasible"))
+                return SplitPartition(K, spl)
+            end
 
-        if j′_hi[K] < n + 1
-            spl = ones(Ti, K + 1)
-            spl[end] = n + 1
-            #TODO throw(ArgumentError("infeasible"))
-            return SplitPartition(K, spl)
-        end
+            ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), n + 1, K, j′_lo, j′_hi)
+            cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
 
-        ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), n + 1, K, j′_lo, j′_hi)
-        cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
+            for j′ = j′_lo[1] : j′_hi[1]
+                cst[j′, 1] = f(1, j′, 1)
+                ptr[j′, 1] = 1
+            end
 
-        for j′ = j′_lo[1] : j′_hi[1]
-            cst[j′, 1] = f(1, j′, 1)
-            ptr[j′, 1] = 1
-        end
-
-        for k = 2:K
-            j₀ = j′_lo[k - 1]
-            for j′ = j′_lo[k] : j′_hi[k]
-                while w(j₀, j′, k) > w_max #TODO can this run over the end?
-                    j₀ += 1
-                end
-                cst[j′, k] = g(cst[j₀, k - 1], f(j₀, j′, k))
-                ptr[j′, k] = j₀
-                for j = j₀ + 1 : min(j′, j′_hi[k - 1])
-                    c′ = g(cst[j, k - 1], f(j, j′, k))
-                    if c′ <= cst[j′, k]
-                        cst[j′, k] = c′ 
-                        ptr[j′, k] = j
+            for k = 2:K
+                j₀ = j′_lo[k - 1]
+                for j′ = j′_lo[k] : j′_hi[k]
+                    while w(j₀, j′, k) > w_max #TODO can this run over the end?
+                        j₀ += 1
+                    end
+                    cst[j′, k] = g(cst[j₀, k - 1], f(j₀, j′, k))
+                    ptr[j′, k] = j₀
+                    for j = j₀ + 1 : min(j′, j′_hi[k - 1])
+                        c′ = g(cst[j, k - 1], f(j, j′, k))
+                        if c′ <= cst[j′, k]
+                            cst[j′, k] = c′ 
+                            ptr[j′, k] = j
+                        end
                     end
                 end
             end
-        end
 
-        return unravel_splits(K, n, PermutedDimsArray(ptr, (2, 1)))
+            return unravel_splits(K, n, PermutedDimsArray(ptr, (2, 1)))
+        end
     end
 end
