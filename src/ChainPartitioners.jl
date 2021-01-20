@@ -172,6 +172,8 @@ include("Permutations.jl")
 include("CuthillMcKeePermuter.jl")
 include("PermutingPartitioner.jl")
 
+@deprecate DynamicTotalChunker(f, w_max) DynamicTotalChunker(ConstrainedCost(f, WidthCost{typeof(w_max)}(), w_max))
+
 function __init__()
     @require AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e" include("glue_AMD.jl")
     @require Laplacians = "6f8e5838-0efe-5de0-80a3-5fb4f8dbb1de" include("glue_Laplacians.jl")

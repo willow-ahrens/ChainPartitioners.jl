@@ -14,10 +14,16 @@ end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter, args...) where {Tv, Ti}
     @inbounds begin
-        (m, n) = size(A)
-
-        f = oracle_stripe(method.f, A, args...)
+        f = oracle_stripe(method.f, A, args...; b = 1)
         g = _dynamic_splitter_combine(method)
+
+        _partition_stripe_dynamic_generic(A, K, f, g)
+    end
+end
+
+function _partition_stripe_dynamic_generic(A::SparseMatrixCSC{Tv, Ti}, K, f, g) where {Tv, Ti}
+    @inbounds begin
+        (m, n) = size(A)
 
         ptr = zeros(Ti, K, n + 1)
         cst = fill(typemax(cost_type(f)), K, n + 1)
@@ -40,13 +46,15 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
 end
 
 function unravel_splits(K, n, ptr)
-    spl = zeros(eltype(ptr), K + 1)
-    spl[end] = n + 1
-    for k = K:-1:1
-        spl[k] = ptr[k, spl[k + 1]]
-    end
+    @inbounds begin
+        spl = zeros(eltype(ptr), K + 1)
+        spl[end] = n + 1
+        for k = K:-1:1
+            spl[k] = ptr[k, spl[k + 1]]
+        end
 
-    return SplitPartition(K, spl)
+        return SplitPartition(K, spl)
+    end
 end
 
 struct WindowConstrainedMatrix{Tv, Ti} <: AbstractMatrix{Tv}
@@ -60,12 +68,14 @@ struct WindowConstrainedMatrix{Tv, Ti} <: AbstractMatrix{Tv}
 end
 
 function WindowConstrainedMatrix{Tv, Ti}(z, m, n, idx_lo::Vector{Ti}, idx_hi::Vector{Ti}) where {Ti, Tv}
-    pos = undefs(Ti, n + 1)
-    pos[1] = 1
-    for j = 1:n
-        pos[j + 1] = pos[j] + idx_hi[j] - idx_lo[j] + 1
+    @inbounds begin
+        pos = undefs(Ti, n + 1)
+        pos[1] = 1
+        for j = 1:n
+            pos[j + 1] = pos[j] + idx_hi[j] - idx_lo[j] + 1
+        end
+        WindowConstrainedMatrix{Tv, Ti}(z, m, n, idx_lo, idx_hi, pos)
     end
-    WindowConstrainedMatrix{Tv, Ti}(z, m, n, idx_lo, idx_hi, pos)
 end
 
 function WindowConstrainedMatrix{Tv, Ti}(z, m, n, idx_lo::Vector{Ti}, idx_hi::Vector{Ti}, pos::Vector{Ti}) where {Ti, Tv}
@@ -91,41 +101,48 @@ end
 end
 
 function column_constraints(A::SparseMatrixCSC{Tv, Ti}, K, w, w_max) where {Tv, Ti}
-    (m, n) = size(A)
+    @inbounds begin
+        (m, n) = size(A)
 
-    j′_lo = undefs(Ti, K)
-    j′ = n + 1
-    for k = K:-1:1
-        j′_lo[k] = j′
-        j = j′
-        while j - 1 >= 1 && w(j - 1, j′, k) <= w_max
-            j -= 1
+        j′_lo = undefs(Ti, K)
+        j′ = n + 1
+        for k = K:-1:1
+            j′_lo[k] = j′
+            j = j′
+            while j - 1 >= 1 && w(j - 1, j′, k) <= w_max
+                j -= 1
+            end
+            j′ = j
         end
-        j′ = j
-    end
 
-    j′_hi = undefs(Ti, K)
-    j = 1
-    for k = 1:K
-        j′ = j
-        while j′ + 1 <= n + 1 && w(j, j′ + 1, k) <= w_max
-            j′ += 1
+        j′_hi = undefs(Ti, K)
+        j = 1
+        for k = 1:K
+            j′ = j
+            while j′ + 1 <= n + 1 && w(j, j′ + 1, k) <= w_max
+                j′ += 1
+            end
+            j′_hi[k] = j′
+            j = j′
         end
-        j′_hi[k] = j′
-        j = j′
-    end
 
-    return (j′_lo, j′_hi)
+        return (j′_lo, j′_hi)
+    end
 end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
-    begin
-        (m, n) = size(A)
-
-        f = oracle_stripe(method.f, A, args...)
+    @inbounds begin
+        f = oracle_stripe(method.f, A, args...; b = 1)
         w = f.w
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)
+        _partition_stripe_dynamic_constrained(A, K, f, w, w_max, g)
+    end
+end
+
+function _partition_stripe_dynamic_constrained(A::SparseMatrixCSC{Tv, Ti}, K, f, w, w_max, g) where {Tv, Ti}
+    @inbounds begin
+        (m, n) = size(A)
 
         (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 

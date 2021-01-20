@@ -92,6 +92,7 @@ function main(args)
         reference = BenchmarkTools.load(joinpath(@__DIR__, "benchmarks.json"))[1]
         judgements = judge(minimum(results), minimum(reference); time_tolerance = 0.05)
         show(IOContext(stdout, :compact=>false, :limit=>false), regressions(judgements))
+        show(IOContext(stdout, :compact=>false, :limit=>false), improvements(judgements))
         println()
     else
         throw(ArgumentError("unrecognized command line arguments"))

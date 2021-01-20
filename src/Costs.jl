@@ -142,9 +142,16 @@ Base.:(==)(::Infeasible, ::Infeasible) = true
 
 struct FeasibleCost end
 
-@inline (::FeasibleCost)() = Feasible()
+@inline (::FeasibleCost)(j, j′, k...) = Feasible()
 @inline cost_type(::Type{FeasibleCost}) = Feasible
 oracle_model(::FeasibleCost) = FeasibleCost()
 oracle_stripe(::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
-@inline (::FeasibleCost)(j, j′, k...) = Feasible()
-bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = Feasible()
+#bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = (Feasible(), Feasible()) #TODO ?
+
+struct WidthCost{Ti} end
+
+@inline (::WidthCost{Ti})(j, j′, k...) where {Ti} = Ti(j′ - j)
+@inline cost_type(::Type{WidthCost{Ti}}) where {Ti} = Ti
+oracle_model(::WidthCost{Ti}) where {Ti} = WidthCost{Ti}()
+oracle_stripe(::WidthCost{Ti}, ::SparseMatrixCSC; kwargs...) where {Ti} = WidthCost{Ti}()
+#bound_stripe(A::SparseMatrixCSC, K, ::WidthCost) = (size(A)[2]/K, size(A)[2]) $TODO ?
