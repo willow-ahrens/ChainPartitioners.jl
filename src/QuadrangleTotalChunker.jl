@@ -104,6 +104,21 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
     end
 end
 
+#=
+function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
+    @inbounds begin
+        for j′ = j₀ + 1:j′₁
+            for j = j₀:j′-1
+                if f(j, j′) <= cst[j′]
+                    cst[j′] = f(j, j′)
+                    ptr[j′] = j
+                end
+            end
+        end
+    end
+end
+=#
+
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)

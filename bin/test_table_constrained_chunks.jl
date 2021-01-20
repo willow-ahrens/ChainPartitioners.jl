@@ -8,10 +8,18 @@ using ChainPartitioners
 using Cthulhu
 
 for mtx in [
-            "Boeing/ct20stif",
-            "DIMACS10/chesapeake",
+            "HB/can_292",
+            #"HB/662_bus",
+            #"HB/fs_680_2",
+            #"HB/can_292",
+            #"HB/plat362",
+            #"LPnetlib/lp_bandm",
+            #"LPnetlib/lp_etamacro",
+            #"Pajek/Erdos991",
+            #"Boeing/ct20stif",
+            #"DIMACS10/chesapeake",
             #"Schmid/thermal1",
-            "Rothberg/3dtube",
+            #"Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
     (m, n) = size(A)
