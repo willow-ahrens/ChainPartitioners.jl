@@ -33,6 +33,8 @@ for mtx in [
         @assert issorted(Φ.spl)
         @assert Φ.spl[1] == 1
         @assert Φ.spl[end] == n + 1
+        @assert all((Φ.spl[2:end] .- Φ.spl[1:end-1]) .<= fld(n, 16))
+        println(Φ.spl)
 
         push!(rows, [key setup_time comm])
     end
