@@ -220,6 +220,6 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         end
 
         j₀ = j′₁
-        j′₁ = σ_j′[I - 1]
+        j′₁ = σ_j′[I - 2]
     end
 end

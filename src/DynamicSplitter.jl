@@ -135,7 +135,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)
 
-        @stabilize Tv Ti A m n f w w_max g begin
+        @stabilize Tv Ti A K m n f w w_max g begin
             (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 
             if j′_hi[K] < n + 1
