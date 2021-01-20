@@ -123,7 +123,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 end
             end
         end
-        return unravel_constrained_splits(K, n, pos, ptr, j_lo)
+        return unravel_constrained_splits(K, n, pos, ptr, @view(j_lo[2:end]))
     end
 end
 
@@ -131,7 +131,7 @@ function unravel_constrained_splits(K, n, pos, ptr, j_lo)
     spl = zeros(eltype(ptr), K + 1)
     spl[end] = n + 1
     for k = K:-1:1
-        spl[k] = ptr[pos[k] + spl[k + 1] - j_lo[k + 1]]
+        spl[k] = ptr[pos[k] + spl[k + 1] - j_lo[k]]
     end
 
     return SplitPartition(K, spl)

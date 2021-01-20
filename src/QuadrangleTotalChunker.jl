@@ -128,18 +128,17 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
     end
 end
 
-#=
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
         f = oracle_stripe(method.f, A, args...)
+        w = f.w
+        w_max = method.f.w_max
 
         if K == 1
             return SplitPartition{Ti}(1, [Ti(1), Ti(n + 1)])
         end
-
-        ftr = Stack{Tuple{Ti, Ti}}(n + 1)
 
         ptr = zeros(Ti, n + 1, K)
         cst = fill(typemax(cost_type(f)), n + 1, K)
@@ -150,8 +149,10 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         σ_ptr = undefs(Ti, 2n + 1)
         σ_cst = undefs(cost_type(method.f), 2n + 1)
 
+    
         j_lo = undefs(Ti, K + 1)
         j′ = n + 1
+        j_lo[K + 1] = n + 1
         for k = K:-1:1
             j = j′
             while j - 1 >= 1 && w(j - 1, j′, k) <= w_max
@@ -160,6 +161,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
             j_lo[k] = j
             j′ = j
         end
+
         j′_hi = undefs(Ti, K)
         j = 1
         for k = 1:K
@@ -170,46 +172,52 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
             j′_hi[k] = j′
             j = j′
         end
+
+        if j′_hi[K] < n + 1
+            spl = ones(Ti, K + 1)
+            spl[end] = n + 1
+            #TODO throw(ArgumentError("infeasible"))
+            return SplitPartition(K, spl)
+        end
+
         pos = undefs(Ti, K + 1)
         pos[1] = 1
         for k = 1:K
-            if j′_hi[k] <= j_lo[k]
-                spl = ones(Ti, K + 1)
-                spl[end] = n + 1
-                throw(ArgumentError("infeasible")) #TODO infeasibility
-                return SplitPartition(K, spl)
-            end
             pos[k + 1] = pos[k] + (1 + j′_hi[k] - j_lo[k])
         end
-        ptr = undefs(Ti, pos[end] - 1)
-        cst = fill(typemax(cost_type(f)), pos[end] - 1)
 
-        for q = pos[K]:pos[K + 1] - 1
-            j = j_lo[K] + (q - pos[K])
-            cst[q] = f(j, n + 1)
-            ptr[q] = n + 1
+        ptr = zeros(Ti, pos[end])
+        cst = undefs(cost_type(f), pos[end])
+
+        for j′ = j_lo[2] : j′_hi[1]
+            i′ = j′ - j_lo[1]
+            cst[pos[1] + i′] = +(zero(cost_type(f)), f(1, j′, 1))
+            ptr[pos[1] + i′] = 1
         end
 
-        for k = K-1:-1:1
-            cst[pos[k + 1] - 1] = zero(cost_type(f))
-            #we need to set infeasible costs from level k + 1 to be inf and allocate space for those. Note that the cost is still convex.
-            f′(i, i′) = cst[pos[k + 1] + i′ - 1] + f(j_lo[k] + i - 1, j_lo[k] + i′ - 2, k)
-            chunk_convex_constrained!((@view cst[pos[k]:pos[k + 1] - 1]), (@view ptr[pos[k]:pos[k + 1] - 1]), f′, w, w_max, 1, j′_hi[k] - j_lo[k] + 2, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
-        end
-
-        spl = undefs(Ti, K + 1)
-        spl[1] = 1
         for k = 2:K
-            spl[k] = ptr[pos[k - 1] + spl[k - 1] + j_lo[k - 1]] - 1
+            j₀ = j_lo[k]
+            for j′ = j_lo[k + 1] : j′_hi[k]
+                while w(j₀, j′, k) > w_max #TODO can this run over the end?
+                    j₀ += 1
+                end
+                i′ = j′ - j_lo[k]
+                i = j₀ - j_lo[k - 1]
+                cst[pos[k] + i′] = +(cst[pos[k - 1] + i], f(j₀, j′, k))
+                ptr[pos[k] + i′] = j₀
+                for j = j₀ + 1 : min(j′, j′_hi[k - 1])
+                    i = j - j_lo[k - 1]
+                    c′ = +(cst[pos[k - 1] + i], f(j, j′, k))
+                    if c′ <= cst[pos[k] + i′]
+                        cst[pos[k] + i′] = c′ 
+                        ptr[pos[k] + i′] = j
+                    end
+                end
+            end
         end
-        spl[K + 1] = n + 1
-        return SplitPartition{Ti}(K, spl) 
+        return unravel_constrained_splits(K, n, pos, ptr, j_lo)
     end
 end
-
-
-=#
-
 
 function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
     j′₁ = J₀ + 1
