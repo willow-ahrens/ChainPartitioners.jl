@@ -57,7 +57,7 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
     empty!(ftr)
     push!(ftr, (j₀, j′₁))
     for j′ = j₀ + 1:j′₁
-        (j, h) = first(ftr)
+        (j, h) = last(ftr)
         if f(j′ - 1, j′) ≥ f(j, j′)
             if f(j, j′) <= cst[j′]
                 cst[j′] = f(j, j′)
@@ -71,13 +71,13 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
                 cst[j′] = f(j′ - 1, j′)
                 ptr[j′] = j′ - 1
             end
-            while !isempty(ftr) && ((j, h) = first(ftr); (f(j′ - 1, h) < f(j, h)))
+            while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h) < f(j, h)))
                 pop!(ftr)
             end
             if isempty(ftr)
                 push!(ftr, (j′ - 1, j′₁))
             else
-                (j, h) = first(ftr)
+                (j, h) = last(ftr)
                 h_lo = j′
                 h_hi = h
                 #=
