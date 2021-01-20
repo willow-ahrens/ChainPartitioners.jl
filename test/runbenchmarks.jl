@@ -10,12 +10,15 @@ function main(args)
 
     suite["partition_stripe"] = BenchmarkGroup(["partition", "stripe"])
     suite["partition_plaid"] = BenchmarkGroup(["partition", "plaid"])
+    suite["pack_stripe"] = BenchmarkGroup(["pack", "stripe"])
 
     work_model = (AffineWorkCostModel(0, 10, 1), "work_model")
     net_model = (AffineNetCostModel(0, 10, 1, 100), "net_model")
     sym_model = (AffineSymCostModel(0, 0, 1, 100, 90), "sym_model")
     comm_model = (AffineCommCostModel(0, 10, 1, 0, 100), "comm_model")
     local_model = (AffineLocalCostModel(0, 10, 1, 0, 100), "local_model")
+    col_block_model = (ColumnBlockComponentCostModel{Int}(8, 3, (w) -> 1 + w), "col_block_model")
+    block_model = (BlockComponentCostModel{Int}(8, 8, 1, 3, (1, identity), (1, identity)), "block_model")
 
     for mtx in [
         "Pajek/GD99_c",
@@ -24,6 +27,23 @@ function main(args)
         A = SparseMatrixCSC(matrices[mtx])
         (m, n) = size(A)
         ϵ = 0.01
+        for (f, f_key) = [
+            (DynamicTotalChunker(net_model[1], 8), "DynamicTotalSplitter(net_model)"),
+            (DynamicTotalChunker(col_block_model[1], 8), "DynamicTotalSplitter(col_block_model)"),
+            (OverlapChunker(0.9, 8), "OverlapChunker(0.9, 8)"),
+            (StrictChunker(8), "StrictChunker(8)"),
+        ]
+            suite["pack_stripe"]["pack_stripe($(mtx), $f_key)"] = @benchmarkable pack_stripe($A, $f)
+        end
+        for (Π, Π_key) in [
+            (pack_stripe(A', EquiChunker(4)), "Π_spl"),
+        ]
+            for (f, f_key) = [
+                (DynamicTotalChunker(block_model[1], 8), "DynamicTotalSplitter(block_model)"),
+            ]
+                suite["pack_stripe"]["pack_stripe($(mtx), $f_key, $Π_key)"] = @benchmarkable pack_stripe($A, $f, $Π)
+            end
+        end
         for K = [2, ceil(Int, n^(3/4))]
             mdls = [
                 work_model,
@@ -39,6 +59,7 @@ function main(args)
                 ((BisectIndexBottleneckSplitter(mdl), "BisectIndexBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                 ((BisectCostBottleneckSplitter(mdl, ϵ), "BisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls)...,
                 ((LazyBisectCostBottleneckSplitter(mdl, ϵ), "LazyBisectCostBottleneckSplitter($mdl_key)") for (mdl, mdl_key) in mdls[2:end])...,
+                (DynamicTotalSplitter(net_model[1]), "DynamicTotalSplitter(net_model)"),
             ]
                 suite["partition_stripe"]["partition_stripe($(mtx), $K, $f_key)"] = @benchmarkable partition_stripe($A, $K, $f)
             end
