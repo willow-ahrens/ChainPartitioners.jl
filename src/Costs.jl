@@ -58,12 +58,12 @@ struct Extended{T}
     x::T
 end
 
-
 infinity(::Type{Float16}) = Inf16
 infinity(::Type{Float32}) = Inf32
 infinity(::Type{Float64}) = Inf64
-infinity(::Extended{T}) where {T} = Extended(true, zero(T))
-infinity(T) = Extended(true, zero(T))
+infinity(::Type{Extended{T}}) where {T} = Extended(true, zero(T))
+infinity(x) = infinity(typeof(x))
+infinity(T::Type) = Extended(true, zero(T))
 
 extend(T::Type) = typeof(infinity(T))
 #TODO use convert here

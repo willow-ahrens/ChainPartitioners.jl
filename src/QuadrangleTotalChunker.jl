@@ -128,6 +128,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
     end
 end
 
+#=
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
@@ -148,7 +149,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         σ_j′ = undefs(Ti, 2n + 1)
         σ_ptr = undefs(Ti, 2n + 1)
         σ_cst = undefs(cost_type(method.f), 2n + 1)
-
     
         j_lo = undefs(Ti, K + 1)
         j′ = n + 1
@@ -196,28 +196,41 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         end
 
         for k = 2:K
-            j₀ = j_lo[k]
             for j′ = j_lo[k + 1] : j′_hi[k]
-                while w(j₀, j′, k) > w_max #TODO can this run over the end?
-                    j₀ += 1
-                end
-                i′ = j′ - j_lo[k]
-                i = j₀ - j_lo[k - 1]
-                cst[pos[k] + i′] = +(cst[pos[k - 1] + i], f(j₀, j′, k))
-                ptr[pos[k] + i′] = j₀
-                for j = j₀ + 1 : min(j′, j′_hi[k - 1])
-                    i = j - j_lo[k - 1]
-                    c′ = +(cst[pos[k - 1] + i], f(j, j′, k))
-                    if c′ <= cst[pos[k] + i′]
-                        cst[pos[k] + i′] = c′ 
-                        ptr[pos[k] + i′] = j
+                function f′(i, i′)
+                    j = j_lo[k] + i - 1
+                    j′ = j_lo[k] + i′ - 1
+                    if j > j′_hi[k - 1]
+                        infinity(cost_type(f))
+                    else
+                        cst[pos[k - 1] + j - j_lo[k - 1] - 1] + f(j, j′, k)
                     end
                 end
+                #for j′ = j_lo[k + 1] : j′_hi[k]
+                for j′ = j_lo[k] : j′_hi[k - 1]
+                    i′ = j′ - j_lo[k] + 1
+                    cst[pos[k] + i′ - 1] = f′(i′, i′) 
+                    ptr[pos[k] + i′ - 1] = i′
+                end
+                chunk_convex_constrained!((@view cst[pos[k]:pos[k + 1] - 1]), (@view ptr[pos[k]:pos[k + 1] - 1]), f′, w, w_max, 1, j′_hi[k] - j_lo[k] + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
             end
         end
-        return unravel_constrained_splits(K, n, pos, ptr, j_lo)
+
+        for k = 1:K
+            @info ptr[pos[k]:pos[k + 1] - 1]
+        end
+        println(ptr)
+
+        spl = zeros(eltype(ptr), K + 1)
+        spl[end] = n + 1
+        for k = K:-1:1
+            spl[k] = j_lo[k] + ptr[pos[k] + spl[k + 1] - j_lo[k]] - 1
+        end
+
+        return SplitPartition(K, spl)
     end
 end
+=#
 
 function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
     j′₁ = J₀ + 1

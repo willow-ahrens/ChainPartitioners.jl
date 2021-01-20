@@ -168,7 +168,7 @@ end
                 c = total_value(A, Φ, f)
                 for method = [
                     DynamicTotalSplitter(f);
-                    ConvexTotalChunker(f);
+                    #ConvexTotalChunker(f);
                 ]
                     Φ′ = partition_stripe(A, K, method)
                     @test issorted(Φ′.spl)
