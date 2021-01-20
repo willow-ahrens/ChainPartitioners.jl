@@ -28,8 +28,8 @@ function main(args)
         (m, n) = size(A)
         ϵ = 0.01
         for (f, f_key) = [
-            (DynamicTotalChunker(net_model[1], 8), "DynamicTotalSplitter(net_model)"),
-            (DynamicTotalChunker(col_block_model[1], 8), "DynamicTotalSplitter(col_block_model)"),
+            (DynamicTotalChunker(net_model[1], 8), "DynamicTotalChunker(net_model, 8)"),
+            (DynamicTotalChunker(col_block_model[1], 8), "DynamicTotalChunker(col_block_model, 8)"),
             (OverlapChunker(0.9, 8), "OverlapChunker(0.9, 8)"),
             (StrictChunker(8), "StrictChunker(8)"),
         ]
@@ -39,7 +39,7 @@ function main(args)
             (pack_stripe(A', EquiChunker(4)), "Π_spl"),
         ]
             for (f, f_key) = [
-                (DynamicTotalChunker(block_model[1], 8), "DynamicTotalSplitter(block_model)"),
+                (DynamicTotalChunker(block_model[1], 8), "DynamicTotalChunker(block_model, 8)"),
             ]
                 suite["pack_stripe"]["pack_stripe($(mtx), $f_key, $Π_key)"] = @benchmarkable pack_stripe($A, $f, $Π)
             end
