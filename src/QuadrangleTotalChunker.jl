@@ -202,6 +202,7 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
                 #end
             end
         end
+        I += 1
 
         for i = 2:I-1
             σ_cst[i] = typemax(eltype(cst))

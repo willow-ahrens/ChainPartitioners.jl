@@ -44,7 +44,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
 end
 
 function unravel_chunks!(spl, n)
-    @inbounds begin
+    begin
         K = 0
         j′ = n + 1
         while j′ != 1

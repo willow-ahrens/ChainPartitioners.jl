@@ -41,6 +41,8 @@ export AbstractWorkCostModel
 export AffineWorkCostModel
 export WorkCostOracle
 
+export WidthCost
+
 export AbstractNetCostModel
 export AffineNetCostModel
 export NetCostOracle
