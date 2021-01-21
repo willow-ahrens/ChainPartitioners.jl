@@ -16,10 +16,10 @@ for mtx in [
             #"LPnetlib/lp_bandm",
             #"LPnetlib/lp_etamacro",
             #"Pajek/Erdos991",
-            #"Boeing/ct20stif",
+            "Boeing/ct20stif",
             #"DIMACS10/chesapeake",
             #"Schmid/thermal1",
-            #"Rothberg/3dtube",
+            "Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
     (m, n) = size(A)
@@ -37,12 +37,11 @@ for mtx in [
     ]
         setup_time = time(@benchmark pack_stripe($A, $method))
         Φ = pack_stripe(A, method)
+        #@descend pack_stripe(A, method)
         comm = total_value(A, Φ, mdl)
         @assert issorted(Φ.spl)
         @assert Φ.spl[1] == 1
         @assert Φ.spl[end] == n + 1
-        @assert all((Φ.spl[2:end] .- Φ.spl[1:end-1]) .<= fld(n, 16))
-        println(Φ.spl)
 
         push!(rows, [key setup_time comm])
     end

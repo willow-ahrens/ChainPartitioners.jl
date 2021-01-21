@@ -54,51 +54,53 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
 end
 
 function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
-    empty!(ftr)
-    push!(ftr, (j₀, j′₁))
-    for j′ = j₀ + 1:j′₁
-        (j, h) = last(ftr)
-        if f(j′ - 1, j′) ≥ f(j, j′)
-            if f(j, j′) <= cst[j′]
-                cst[j′] = f(j, j′)
-                ptr[j′] = j
-            end
-            if h == j′
-                pop!(ftr)
-            end
-        else
-            if f(j′ - 1, j′) <= cst[j′]
-                cst[j′] = f(j′ - 1, j′)
-                ptr[j′] = j′ - 1
-            end
-            while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h) < f(j, h)))
-                pop!(ftr)
-            end
-            if isempty(ftr)
-                push!(ftr, (j′ - 1, j′₁))
+    @inbounds begin
+        empty!(ftr)
+        push!(ftr, (j₀, j′₁))
+        for j′ = j₀ + 1:j′₁
+            (j, h) = last(ftr)
+            if f(j′ - 1, j′) ≥ f(j, j′)
+                if f(j, j′) <= cst[j′]
+                    cst[j′] = f(j, j′)
+                    ptr[j′] = j
+                end
+                if h == j′
+                    pop!(ftr)
+                end
             else
-                (j, h) = last(ftr)
-                h_lo = j′
-                h_hi = h
-                #=
-                h_ref = h_lo
-                while h_ref < h_hi && f(j′ - 1, h_ref + 1) < f(j, h_ref + 1)
-                    h_ref += 1
+                if f(j′ - 1, j′) <= cst[j′]
+                    cst[j′] = f(j′ - 1, j′)
+                    ptr[j′] = j′ - 1
                 end
-                h = h_ref
-                =#
-                while h_lo <= h_hi
-                    h = fld2(h_lo + h_hi)
-                    if f(j′ - 1, h) < f(j, h)
-                        h_lo = h + 1
-                    else
-                        h_hi = h - 1
+                while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h) < f(j, h)))
+                    pop!(ftr)
+                end
+                if isempty(ftr)
+                    push!(ftr, (j′ - 1, j′₁))
+                else
+                    (j, h) = last(ftr)
+                    h_lo = j′
+                    h_hi = h
+                    #=
+                    h_ref = h_lo
+                    while h_ref < h_hi && f(j′ - 1, h_ref + 1) < f(j, h_ref + 1)
+                        h_ref += 1
                     end
-                end
-                h = h_hi
+                    h = h_ref
+                    =#
+                    while h_lo <= h_hi
+                        h = fld2(h_lo + h_hi)
+                        if f(j′ - 1, h) < f(j, h)
+                            h_lo = h + 1
+                        else
+                            h_hi = h - 1
+                        end
+                    end
+                    h = h_hi
 
-                if j′ < h
-                    push!(ftr, (j′ - 1, h))
+                    if j′ < h
+                        push!(ftr, (j′ - 1, h))
+                    end
                 end
             end
         end
@@ -136,23 +138,25 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f.f, A, args...)
+        f = oracle_stripe(method.f.f, A, args...; b=1)
         w = oracle_stripe(method.f.w, A, args...)
         w_max = method.f.w_max
 
-        ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
-        σ_j = undefs(Ti, 2n + 1)
-        σ_j′ = undefs(Ti, 2n + 1)
-        σ_ptr = undefs(Ti, 2n + 1)
-        σ_cst = undefs(cost_type(f), 2n + 1)
+        @stabilize Tv Ti A m n f w w_max begin 
+            ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
+            σ_j = undefs(Ti, 2n + 1)
+            σ_j′ = undefs(Ti, 2n + 1)
+            σ_ptr = undefs(Ti, 2n + 1)
+            σ_cst = undefs(cost_type(f), 2n + 1)
 
-        spl = zeros(Ti, n + 1)
-        cst = fill(typemax(cost_type(f)), n + 1)
-        cst[1] = zero(cost_type(f))
-        f′(j, j′) = cst[j] + f(j, j′)
-        chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+            spl = zeros(Ti, n + 1)
+            cst = fill(typemax(cost_type(f)), n + 1)
+            cst[1] = zero(cost_type(f))
+            f′(j, j′) = cst[j] + f(j, j′)
+            chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
 
-        return unravel_chunks!(spl, n)
+            return unravel_chunks!(spl, n)
+        end
     end
 end
 
@@ -201,53 +205,55 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
 end
 
 function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
-    j′₁ = J₀ + 1
-    while j′₁ < J′₁ && w(J₀, j′₁ + 1) <= w_max
-        j′₁ += 1
-    end
-    j₀ = J₀
-
-    while j′₁ <= J′₁
-        chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
-
-        if j′₁  == J′₁
-            break
+    @inbounds begin
+        j′₁ = J₀ + 1
+        while j′₁ < J′₁ && w(J₀, j′₁ + 1) <= w_max
+            j′₁ += 1
         end
-        j′ = j′₁
-        I = 1
-        for j = j₀ + 1 : j′₁ # j = j₀ is redundant, as is j′ = j′₁.
-            if j′ > j′₁
-                σ_j′[I] = j′
-                I += 1
-                σ_j[I] = j
+        j₀ = J₀
+
+        while j′₁ <= J′₁
+            chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
+
+            if j′₁  == J′₁
+                break
             end
-            while j′ < J′₁ && w(j, j′ + 1) <= w_max
-                j′ += 1
-                #if j′ > j′₁
+            j′ = j′₁
+            I = 1
+            for j = j₀ + 1 : j′₁ # j = j₀ is redundant, as is j′ = j′₁.
+                if j′ > j′₁
                     σ_j′[I] = j′
                     I += 1
                     σ_j[I] = j
-                #end
+                end
+                while j′ < J′₁ && w(j, j′ + 1) <= w_max
+                    j′ += 1
+                    #if j′ > j′₁
+                        σ_j′[I] = j′
+                        I += 1
+                        σ_j[I] = j
+                    #end
+                end
             end
+            I += 1
+
+            for i = 2:I-1
+                σ_cst[i] = typemax(eltype(cst))
+            end
+            #have i < i′
+            #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
+            #also need j < j′ but this is satisfied for any i, i′ since rand(σ_j) < rand(σ_j′)
+
+            σ_f(i, i′) = f(σ_j[I - i], σ_j′[I - i′])
+            chunk_convex!(σ_cst, σ_ptr, σ_f, 1, I - 1, ftr)
+
+            for i′ = 2:I - 1
+                cst[σ_j′[I - i′]] = σ_cst[i′]
+                ptr[σ_j′[I - i′]] = σ_j[I - σ_ptr[i′]]
+            end
+
+            j₀ = j′₁
+            j′₁ = σ_j′[I - 2]
         end
-        I += 1
-
-        for i = 2:I-1
-            σ_cst[i] = typemax(eltype(cst))
-        end
-        #have i < i′
-        #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
-        #also need j < j′ but this is satisfied for any i, i′ since rand(σ_j) < rand(σ_j′)
-
-        σ_f(i, i′) = f(σ_j[I - i], σ_j′[I - i′])
-        chunk_convex!(σ_cst, σ_ptr, σ_f, 1, I - 1, ftr)
-
-        for i′ = 2:I - 1
-            cst[σ_j′[I - i′]] = σ_cst[i′]
-            ptr[σ_j′[I - i′]] = σ_j[I - σ_ptr[i′]]
-        end
-
-        j₀ = j′₁
-        j′₁ = σ_j′[I - 2]
     end
 end
