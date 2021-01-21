@@ -77,13 +77,14 @@ mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     Δ_net::Vector{Ti}
     j::Ti
     j′::Ti
+    q′::Ti
     x_net::Ti
 end
 
 function step_oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0))
+        return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
     end
 end
 
@@ -94,23 +95,32 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
         A = ocl.A
         ocl_j = ocl.j
         ocl_j′ = ocl.j′
+        q′ = ocl.q′
         x_net = ocl.x_net
         Δ_net = ocl.Δ_net
         hst = ocl.hst
+        if j == ocl_j + 1 && j′ == ocl_j′ #fast track
+            ocl.j = j
+            x_net -= Δ_net[j]
+            ocl.x_net = x_net
+            return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
+        end
         if j′ < ocl_j′
-            ocl.j = 1
-            ocl.j′ = 1
-            ocl.x_net = 0
+            j = Ti(1)
+            j′ = Ti(1)
+            q′ = Ti(1)
+            x_net = Ti(0)
             one!(ocl.hst)
         end
         while ocl_j′ < j′
-            q₀ = A.colptr[ocl_j′]
-            q₁ = A.colptr[ocl_j′ + 1] - 1
-            Δ_net[ocl_j′ + 1] = 1 + q₁ - q₀
-            for q = q₀:q₁
-                i = A.rowval[q]
-                x_net += hst[i] - 1 < ocl_j
-                Δ_net[hst[i]] -= 1
+            q = q′
+            q′ = A.colptr[ocl_j′ + 1]
+            Δ_net[ocl_j′ + 1] = q′ - q
+            for _q = q:q′ - 1
+                i = A.rowval[_q]
+                j₀ = hst[i] - 1
+                x_net += j₀ < ocl_j
+                Δ_net[j₀ + 1] -= 1
                 hst[i] = ocl_j′ + 1
             end
             ocl_j′ += 1
@@ -127,7 +137,8 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
         ocl.j = ocl_j
         ocl.j′ = ocl_j′
         ocl.x_net = x_net
-        return ocl.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+        ocl.q′ = q′
+        return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
     end
 end
 

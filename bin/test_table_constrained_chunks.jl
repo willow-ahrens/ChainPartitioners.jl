@@ -42,7 +42,8 @@ for mtx in [
     ]
         setup_time = @belapsed(pack_stripe($A, $method))/ref_time
         Φ = pack_stripe(A, method)
-        #@descend pack_stripe(A, method)
+        #@profile pack_stripe(A, method)
+        #Profile.print()
         comm = total_value(A, Φ, mdl)
         @assert issorted(Φ.spl)
         @assert Φ.spl[1] == 1
