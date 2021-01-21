@@ -104,8 +104,8 @@ mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     mdl::Mdl
     hst::Vector{Ti}
     Δ_net::Vector{Ti}
-    j₁::Ti
-    j′₀::Ti
+    j::Ti
+    j′::Ti
     x_net::Ti
 end
 
@@ -119,49 +119,49 @@ end
 
 oracle_model(ocl::SymCostStepOracle) = ocl.mdl
 
-@inline function (cst::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     @inbounds begin
-        if j′ < cst.j′₀
-            cst.j = 1
-            cst.j′ = 1
-            cst.x_net = 0
-            one!(cst.hst)
+        A = ocl.A
+        ocl_j = ocl.j
+        ocl_j′ = ocl.j′
+        x_net = ocl.x_net
+        Δ_net = ocl.Δ_net
+        hst = ocl.hst
+        if j′ < ocl_j′
+            ocl_j = 1
+            ocl_j′ = 1
+            x_net = 0
+            one!(hst)
         end
-        A = cst.A
-        j₁ = cst.j₁
-        j′₀ = cst.j′₀
-        x_net = cst.x_net
-        Δ_net = cst.Δ_net
-        hst = cst.hst
-        while j′₀ < j′
-            q₀ = A.colptr[j′₀]
-            q₁ = A.colptr[j′₀ + 1] - 1
-            Δ_net[j′₀ + 1] = 1 + q₁ - q₀
+        while ocl_j′ < j′
+            q₀ = A.colptr[ocl_j′]
+            q₁ = A.colptr[ocl_j′ + 1] - 1
+            Δ_net[ocl_j′ + 1] = 1 + q₁ - q₀
             for q = q₀:q₁
                 i = A.rowval[q]
-                x_net += hst[i] - 1 < j₁
+                x_net += hst[i] - 1 < ocl_j
                 Δ_net[hst[i]] -= 1
-                hst[i] = j′₀ + 1
+                hst[i] = ocl_j′ + 1
             end
-            if hst[j′₀] - 1 < j′₀
+            if hst[ocl_j′] - 1 < ocl_j′
                 x_net += 1
-                Δ_net[hst[j′₀]] -= 1
+                Δ_net[hst[ocl_j′]] -= 1
             end
-            j′₀ += 1
+            ocl_j′ += 1
         end
-        while j < j₁
-            j₁ -= 1
-            x_net += Δ_net[j₁ + 1]
+        while j < ocl_j
+            ocl_j -= 1
+            x_net += Δ_net[ocl_j + 1]
         end
-        while j > j₁
-            x_net -= Δ_net[j₁ + 1]
-            j₁ += 1
+        while j > ocl_j
+            x_net -= Δ_net[ocl_j + 1]
+            ocl_j += 1
         end
 
-        cst.j₁ = j₁
-        cst.j′₀ = j′₀
-        cst.x_net = x_net
-        return cst.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+        ocl.j = ocl_j
+        ocl.j′ = ocl_j′
+        ocl.x_net = x_net
+        return ocl.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
     end
 end
 
