@@ -152,7 +152,10 @@ include("SparseColorArrays.jl")
 include("Costs.jl")
 
 include("WorkCosts.jl")
-include("HyperedgeCosts.jl")
+include("NetCosts.jl")
+include("SymCosts.jl")
+include("CommCosts.jl")
+include("LocalCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 
