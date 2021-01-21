@@ -85,18 +85,23 @@ function main(args)
         BenchmarkTools.save(joinpath(@__DIR__, "params.json"), BenchmarkTools.params(suite))
         results = run(suite, verbose=true, seconds=60)
         BenchmarkTools.save(joinpath(@__DIR__, "benchmarks.json"), results)
+        return
     elseif length(args) == 0
-        params = BenchmarkTools.load(joinpath(@__DIR__, "params.json"))[1]
-        BenchmarkTools.loadparams!(suite, params)
-        results = run(suite, seconds=60, verbose=true)
-        reference = BenchmarkTools.load(joinpath(@__DIR__, "benchmarks.json"))[1]
-        judgements = judge(minimum(results), minimum(reference); time_tolerance = 0.05)
-        show(IOContext(stdout, :compact=>false, :limit=>false), regressions(judgements))
-        show(IOContext(stdout, :compact=>false, :limit=>false), improvements(judgements))
-        println()
+        key = Colon()
+    elseif length(args) == 1
+        key = args[1]
     else
         throw(ArgumentError("unrecognized command line arguments"))
     end
+
+    params = BenchmarkTools.load(joinpath(@__DIR__, "params.json"))[1]
+    BenchmarkTools.loadparams!(suite, params)
+    results = run(suite[key], seconds=60, verbose=true)
+    reference = BenchmarkTools.load(joinpath(@__DIR__, "benchmarks.json"))[1][key]
+    judgements = judge(minimum(results), minimum(reference); time_tolerance = 0.05)
+    show(IOContext(stdout, :compact=>false, :limit=>false), regressions(judgements))
+    #show(IOContext(stdout, :compact=>false, :limit=>false), improvements(judgements))
+    println()
 end
 
 main(ARGS)

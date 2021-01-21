@@ -99,7 +99,7 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
         x_net = ocl.x_net
         Δ_net = ocl.Δ_net
         hst = ocl.hst
-        if j == ocl_j + 1 && j′ == ocl_j′ #fast track
+        if j == ocl_j + 1 && j′ == ocl_j′ #fast track for common case
             ocl.j = j
             x_net -= Δ_net[j]
             ocl.x_net = x_net
