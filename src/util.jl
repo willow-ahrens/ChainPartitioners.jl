@@ -24,6 +24,7 @@ end
 @inline undefs(T::Type, dims::Vararg{Any, N}) where {N} = Array{T, N}(undef, dims...)
 
 zero!(arr) = fill!(arr, zero(eltype(arr)))
+one!(arr) = fill!(arr, one(eltype(arr)))
 
 function pattern(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
     return SparseMatrixCSC{Bool, Ti}(size(A)..., A.colptr, A.rowval, ones(Bool, nnz(A)))

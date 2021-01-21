@@ -13,15 +13,15 @@ end
 
 (mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-struct NetCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
+struct NetCostDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
     mdl::Mdl
 end
 
-oracle_model(ocl::NetCostOracle) = ocl.mdl
+oracle_model(ocl::NetCostDominanceOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::NetCostOracle{<:Any, <:AffineNetCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::NetCostDominanceOracle{<:Any, <:AffineNetCostModel})
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
@@ -58,11 +58,11 @@ function oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC; net=nothin
         if net === nothing
             net = rownetcount(A; kwargs...)
         end
-        return NetCostOracle(pos, net, mdl)
+        return NetCostDominanceOracle(pos, net, mdl)
     end
 end
 
-@inline function (cst::NetCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::NetCostDominanceOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net[j, j′]
@@ -70,57 +70,81 @@ end
     end
 end
 
+mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
+    A::SparseMatrixCSC{Tv, Ti}
+    mdl::Mdl
+    hst::Vector{Ti}
+    Δ_net::Vector{Ti}
+    j₁::Ti
+    j′₀::Ti
+    x_net::Ti
+end
+
+function step_oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+    @inbounds begin
+        m, n = size(A)
+        return NetCostStepOracle(A, mdl, zeros(Ti, m), undefs(Ti, n), Ti(1), Ti(1), Ti(0))
+    end
+end
+
+oracle_model(ocl::NetCostStepOracle) = ocl.mdl
+
+@inline function (cst::NetCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    if j′ < cst.j′₀
+        cst.j = 1
+        cst.j′ = 1
+        cst.x_net = 0
+        zero!(cst.hst)
+    end
+    A = cst.A
+    j₁ = cst.j₁
+    j′₀ = cst.j′₀
+    x_net = cst.x_net
+    Δ_net = cst.Δ_net
+    hst = cst.hst
+    while j′₀ < j′
+        q₀ = A.colptr[j′₀]
+        q₁ = A.colptr[j′₀ + 1] - 1
+        Δ_net[j′₀] = 1 + q₁ - q₀
+        for q = q₀:q₁
+            i = A.rowval[q]
+            x_net += hst[i] < j₁
+            if 0 < hst[i] < j′₀
+                Δ_net[hst[i]] -= 1
+            end
+            hst[i] = j′₀
+        end
+        j′₀ += 1
+    end
+    while j < j₁
+        j₁ -= 1
+        x_net += Δ_net[j₁]
+    end
+    while j > j₁
+        x_net -= Δ_net[j₁]
+        j₁ += 1
+    end
+
+    cst.j₁ = j₁
+    cst.j′₀ = j′₀
+    cst.x_net = x_net
+    return cst.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+end
+
 function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel) where {G}
     cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    hst = zeros(m)
+    ocl = step_oracle_stripe(mdl, A)
     for k = 1:Φ.K
-        j = Φ.spl[k]
-        j′ = Φ.spl[k + 1]
-        x_width = j′ - j
-        x_work = 0
-        x_net = 0
-        for _j = j:(j′ - 1)
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += q′ - q
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < j
-                    x_net += 1
-                end
-                hst[i] = j
-            end
-        end
-        cst = g(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, ocl(Φ.spl[k], Φ.spl[k + 1]))
     end
     return cst
 end
 
 function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel) where {G}
     cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    hst = zeros(m)
+    ocl = step_oracle_stripe(mdl, A[:, Φ.prm])
     for k = 1:Φ.K
-        s = Φ.spl[k]
-        s′ = Φ.spl[k + 1]
-        x_width = s′ - s
-        x_work = 0
-        x_net = 0
-        for _s = s:(s′ - 1)
-            _j = Φ.prm[_s]
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += q′ - q
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < s
-                    x_net += 1
-                end
-                hst[i] = s
-            end
-        end
-        cst = g(cst, mdl(x_width, x_work, x_net, k))
+        cst = g(cst, ocl(Φ.spl[k], Φ.spl[k + 1]))
     end
     return cst
 end
