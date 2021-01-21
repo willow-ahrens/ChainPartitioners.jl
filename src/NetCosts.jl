@@ -83,52 +83,52 @@ end
 function step_oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return NetCostStepOracle(A, mdl, zeros(Ti, m), undefs(Ti, n), Ti(1), Ti(1), Ti(0))
+        return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0))
     end
 end
 
 oracle_model(ocl::NetCostStepOracle) = ocl.mdl
 
 @inline function (cst::NetCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    if j′ < cst.j′₀
-        cst.j = 1
-        cst.j′ = 1
-        cst.x_net = 0
-        zero!(cst.hst)
-    end
-    A = cst.A
-    j₁ = cst.j₁
-    j′₀ = cst.j′₀
-    x_net = cst.x_net
-    Δ_net = cst.Δ_net
-    hst = cst.hst
-    while j′₀ < j′
-        q₀ = A.colptr[j′₀]
-        q₁ = A.colptr[j′₀ + 1] - 1
-        Δ_net[j′₀] = 1 + q₁ - q₀
-        for q = q₀:q₁
-            i = A.rowval[q]
-            x_net += hst[i] < j₁
-            if 0 < hst[i] < j′₀
-                Δ_net[hst[i]] -= 1
-            end
-            hst[i] = j′₀
+    @inbounds begin
+        if j′ < cst.j′₀
+            cst.j = 1
+            cst.j′ = 1
+            cst.x_net = 0
+            one!(cst.hst)
         end
-        j′₀ += 1
-    end
-    while j < j₁
-        j₁ -= 1
-        x_net += Δ_net[j₁]
-    end
-    while j > j₁
-        x_net -= Δ_net[j₁]
-        j₁ += 1
-    end
+        A = cst.A
+        j₁ = cst.j₁
+        j′₀ = cst.j′₀
+        x_net = cst.x_net
+        Δ_net = cst.Δ_net
+        hst = cst.hst
+        while j′₀ < j′
+            q₀ = A.colptr[j′₀]
+            q₁ = A.colptr[j′₀ + 1] - 1
+            Δ_net[j′₀ + 1] = 1 + q₁ - q₀
+            for q = q₀:q₁
+                i = A.rowval[q]
+                x_net += hst[i] - 1 < j₁
+                Δ_net[hst[i]] -= 1
+                hst[i] = j′₀ + 1
+            end
+            j′₀ += 1
+        end
+        while j < j₁
+            j₁ -= 1
+            x_net += Δ_net[j₁ + 1]
+        end
+        while j > j₁
+            x_net -= Δ_net[j₁ + 1]
+            j₁ += 1
+        end
 
-    cst.j₁ = j₁
-    cst.j′₀ = j′₀
-    cst.x_net = x_net
-    return cst.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+        cst.j₁ = j₁
+        cst.j′₀ = j′₀
+        cst.x_net = x_net
+        return cst.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+    end
 end
 
 function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel) where {G}
