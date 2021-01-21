@@ -53,7 +53,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
     end
 end
 
-function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
+function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
     @inbounds begin
         empty!(ftr)
         push!(ftr, (j₀, j′₁))
@@ -134,6 +134,8 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
 end
 =#
 
+using Cthulhu
+
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
@@ -152,13 +154,25 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
             spl = zeros(Ti, n + 1)
             cst = fill(typemax(cost_type(f)), n + 1)
             cst[1] = zero(cost_type(f))
-            f′(j, j′) = cst[j] + f(j, j′)
+            f′ = let cst=cst, f=f
+                @inline f′(j, j′) = @inbounds cst[j] + f(j, j′)
+            end
+            #f′ = _quadrangle_f′(cst, f)
             chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
 
             return unravel_chunks!(spl, n)
         end
     end
 end
+
+#=
+struct _quadrangle_f′{Tv, F}
+    cst::Vector{Tv}
+    f::F
+end
+
+@inline (f′::_quadrangle_f′{Tv, F})(j, j′) where {Tv, F} = @inbounds f′.cst[j] + f′.f(j, j′)
+=#
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     begin
@@ -204,7 +218,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
     end
 end
 
-function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+function chunk_convex_constrained!(cst, ptr, f::F, w, w_max, J₀, J′₁, ftr, σ_j, σ_j′, σ_cst, σ_ptr) where {F}
     @inbounds begin
         j′₁ = J₀ + 1
         while j′₁ < J′₁ && w(J₀, j′₁ + 1) <= w_max
@@ -212,10 +226,10 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         end
         j₀ = J₀
 
-        while j′₁ <= J′₁
+        while true
             chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
 
-            if j′₁  == J′₁
+            if j′₁ == J′₁
                 break
             end
             j′ = j′₁
@@ -244,8 +258,11 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
             #need if j = σ_j[I], then j′ < σ_j′[I] (can do this with i < i′)
             #also need j < j′ but this is satisfied for any i, i′ since rand(σ_j) < rand(σ_j′)
 
-            σ_f(i, i′) = f(σ_j[I - i], σ_j′[I - i′])
-            chunk_convex!(σ_cst, σ_ptr, σ_f, 1, I - 1, ftr)
+            f′ = let I=I, σ_j=σ_j, σ_j′=σ_j′, f=f
+                @inline f′(i, i′) = @inbounds f(σ_j[I - i], σ_j′[I - i′])
+            end
+            #f′ = _quadrangle_σ_f′(I, σ_j, σ_j′, f)
+            chunk_convex!(σ_cst, σ_ptr, f′, 1, I - 1, ftr)
 
             for i′ = 2:I - 1
                 cst[σ_j′[I - i′]] = σ_cst[i′]
@@ -257,3 +274,14 @@ function chunk_convex_constrained!(cst, ptr, f, w, w_max, J₀, J′₁, ftr, σ
         end
     end
 end
+
+#=
+struct _quadrangle_σ_f′{F}
+    I::Int
+    σ_j::Vector{Int}
+    σ_j′::Vector{Int}
+    f::F
+end
+
+@inline (f′::_quadrangle_σ_f′{F})(i, i′) where {F} = @inbounds f′.f(f′.σ_j[f′.I - i], f′.σ_j′[f′.I - i′])
+=#
