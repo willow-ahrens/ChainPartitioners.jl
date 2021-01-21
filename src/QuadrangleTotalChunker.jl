@@ -157,22 +157,12 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
             f′ = let cst=cst, f=f
                 @inline f′(j, j′) = @inbounds cst[j] + f(j, j′)
             end
-            #f′ = _quadrangle_f′(cst, f)
             chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
 
             return unravel_chunks!(spl, n)
         end
     end
 end
-
-#=
-struct _quadrangle_f′{Tv, F}
-    cst::Vector{Tv}
-    f::F
-end
-
-@inline (f′::_quadrangle_f′{Tv, F})(j, j′) where {Tv, F} = @inbounds f′.cst[j] + f′.f(j, j′)
-=#
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     begin
@@ -261,7 +251,6 @@ function chunk_convex_constrained!(cst, ptr, f::F, w, w_max, J₀, J′₁, ftr,
             f′ = let I=I, σ_j=σ_j, σ_j′=σ_j′, f=f
                 @inline f′(i, i′) = @inbounds f(σ_j[I - i], σ_j′[I - i′])
             end
-            #f′ = _quadrangle_σ_f′(I, σ_j, σ_j′, f)
             chunk_convex!(σ_cst, σ_ptr, f′, 1, I - 1, ftr)
 
             for i′ = 2:I - 1
@@ -274,14 +263,3 @@ function chunk_convex_constrained!(cst, ptr, f::F, w, w_max, J₀, J′₁, ftr,
         end
     end
 end
-
-#=
-struct _quadrangle_σ_f′{F}
-    I::Int
-    σ_j::Vector{Int}
-    σ_j′::Vector{Int}
-    f::F
-end
-
-@inline (f′::_quadrangle_σ_f′{F})(i, i′) where {F} = @inbounds f′.f(f′.σ_j[f′.I - i], f′.σ_j′[f′.I - i′])
-=#
