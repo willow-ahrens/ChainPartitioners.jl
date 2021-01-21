@@ -106,6 +106,7 @@ mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     Δ_net::Vector{Ti}
     j::Ti
     j′::Ti
+    x_work::Ti
     x_net::Ti
 end
 
@@ -113,7 +114,7 @@ function step_oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti
     @inbounds begin
         m, n = size(A)
         @assert m == n
-        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0))
+        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0), Ti(0))
     end
 end
 
@@ -124,23 +125,37 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
         A = ocl.A
         ocl_j = ocl.j
         ocl_j′ = ocl.j′
+        x_work = ocl.x_work
         x_net = ocl.x_net
         Δ_net = ocl.Δ_net
         hst = ocl.hst
+        if j == ocl_j + 1 && j′ == ocl_j′ #fast track
+            q = A.colptr[ocl_j]
+            q′ = A.colptr[ocl_j + 1]
+            x_work -= max(Δ_work, q′ - q)
+            x_net -= Δ_net[ocl_j + 1]
+            ocl.j = j
+            ocl.x_work = x_work
+            ocl.x_net = x_net
+            return ocl.mdl(j′ - j, x_work, x_net, k...)
+        end
         if j′ < ocl_j′
-            ocl_j = 1
-            ocl_j′ = 1
-            x_net = 0
+            ocl_j = Ti(1)
+            ocl_j′ = Ti(1)
+            x_work = Ti(0)
+            x_net = Ti(0)
             one!(hst)
         end
         while ocl_j′ < j′
-            q₀ = A.colptr[ocl_j′]
-            q₁ = A.colptr[ocl_j′ + 1] - 1
-            Δ_net[ocl_j′ + 1] = 1 + q₁ - q₀
-            for q = q₀:q₁
-                i = A.rowval[q]
-                x_net += hst[i] - 1 < ocl_j
-                Δ_net[hst[i]] -= 1
+            q = A.colptr[ocl_j′]
+            q′ = A.colptr[ocl_j′ + 1]
+            x_work += max(Δ_work, q′ - q)
+            Δ_net[ocl_j′ + 1] = q′ - q
+            for _q = q:q′
+                i = A.rowval[_q]
+                j₀ = hst[i] - 1
+                x_net += j₀ < ocl_j
+                Δ_net[j₀ + 1] -= 1
                 hst[i] = ocl_j′ + 1
             end
             if hst[ocl_j′] - 1 < ocl_j′
@@ -151,9 +166,15 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
         end
         while j < ocl_j
             ocl_j -= 1
+            q = A.colptr[ocl_j]
+            q′ = A.colptr[ocl_j + 1]
+            x_work += max(Δ_work, q′ - q)
             x_net += Δ_net[ocl_j + 1]
         end
         while j > ocl_j
+            q = A.colptr[ocl_j]
+            q′ = A.colptr[ocl_j + 1]
+            x_work -= max(Δ_work, q′ - q)
             x_net -= Δ_net[ocl_j + 1]
             ocl_j += 1
         end
@@ -161,7 +182,8 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
         ocl.j = ocl_j
         ocl.j′ = ocl_j′
         ocl.x_net = x_net
-        return ocl.mdl(j′ - j, A.colptr[j′] - A.colptr[j], x_net, k...)
+        ocl.x_work = x_work
+        return ocl.mdl(j′ - j, x_work, x_net, k...)
     end
 end
 
