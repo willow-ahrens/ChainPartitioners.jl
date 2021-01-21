@@ -6,9 +6,10 @@ using UnicodePlots
 using PrettyTables
 using ChainPartitioners
 using Cthulhu
+using Profile
 
 for mtx in [
-            "HB/can_292",
+            #"HB/can_292",
             #"HB/662_bus",
             #"HB/fs_680_2",
             #"HB/can_292",
@@ -18,11 +19,15 @@ for mtx in [
             #"Pajek/Erdos991",
             "Boeing/ct20stif",
             #"DIMACS10/chesapeake",
-            #"Schmid/thermal1",
+            "Schmid/thermal1",
             "Rothberg/3dtube",
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
     (m, n) = size(A)
+
+    y = zeros(m)
+    x = rand(n)
+    ref_time = @belapsed(mul!($y, $A, $x))
 
     mdl = AffineNetCostModel{Int64}(0, 0, 0, 1)
 
@@ -32,10 +37,10 @@ for mtx in [
     println(mtx)
     rows = []
     for (key, method) in [
-        ("dynamic16", DynamicTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 16)))),
-        ("quadrangle16", ConvexTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 16)))),
+        ("dynamic16", DynamicTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 4)))),
+        ("quadrangle16", ConvexTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 4)))),
     ]
-        setup_time = time(@benchmark pack_stripe($A, $method))
+        setup_time = @belapsed(pack_stripe($A, $method))/ref_time
         Φ = pack_stripe(A, method)
         #@descend pack_stripe(A, method)
         comm = total_value(A, Φ, mdl)
