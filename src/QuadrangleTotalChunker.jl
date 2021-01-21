@@ -59,17 +59,19 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
         push!(ftr, (j₀, j′₁))
         for j′ = j₀ + 1:j′₁
             (j, h) = last(ftr)
-            if f(j′ - 1, j′) ≥ f(j, j′)
-                if f(j, j′) <= cst[j′]
-                    cst[j′] = f(j, j′)
+            c = f(j, j′)
+            c′ = f(j′ - 1, j′)
+            if c <= c′
+                if c <= cst[j′]
+                    cst[j′] = c
                     ptr[j′] = j
                 end
                 if h == j′
                     pop!(ftr)
                 end
             else
-                if f(j′ - 1, j′) <= cst[j′]
-                    cst[j′] = f(j′ - 1, j′)
+                if c′ <= cst[j′]
+                    cst[j′] = c′
                     ptr[j′] = j′ - 1
                 end
                 while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h) < f(j, h)))
@@ -133,8 +135,6 @@ function chunk_convex!(cst, ptr, f, j₀, j′₁, ftr)
     end
 end
 =#
-
-using Cthulhu
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
