@@ -15,22 +15,26 @@ end
 
 Base.size(arg::SparseSummedArea) = (arg.m + 1, arg.n + 1)
 
-function areasum(A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+areasum(args...; kwargs...) = areasum(NoHint(), args...; kwargs...)
+areasum(::AbstractHint, args...; kwargs...) = @assert false
+function areasum(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     (m, n) = size(A)
     N = nnz(A)
     pos = copy(A.colptr)
     idx = copy(A.rowval)
     val = A.nzval
-    return areasum!(m, n, N, pos, idx, val; kwargs...)
+    return areasum!(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
-function areasum!(m, n, N, pos, idx, val; kwargs...)
-    return SparseSummedArea(m, n, N, pos, idx, val; kwargs...)
+areasum!(args...; kwargs...) = areasum!(NoHint(), args...; kwargs...)
+areasum!(::AbstractHint, args...; kwargs...) = @assert false
+function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; kwargs...)
+    return SparseSummedArea(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
-SparseSummedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
-    SparseSummedArea{Tv, Ti}(m, n, N, pos, idx, val; kwargs...)
-function SparseSummedArea{Tv, Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Tv, Ti}
+SparseSummedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
+    SparseSummedArea{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
+function SparseSummedArea{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Tv, Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
             if H === nothing
@@ -251,25 +255,29 @@ end
 
 Base.size(arg::SparseBinaryCountedArea) = (arg.m + 1, arg.n + 1)
 
-function areacount(A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+areacount(args...; kwargs...) = areacount(NoHint(), args...; kwargs...)
+areacount(::AbstractHint, args...; kwargs...) = @assert false
+function areacount(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
-        return areacount!(m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
+        return areacount!(hint, m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
     end
 end
 
-function areacount!(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; Tb = Int, b = nothing, kwargs...) where {Ti}
+areacount!(args...; kwargs...) = areacount!(NoHint(), args...; kwargs...)
+areacount!(::AbstractHint, args...; kwargs...) = @assert false
+function areacount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; Tb = Int, b = nothing, kwargs...) where {Ti}
     if b == 1
-        SparseBinaryCountedArea{Ti, Tb}(m, n, N, pos, idx; kwargs...)
+        SparseBinaryCountedArea{Ti, Tb}(hint, m, n, N, pos, idx; kwargs...)
     else
-        SparseCountedArea{Ti}(m, n, N, pos, idx; b = b, kwargs...)
+        SparseCountedArea{Ti}(hint, m, n, N, pos, idx; b = b, kwargs...)
     end
 end
 
-SparseCountedArea(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
-    SparseCountedArea{Ti}(m, n, N, pos, idx; kwargs...)
-function SparseCountedArea{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
+SparseCountedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SparseCountedArea{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SparseCountedArea{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
             if H === nothing
@@ -412,11 +420,11 @@ function Base.getindex(arg::SparseCountedArea{Ti}, i::Integer, j::Integer) where
     end
 end
 
-SparseBinaryCountedArea(m, n, N, pos, idx; kwargs...) =
-    SparseBinaryCountedArea{UInt}(m, n, N, pos, idx; kwargs...)
-SparseBinaryCountedArea{Tb}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
-    SparseBinaryCountedArea{Tb, Ti}(m, n, N, pos, idx; kwargs...)
-function SparseBinaryCountedArea{Tb, Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+SparseBinaryCountedArea(hint::AbstractHint, m, n, N, pos, idx; kwargs...) =
+    SparseBinaryCountedArea{UInt}(hint, m, n, N, pos, idx; kwargs...)
+SparseBinaryCountedArea{Tb}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    SparseBinaryCountedArea{Tb, Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SparseBinaryCountedArea{Tb, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
     @inbounds begin
         #b = branching factor of tree = 1
 
@@ -511,13 +519,15 @@ end
 
 Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
 
-function rooksum!(N, idx, val; kwargs...)
-    return SparseSummedRooks(N, idx, val; kwargs...)
+rooksum!(args...; kwargs...) = rooksum!(NoHint(), args...; kwargs...)
+rooksum!(::AbstractHint, args...; kwargs...) = @assert false
+function rooksum!(hint::AbstractHint, N, idx, val; kwargs...)
+    return SparseSummedRooks(hint, N, idx, val; kwargs...)
 end
 
-SparseSummedRooks(N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} =
-    SparseSummedRooks{Ti, Tv}(N, idx, val; kwargs...)
-function SparseSummedRooks{Ti, Tv}(N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti, Tv}
+SparseSummedRooks(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} =
+    SparseSummedRooks{Ti, Tv}(hint, N, idx, val; kwargs...)
+function SparseSummedRooks{Ti, Tv}(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti, Tv}
     @inbounds begin
         @debug begin
             @assert length(idx) == N
@@ -706,17 +716,19 @@ end
 
 Base.size(arg::SparseBinaryCountedRooks) = (arg.N + 1, arg.N + 1)
 
-function rookcount!(N, idx; Tb = UInt8, b = nothing, kwargs...)
+rookcount!(args...; kwargs...) = rookcount!(NoHint(), args...; kwargs...)
+rookcount!(::AbstractHint, args...; kwargs...) = @assert false
+function rookcount!(hint::AbstractHint, N, idx; b = nothing, kwargs...)
     if b == 1
-        SparseBinaryCountedRooks(N, idx; Tb = UInt8, kwargs...)
+        SparseBinaryCountedRooks(hint, N, idx; kwargs...)
     else
-        SparseCountedRooks(N, idx; b = b, kwargs...)
+        SparseCountedRooks(hint, N, idx; b = b, kwargs...)
     end
 end
 
-SparseCountedRooks(N, idx::Vector{Ti}; kwargs...) where {Ti} =
-    SparseCountedRooks{Ti}(N, idx; kwargs...)
-function SparseCountedRooks{Ti}(N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
+SparseCountedRooks(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
+    SparseCountedRooks{Ti}(hint, N, idx; kwargs...)
+function SparseCountedRooks{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         @debug begin
             @assert length(idx) == N
@@ -854,11 +866,11 @@ function Base.getindex(arg::SparseCountedRooks{Ti}, i::Integer, j::Integer) wher
     end
 end
 
-SparseBinaryCountedRooks(N, idx; kwargs...) =
-    SparseBinaryCountedRooks{UInt}(N, idx; kwargs...)
-SparseBinaryCountedRooks{Tb}(N, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
-    SparseBinaryCountedRooks{Tb, Ti}(N, idx; kwargs...)
-function SparseBinaryCountedRooks{Tb, Ti}(N, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+SparseBinaryCountedRooks(hint::AbstractHint, N, idx; kwargs...) =
+    SparseBinaryCountedRooks{UInt}(hint, N, idx; kwargs...)
+SparseBinaryCountedRooks{Tb}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    SparseBinaryCountedRooks{Tb, Ti}(hint, N, idx; kwargs...)
+function SparseBinaryCountedRooks{Tb, Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
     @inbounds begin
         #b = branching factor of tree = 1
 

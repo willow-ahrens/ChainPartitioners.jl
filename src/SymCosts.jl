@@ -85,7 +85,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseM
         N′ = q′ - 1
         resize!(idx′, N′)
 
-        net = SparseCountedRowNet(n, pos′, SparseCountedArea{Ti}(n + 1, n + 1, N′, pos′, idx′; kwargs...))
+        net = SparseCountedRowNet(n, pos′, SparseCountedArea{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
 
         return SymCostOracle(wrk, net, mdl)
     end
