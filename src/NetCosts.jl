@@ -136,8 +136,8 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
 
         ocl.j = ocl_j
         ocl.j′ = ocl_j′
-        ocl.x_net = x_net
         ocl.q′ = q′
+        ocl.x_net = x_net
         return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
     end
 end
