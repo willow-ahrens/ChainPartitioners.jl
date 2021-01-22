@@ -49,7 +49,7 @@ end
 @propagate_inbounds block_component(f::Tuple, w) = f[w]
 @propagate_inbounds block_component(f::AbstractArray, w) = f[w]
 
-function oracle_stripe(mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{Ti, Tv}, Π; net=nothing, adj_A=nothing, kwargs...) where {Ti, Tv, Tc, R}
+function oracle_stripe(hint::AbstractHint, mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{Ti, Tv}, Π; net=nothing, adj_A=nothing, kwargs...) where {Ti, Tv, Tc, R}
     @inbounds begin
         m, n = size(A)
         A_pos = A.colptr

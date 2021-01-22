@@ -46,7 +46,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         @assert m == n

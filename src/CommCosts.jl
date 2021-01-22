@@ -53,7 +53,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineCommCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractCommCostModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractCommCostModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr

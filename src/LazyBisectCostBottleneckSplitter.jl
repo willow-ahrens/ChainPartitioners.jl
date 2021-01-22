@@ -9,7 +9,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
         N = nnz(A)
         ϵ = method.ϵ
 
-        f = step_oracle_stripe(method.f, A)
+        f = oracle_stripe(StepHint(), method.f, A)
 
         spl = undefs(Int, K + 1)
         spl[1] = 1

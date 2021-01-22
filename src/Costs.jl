@@ -1,7 +1,8 @@
 abstract type AbstractOracleCost{Mdl} end
 
-function oracle_stripe(mdl, A, Π; kwargs...)
-    return oracle_stripe(mdl, A; kwargs...)
+oracle_stripe(args...; kwargs...) = oracle_stripe(NoHint(), args...; kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl, A, Π; kwargs...)
+    return oracle_stripe(hint, mdl, A; kwargs...)
 end
 
 function bound_stripe(A, K, Π, ocl::AbstractOracleCost)
@@ -27,7 +28,7 @@ end
 @inline total_value(A, Φ, mdl) = compute_objective(+, A, Φ, mdl)
 
 @inline function compute_objective(g, A, Π, Φ, mdl)
-    return compute_objective(g, A, Π, Φ, oracle_stripe(mdl, A, Π))
+    return compute_objective(g, A, Π, Φ, oracle_stripe(StepHint(), mdl, A, Π))
 end
 function compute_objective(g::G, A, Π, Φ, mdl::AbstractOracleCost) where {G}
     cst = objective_identity(g, cost_type(mdl))
@@ -39,7 +40,7 @@ function compute_objective(g::G, A, Π, Φ, mdl::AbstractOracleCost) where {G}
     return cst
 end
 @inline function compute_objective(g, A, Φ, mdl)
-    return compute_objective(g, A, Φ, oracle_stripe(mdl, A))
+    return compute_objective(g, A, Φ, oracle_stripe(StepHint(), mdl, A))
 end
 function compute_objective(g, A, Φ::SplitPartition, mdl::AbstractOracleCost) where {G}
     cst = objective_identity(g, cost_type(mdl))
@@ -107,10 +108,10 @@ ConstrainedCostOracle(f::F, w::W, w_max) where {F, W} = ConstrainedCostOracle{F,
 
 oracle_model(ocl::ConstrainedCostOracle) = ConstrainedCost(oracle_model(ocl.f), oracle_model(ocl.w), ocl.w_max)
 
-function oracle_stripe(cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
+function oracle_stripe(hint::AbstractHint, cst::ConstrainedCost{F, W, Tw}, A::SparseMatrixCSC, args...; kwargs...) where {F, W, Tw}
     (m, n) = size(A)
-    f = oracle_stripe(cst.f, A, args...; kwargs...)
-    w = oracle_stripe(cst.w, A, args...; kwargs...)
+    f = oracle_stripe(hint, cst.f, A, args...; kwargs...)
+    w = oracle_stripe(hint, cst.w, A, args...; kwargs...)
     w_max = cst.w_max
     return ConstrainedCostOracle(f, w, w_max)
 end
@@ -145,7 +146,7 @@ struct FeasibleCost end
 @inline (::FeasibleCost)(j, j′, k...) = Feasible()
 @inline cost_type(::Type{FeasibleCost}) = Feasible
 oracle_model(::FeasibleCost) = FeasibleCost()
-oracle_stripe(::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
+oracle_stripe(::AbstractHint, ::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
 #bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = (Feasible(), Feasible()) #TODO ?
 
 struct WidthCost{Ti} end
@@ -153,7 +154,7 @@ struct WidthCost{Ti} end
 @inline (::WidthCost{Ti})(j, j′, k...) where {Ti} = Ti(j′ - j)
 @inline cost_type(::Type{WidthCost{Ti}}) where {Ti} = Ti
 oracle_model(::WidthCost{Ti}) where {Ti} = WidthCost{Ti}()
-oracle_stripe(::WidthCost{Ti}, ::SparseMatrixCSC; kwargs...) where {Ti} = WidthCost{Ti}()
+oracle_stripe(::AbstractHint, ::WidthCost{Ti}, ::SparseMatrixCSC; kwargs...) where {Ti} = WidthCost{Ti}()
 #bound_stripe(A::SparseMatrixCSC, K, ::WidthCost) = (size(A)[2]/K, size(A)[2]) $TODO ?
 
 struct NextJ{Ocl}

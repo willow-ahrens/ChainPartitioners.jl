@@ -19,7 +19,7 @@ end
 
 oracle_model(ocl::WorkCostOracle) = ocl.mdl
 
-function oracle_stripe(mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...)
     return WorkCostOracle(A.colptr, mdl)
 end
 

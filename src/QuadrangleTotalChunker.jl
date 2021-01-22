@@ -9,7 +9,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, args...)
+        f = oracle_stripe(RandomHint(), method.f, A, args...)
 
         ftr = CircularDeque{Tuple{Ti, Ti}}(n + 1)
         spl = zeros(Ti, n + 1)
@@ -26,7 +26,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, args...)
+        f = oracle_stripe(RandomHint(), method.f, A, args...)
 
         if K == 1
             return SplitPartition{Ti}(1, [Ti(1), Ti(n + 1)])
@@ -140,8 +140,8 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f.f, A, args...; b=1)
-        w = oracle_stripe(method.f.w, A, args...)
+        f = oracle_stripe(RandomHint(), method.f.f, A, args...; b=1)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
         @stabilize Tv Ti A m n f w w_max begin 
@@ -168,7 +168,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
     begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, args...)
+        f = oracle_stripe(RandomHint(), method.f, A, args...) #TODO extend the cost type explicitly
         w = f.w
         w_max = method.f.w_max
 

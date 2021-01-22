@@ -12,8 +12,8 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
-        f = oracle_stripe(method.f.f, A, args...)
-        w = oracle_stripe(method.f.w, A, args...)
+        f = oracle_stripe(StepHint(), method.f.f, A, args...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
         cst = Vector{cost_type(f)}(undef, n + 1)
@@ -72,8 +72,8 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
-        f = step_oracle_stripe(method.f.f, A)
-        w = oracle_stripe(method.f.w, A, args...)
+        f = oracle_stripe(StepHint(), method.f.f, A)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
         cst = Vector{cost_type(f)}(undef, n + 1)

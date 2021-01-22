@@ -46,7 +46,7 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostO
     end
 end
 
-function oracle_stripe(mdl::AbstractLocalCostModel, A::SparseMatrixCSC, Π::SplitPartition; adj_pos=nothing, adj_A=nothing, net=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractLocalCostModel, A::SparseMatrixCSC, Π::SplitPartition; adj_pos=nothing, adj_A=nothing, net=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
 

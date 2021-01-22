@@ -16,7 +16,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
         g = _dynamic_splitter_combine(method)
 
         @stabilize Tv Ti A m n K f g begin
@@ -130,7 +130,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(method.f, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
         w = f.w
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)

@@ -51,7 +51,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineNetCostModel)
     end
 end
 
-function oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC; net=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
@@ -90,7 +90,7 @@ mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     x_net::Ti
 end
 
-function step_oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::StepHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
@@ -207,24 +207,6 @@ end
         ocl.x_net = x_net
         return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
     end
-end
-
-function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractNetCostModel) where {G}
-    cst = objective_identity(g, cost_type(mdl))
-    ocl = step_oracle_stripe(mdl, A)
-    for k = 1:Φ.K
-        cst = g(cst, ocl(Φ.spl[k], Φ.spl[k + 1]))
-    end
-    return cst
-end
-
-function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractNetCostModel) where {G}
-    cst = objective_identity(g, cost_type(mdl))
-    ocl = step_oracle_stripe(mdl, A[:, Φ.prm])
-    for k = 1:Φ.K
-        cst = g(cst, ocl(Φ.spl[k], Φ.spl[k + 1]))
-    end
-    return cst
 end
 
 function compute_objective(g, A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)

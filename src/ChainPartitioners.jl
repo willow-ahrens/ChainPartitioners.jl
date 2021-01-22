@@ -143,6 +143,12 @@ export pattern
 
 include("util.jl")
 
+abstract type AbstractHint end
+struct NoHint <: AbstractHint end
+struct RandomHint <: AbstractHint end
+struct SparseHint <: AbstractHint end
+struct StepHint <: AbstractHint end
+
 include("Partitions.jl")
 
 include("EnvelopeMatrices.jl")

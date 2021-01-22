@@ -44,7 +44,7 @@ function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
     return fld(upperbound_stripe(A, K, mdl), K)
 end
 
-function oracle_stripe(mdl::AbstractEnvNetCostModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractEnvNetCostModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
