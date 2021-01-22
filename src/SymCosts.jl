@@ -129,7 +129,7 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
         x_net = ocl.x_net
         Δ_net = ocl.Δ_net
         hst = ocl.hst
-        if j == ocl_j + 1 && j′ == ocl_j′ #fast track
+        if j == ocl_j + 1 && j′ == ocl_j′ #fast track for common case
             q = A.colptr[ocl_j]
             q′ = A.colptr[ocl_j + 1]
             x_work -= max(Δ_work, q′ - q)
