@@ -58,9 +58,9 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractCommCostModel, A::Sparse
         m, n = size(A)
         pos = A.colptr
         if net === nothing
-            net = rownetcount(A; kwargs...)
+            net = rownetcount(hint, A; kwargs...)
         end
-        lcr = localrownetcount(A, convert(MapPartition, Π); kwargs...)
+        lcr = localrownetcount(hint, A, convert(MapPartition, Π); kwargs...)
         return CommCostOracle(pos, net, lcr, mdl)
     end
 end

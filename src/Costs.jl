@@ -1,6 +1,7 @@
 abstract type AbstractOracleCost{Mdl} end
 
 oracle_stripe(args...; kwargs...) = oracle_stripe(NoHint(), args...; kwargs...)
+oracle_stripe(::AbstractHint, args...; kwargs...) = @assert false
 function oracle_stripe(hint::AbstractHint, mdl, A, Π; kwargs...)
     return oracle_stripe(hint, mdl, A; kwargs...)
 end

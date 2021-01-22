@@ -56,7 +56,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractNetCostModel, A::SparseM
         m, n = size(A)
         pos = A.colptr
         if net === nothing
-            net = rownetcount(A; kwargs...)
+            net = rownetcount(hint, A; kwargs...)
         end
         return NetCostDominanceOracle(pos, net, mdl)
     end

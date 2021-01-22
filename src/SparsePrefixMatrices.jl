@@ -28,7 +28,14 @@ end
 
 areasum!(args...; kwargs...) = areasum!(NoHint(), args...; kwargs...)
 areasum!(::AbstractHint, args...; kwargs...) = @assert false
-function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; kwargs...)
+function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; h = nothing, b = nothing, b′ = nothing, kwargs...)
+    if h === b === b′ === nothing
+        return SparseSummedArea(hint, m, n, N, pos, idx, val; b = 4, kwargs...)
+    else
+        return SparseSummedArea(hint, m, n, N, pos, idx, val; h = h, b = b, b′ = b′, kwargs...)
+    end
+end
+function areasum!(hint::SparseHint, m, n, N, pos, idx, val; kwargs...)
     return SparseSummedArea(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
@@ -267,12 +274,11 @@ end
 
 areacount!(args...; kwargs...) = areacount!(NoHint(), args...; kwargs...)
 areacount!(::AbstractHint, args...; kwargs...) = @assert false
-function areacount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; Tb = Int, b = nothing, kwargs...) where {Ti}
-    if b == 1
-        SparseBinaryCountedArea{Ti, Tb}(hint, m, n, N, pos, idx; kwargs...)
-    else
-        SparseCountedArea{Ti}(hint, m, n, N, pos, idx; b = b, kwargs...)
-    end
+function areacount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    SparseBinaryCountedArea(hint, m, n, N, pos, idx; kwargs...)
+end
+function areacount!(hint::SparseHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    SparseCountedArea(hint, m, n, N, pos, idx; kwargs...)
 end
 
 SparseCountedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
@@ -521,7 +527,14 @@ Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
 
 rooksum!(args...; kwargs...) = rooksum!(NoHint(), args...; kwargs...)
 rooksum!(::AbstractHint, args...; kwargs...) = @assert false
-function rooksum!(hint::AbstractHint, N, idx, val; kwargs...)
+function rooksum!(hint::AbstractHint, N, idx, val; h=nothing, b=nothing, b′=nothing, kwargs...)
+    if h === b === b′ === nothing
+        return SparseSummedRooks(hint, N, idx, val; b=4, kwargs...)
+    else
+        return SparseSummedRooks(hint, N, idx, val; h=h, b=b, b′=b′, kwargs...)
+    end
+end
+function rooksum!(hint::SparseHint, N, idx, val; kwargs...)
     return SparseSummedRooks(hint, N, idx, val; kwargs...)
 end
 
@@ -718,12 +731,11 @@ Base.size(arg::SparseBinaryCountedRooks) = (arg.N + 1, arg.N + 1)
 
 rookcount!(args...; kwargs...) = rookcount!(NoHint(), args...; kwargs...)
 rookcount!(::AbstractHint, args...; kwargs...) = @assert false
-function rookcount!(hint::AbstractHint, N, idx; b = nothing, kwargs...)
-    if b == 1
-        SparseBinaryCountedRooks(hint, N, idx; kwargs...)
-    else
-        SparseCountedRooks(hint, N, idx; b = b, kwargs...)
-    end
+function rookcount!(hint::AbstractHint, N, idx; kwargs...)
+    return SparseBinaryCountedRooks(hint, N, idx; kwargs...)
+end
+function rookcount!(hint::SparseHint, N, idx; kwargs...)
+    SparseCountedRooks(hint, N, idx; kwargs...)
 end
 
 SparseCountedRooks(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =

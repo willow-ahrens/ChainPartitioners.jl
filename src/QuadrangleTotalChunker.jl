@@ -140,7 +140,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(RandomHint(), method.f.f, A, args...; b=1)
+        f = oracle_stripe(RandomHint(), method.f.f, A, args...)
         w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 

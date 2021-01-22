@@ -49,7 +49,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractEnvNetCostModel, A::Spar
         m, n = size(A)
         pos = A.colptr
         if env === nothing
-            env = rowenvelope(A)
+            env = rowenvelope(A) #TODO hint
         end
         return EnvNetCostOracle(pos, env, mdl)
     end

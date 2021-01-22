@@ -58,7 +58,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractLocalCostModel, A::Spars
             adj_pos = adj_A.colptr
         end
 
-        lcc = localcolnetcount(A, convert(MapPartition, Π); kwargs...)
+        lcc = localcolnetcount(hint, A, convert(MapPartition, Π); kwargs...)
 
         return LocalCostOracle(Π, adj_pos, lcc, mdl)
     end
