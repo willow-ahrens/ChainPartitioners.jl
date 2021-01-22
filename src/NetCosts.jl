@@ -208,7 +208,3 @@ end
         return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
     end
 end
-
-function compute_objective(g, A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractNetCostModel)
-    return compute_objective(g, A, convert(DomainPartition, Φ), mdl)
-end

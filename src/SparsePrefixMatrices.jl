@@ -28,11 +28,11 @@ end
 
 areasum!(args...; kwargs...) = areasum!(NoHint(), args...; kwargs...)
 areasum!(::AbstractHint, args...; kwargs...) = @assert false
-function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; h = nothing, b = nothing, b′ = nothing, kwargs...)
-    if h === b === b′ === nothing
-        return SparseSummedArea(hint, m, n, N, pos, idx, val; kwargs...)
+function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; H = nothing, b = nothing, b′ = nothing, kwargs...)
+    if H === b === b′ === nothing
+        return SparseSummedArea(hint, m, n, N, pos, idx, val; b = 4, kwargs...)
     else
-        return SparseSummedArea(hint, m, n, N, pos, idx, val; h = h, b = b, b′ = b′, kwargs...)
+        return SparseSummedArea(hint, m, n, N, pos, idx, val; H = H, b = b, b′ = b′, kwargs...)
     end
 end
 function areasum!(hint::SparseHint, m, n, N, pos, idx, val; kwargs...)
@@ -527,11 +527,11 @@ Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
 
 rooksum!(args...; kwargs...) = rooksum!(NoHint(), args...; kwargs...)
 rooksum!(::AbstractHint, args...; kwargs...) = @assert false
-function rooksum!(hint::AbstractHint, N, idx, val; h=nothing, b=nothing, b′=nothing, kwargs...)
-    if h === b === b′ === nothing
-        return SparseSummedRooks(hint, N, idx, val; kwargs...)
+function rooksum!(hint::AbstractHint, N, idx, val; H = nothing, b = nothing, b′ = nothing, kwargs...)
+    if H === b === b′ === nothing
+        return SparseSummedRooks(hint, N, idx, val; b = 4, kwargs...)
     else
-        return SparseSummedRooks(hint, N, idx, val; h=h, b=b, b′=b′, kwargs...)
+        return SparseSummedRooks(hint, N, idx, val; H = H, b = b, b′ = b′, kwargs...)
     end
 end
 function rooksum!(hint::SparseHint, N, idx, val; kwargs...)

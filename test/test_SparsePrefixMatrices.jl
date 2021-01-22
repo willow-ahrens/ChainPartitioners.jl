@@ -2,14 +2,14 @@
     trials = 100
 
     @testset "generic" begin
-        for m = 1:40, H = 1:4
+        for m = 1:40, kwargs = ((H = 1,), (H = 2,), (H = 3,), (H = 4,), (b = 1,), (b = 2,), (b = 3,), (b = 4,))
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacount(ChainPartitioners.SparseHint(), A, H = H)
+                C = areacount(ChainPartitioners.SparseHint(), A; kwargs...)
                 @test typeof(C) <: SparseCountedArea
-                S = areasum(A, H = H)
+                S = areasum(A; kwargs...)
                 @test typeof(S) <: SparseSummedArea
-                @testset "H = $H, m = $m" begin
+                @testset "kwargs = $kwargs, m = $m" begin
                     for _ = 1:trials
                         i = rand(0:m)
                         j = rand(0:n)
@@ -34,11 +34,11 @@
                 for j = 1:N
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
-                RC = rookcount!(ChainPartitioners.SparseHint(), N, copy(idx), H = H)
+                RC = rookcount!(ChainPartitioners.SparseHint(), N, copy(idx); kwargs...)
                 @test typeof(RC) <: SparseCountedRooks
-                RS = rooksum!(N, copy(idx), B.nzval, H = H)
+                RS = rooksum!(N, copy(idx), B.nzval; kwargs...)
                 @test typeof(RS) <: SparseSummedRooks
-                @testset "H = $H, N = $N" begin
+                @testset "kwargs = $kwargs, N = $N" begin
                     for _ = 1:trials
                         i = rand(0:N)
                         j = rand(0:N)
