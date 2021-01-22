@@ -70,6 +70,15 @@ end
     end
 end
 
+#=
+mutable struct StepOracle{Mdl, Ocl} <: AbstractOracleCost{Mdl}
+    ocl::Ocl
+    StepOracle{Mdl, Ocl}(ocl::Ocl) where {Mdl, Ocl<:AbstractOracleCost{Mdl}}
+        return new{Mdl, Ocl}(ocl)
+    end
+end
+=#
+
 mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
@@ -85,6 +94,45 @@ function step_oracle_stripe(mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti
     @inbounds begin
         m, n = size(A)
         return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
+    end
+end
+
+@inline function step_start(ocl::NetCostStepOracle{Tv, Ti, Mdl}, j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    @inbounds begin
+        A = ocl.A
+        q′ = ocl.q′
+        x_net = ocl.x_net
+        Δ_net = ocl.Δ_net
+        hst = ocl.hst
+        ocl.j = j
+        x_net -= Δ_net[j]
+        ocl.x_net = x_net
+        return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
+    end
+end
+
+@inline function step_stop(ocl::NetCostStepOracle{Tv, Ti, Mdl}, j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    #@assert j == ocl.j && j′ == ocl.j′ + 1 "$(j) == $(ocl.j) && $(j′) == $(ocl.j′)"
+    @inbounds begin
+        A = ocl.A
+        q′ = ocl.q′
+        x_net = ocl.x_net
+        Δ_net = ocl.Δ_net
+        hst = ocl.hst
+        q = q′
+        q′ = A.colptr[j′]
+        Δ_net[j′] = q′ - q
+        for _q = q:q′ - 1
+            i = A.rowval[_q]
+            j₀ = hst[i] - 1
+            x_net += j₀ < j
+            Δ_net[j₀ + 1] -= 1
+            hst[i] = j′
+        end
+        ocl.j′ = j′
+        ocl.q′ = q′
+        ocl.x_net = x_net 
+        return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
     end
 end
 
@@ -106,8 +154,8 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
             return ocl.mdl(j′ - j, q′ - A.colptr[j], x_net, k...)
         end
         if j′ < ocl_j′
-            j = Ti(1)
-            j′ = Ti(1)
+            ocl_j = Ti(1)
+            ocl_j′ = Ti(1)
             q′ = Ti(1)
             x_net = Ti(0)
             one!(ocl.hst)
