@@ -5,7 +5,7 @@
         for m = 1:40, H = 1:4
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacount(A, H = H)
+                C = areacount(ChainPartitioners.SparseHint(), A, H = H)
                 @test typeof(C) <: SparseCountedArea
                 S = areasum(A, H = H)
                 @test typeof(S) <: SparseSummedArea
@@ -34,7 +34,7 @@
                 for j = 1:N
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
-                RC = rookcount!(N, copy(idx), H = H)
+                RC = rookcount!(ChainPartitioners.SparseHint(), N, copy(idx), H = H)
                 @test typeof(RC) <: SparseCountedRooks
                 RS = rooksum!(N, copy(idx), B.nzval, H = H)
                 @test typeof(RS) <: SparseSummedRooks
