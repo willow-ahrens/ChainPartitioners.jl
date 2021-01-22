@@ -2,6 +2,8 @@ abstract type AbstractNetCostModel end
 
 @inline (mdl::AbstractNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
+
+
 struct AffineNetCostModel{Tv} <: AbstractNetCostModel
     α::Tv
     β_width::Tv
@@ -13,6 +15,20 @@ end
 
 (mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineNetCostModel)
+    return bound_stripe(A, K, oracle_stripe(StepHint(), mdl, A))
+end
+function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineNetCostModel})
+    m, n = size(A)
+    N = nnz(A)
+    mdl = oracle_model(ocl)
+    c_hi = ocl(1, n + 1)
+    c_lo = mdl.α + fld(c_hi - mdl.α, K)
+    return (c_lo, c_hi)
+end
+
+
+
 struct NetCostDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
@@ -20,36 +36,6 @@ struct NetCostDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
 end
 
 oracle_model(ocl::NetCostDominanceOracle) = ocl.mdl
-
-function bound_stripe(A::SparseMatrixCSC, K, ocl::NetCostDominanceOracle{<:Any, <:AffineNetCostModel})
-    m, n = size(A)
-    N = nnz(A)
-    mdl = oracle_model(ocl)
-    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * ocl.net[1, end]
-    c_lo = mdl.α + fld(c_hi - mdl.α, K)
-    return (c_lo, c_hi)
-end
-
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineNetCostModel)
-    @inbounds begin
-        m, n = size(A)
-        N = nnz(A)
-        hst = falses(m)
-        x_net = 0
-        for j = 1:n
-            for q = A.colptr[j]:A.colptr[j+1]-1
-                i = A.rowval[q]
-                if !hst[i]
-                    x_net += 1
-                end
-                hst[i] = true
-            end
-        end
-        c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * x_net
-        c_lo = mdl.α + fld(c_hi - mdl.α, K)
-        return (c_lo, c_hi)
-    end
-end
 
 function oracle_stripe(hint::AbstractHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
@@ -70,14 +56,7 @@ end
     end
 end
 
-#=
-mutable struct StepOracle{Mdl, Ocl} <: AbstractOracleCost{Mdl}
-    ocl::Ocl
-    StepOracle{Mdl, Ocl}(ocl::Ocl) where {Mdl, Ocl<:AbstractOracleCost{Mdl}}
-        return new{Mdl, Ocl}(ocl)
-    end
-end
-=#
+
 
 mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}

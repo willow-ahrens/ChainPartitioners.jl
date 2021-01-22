@@ -30,7 +30,7 @@ end
 
 oracle_model(ocl::LocalCostOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostOracle{<:Any, <:AffineLocalCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostOracle{<:Any, <:Any, <:AffineLocalCostModel})
     @inbounds begin
         c_lo = 0
         c_hi = 0

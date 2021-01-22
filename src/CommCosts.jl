@@ -23,10 +23,10 @@ end
 
 oracle_model(ocl::CommCostOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:AffineCommCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:Any, <:Any, <:AffineCommCostModel})
     m, n = size(A)
     N = nnz(A)
-    oracle_model(ocl)
+    mdl = oracle_model(ocl)
     c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_comm * ocl.net[1, end]
     c_lo = mdl.α + fld(mdl.β_width * n + mdl.β_work * N, K)
     return (c_lo, c_hi)

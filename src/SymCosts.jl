@@ -12,7 +12,7 @@ end
 
 @inline cost_type(::Type{AffineSymCostModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSymCostModel)(x_width, x_work, x_net, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
+(mdl::AffineSymCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
 struct SymCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     wrk::Vector{Ti}
@@ -22,12 +22,12 @@ end
 
 oracle_model(ocl::SymCostOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::SymCostOracle{<:Any, <:AffineSymCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSymCostModel})
     m, n = size(A)
     @assert m == n
     N = nnz(A)
     mdl = oracle_model(ocl)
-    c_hi = mdl.α + mdl.β_width * n + mdl.β_work * (ocl.wrk[end] - ocl.wrk[1]) + mdl.β_net * m
+    c_hi = ocl(1, n + 1)
     c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
 end
