@@ -8,6 +8,64 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
         (m, n) = size(A)
         N = nnz(A)
         ϵ = method.ϵ
+
+        f = step_oracle_stripe(method.f, A)
+
+        spl = undefs(Int, K + 1)
+        spl[1] = 1
+
+        spl_hi = fill(n + 1, K + 1)
+        spl_hi[1] = 1
+
+        function probe(c)
+            @inbounds begin
+                spl[1] = 1
+                j = 1
+                k = 1
+
+                for j′ = 2:n + 1
+                    while f(j, j′, k) > c
+                        if k == K
+                            return false
+                        end
+                        spl[k + 1] = j′ - 1
+                        j = j′ - 1
+                        k += 1
+                    end
+                end
+                while k <= K
+                    spl[k + 1] = n + 1
+                    k += 1
+                end
+                return true
+            end
+        end
+
+        c_lo, c_hi = bound_stripe(A, K, args..., method.f) ./ 1
+
+        for k = 1:K
+            c_lo = max(c_lo, f(1, 1, k))
+        end
+
+        while c_lo * (1 + ϵ) < c_hi
+            c = (c_lo + c_hi) / 2
+            if probe(c)
+                c_hi = c
+                spl_hi .= spl
+            else
+                c_lo = c
+            end
+        end
+        return SplitPartition(K, spl_hi)
+    end
+end
+
+#=
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractNetCostModel}, args...; kwargs...) where {Tv, Ti}
+    @inbounds begin 
+        (m, n) = size(A)
+        N = nnz(A)
+        ϵ = method.ϵ
         f = method.f
 
         spl = undefs(Int, K + 1)
@@ -122,6 +180,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
         return SplitPartition(K, spl_hi)
     end
 end
+=#
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractSymCostModel}, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
