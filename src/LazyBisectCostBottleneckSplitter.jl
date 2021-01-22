@@ -26,14 +26,17 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
                 f(1, 1, 1)
 
                 for j′ = 2:n + 1
-                    if step_stop(f, j, j′, k) > c
-                        while f(j, j′, k) > c
+                    if NextJ′(f)(j, j′, k) > c
+                        while true
                             if k == K
                                 return false
                             end
                             spl[k + 1] = j′ - 1
                             j = j′ - 1
                             k += 1
+                            if f(j, j′, k) <= c
+                                break
+                            end
                         end
                     end
                 end

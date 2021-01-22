@@ -89,7 +89,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
             best_c = cst[j₀] + f(j₀, j′)
             best_j = j₀
             for j = j₀ + 1 : j′ - 1
-                c = cst[j] + step_start(f, j, j′) 
+                c = cst[j] + NextJ(f)(j, j′) 
                 if c < best_c
                     best_c = c
                     best_j = j
