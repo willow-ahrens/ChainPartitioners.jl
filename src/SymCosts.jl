@@ -14,14 +14,6 @@ end
 
 (mdl::AffineSymCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-struct SymCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
-    wrk::Vector{Ti}
-    net::Net
-    mdl::Mdl
-end
-
-oracle_model(ocl::SymCostOracle) = ocl.mdl
-
 function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSymCostModel})
     m, n = size(A)
     @assert m == n
@@ -31,6 +23,7 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSym
     c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
 end
+
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
     @inbounds begin
         m, n = size(A)
@@ -45,6 +38,15 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
         return (c_lo, c_hi)
     end
 end
+
+struct SymCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
+    wrk::Vector{Ti}
+    net::Net
+    mdl::Mdl
+end
+
+oracle_model(ocl::SymCostOracle) = ocl.mdl
+
 
 function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
@@ -99,71 +101,155 @@ end
     end
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Φ::SplitPartition, mdl::AbstractSymCostModel) where {G}
-    cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    @assert m == n
-    hst = zeros(m)
-    for k = 1:Φ.K
-        j = Φ.spl[k]
-        j′ = Φ.spl[k + 1]
-        x_width = j′ - j
-        x_work = 0
-        x_net = 0
-        for _j = j:(j′ - 1)
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += max(q′ - q - mdl.Δ_work, 0)
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < j
-                    x_net += 1
-                end
-                hst[i] = j
-            end
-            if hst[_j] < j
-                x_net += 1
-            end
-            hst[_j] = j
-        end
-        cst = g(cst, mdl(x_width, x_work, x_net, k))
-    end
-    return cst
+
+
+mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
+    A::SparseMatrixCSC{Tv, Ti}
+    mdl::Mdl
+    hst::Vector{Ti}
+    Δ_net::Vector{Ti}
+    j::Ti
+    j′::Ti
+    x_work::Ti
+    x_net::Ti
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Φ::DomainPartition, mdl::AbstractSymCostModel) where {G}
-    cst = objective_identity(g, cost_type(mdl))
-    m, n = size(A)
-    @assert m == n
-    hst = zeros(m)
-    for k = 1:Φ.K
-        s = Φ.spl[k]
-        s′ = Φ.spl[k + 1]
-        x_width = s′ - s
-        x_work = 0
-        x_net = 0
-        for _s = s:(s′ - 1)
-            _j = Φ.prm[_s]
-            q = A.colptr[_j]
-            q′ = A.colptr[_j + 1]
-            x_work += max(q′ - q - mdl.Δ_work, 0)
-            for _q = q : q′ - 1
-                i = A.rowval[_q]
-                if hst[i] < s
-                    x_net += 1
-                end
-                hst[i] = s
-            end
-            if hst[_j] < s
-                x_net += 1
-            end
-            hst[_j] = s
-        end
-        cst = g(cst, mdl(x_width, x_work, x_net, k))
+function oracle_stripe(hint::StepHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+    @inbounds begin
+        m, n = size(A)
+        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
     end
-    return cst
 end
 
-function compute_objective(g, A::SparseMatrixCSC, Φ::MapPartition, mdl::AbstractSymCostModel)
-    return compute_objective(g, A, convert(DomainPartition, Φ), mdl)
+oracle_model(ocl::SymCostStepOracle) = ocl.mdl
+
+@propagate_inbounds function (stp::NextJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    x_net -= Δ_net[j]
+    x_work -= max(pos[j] - pos[j - 1], Δ_work)
+    ocl.j = j
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@propagate_inbounds function (stp::PrevJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    x_net += Δ_net[j + 1]
+    x_work += max(pos[j + 1] - pos[j], Δ_work)
+    ocl.j = j
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@propagate_inbounds function (stp::NextJ′{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    idx = A.rowval
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    q = pos[j′]
+    q′ = pos[j′ + 1]
+    Δ_net[j′] = q′ - q
+    x_work += max(q′ - q, Δ_work)
+    for _q = q:q′ - 1
+        i = idx[_q]
+        j₀ = hst[i] - 1
+        x_net += j₀ < j
+        Δ_net[j₀ + 1] -= 1
+        hst[i] = j′
+    end
+    if hst[j′ - 1] < j′
+        x_net += 1
+    end
+    hst[j′ - 1] = j′
+    ocl.q′ = q′
+    ocl.j′ = j′
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    @inbounds begin
+        ocl_j = ocl.j
+        ocl_j′ = ocl.j′
+        x_work = ocl.x_work
+        x_net = ocl.x_net
+        Δ_net = ocl.Δ_net
+        Δ_work = ocl.mdl.Δ_work
+        A = ocl.A
+        pos = A.colptr
+        idx = A.rowval
+        hst = ocl.hst
+
+        if j′ < ocl_j′
+            ocl_j = Ti(1)
+            ocl_j′ = Ti(1)
+            x_work = Ti(0)
+            x_net = Ti(0)
+            one!(ocl.hst)
+        end
+        while ocl_j′ < j′
+            q = pos[ocl_j′]
+            q′ = pos[ocl_j′ + 1]
+            Δ_net[j′] = q′ - q
+            x_work += max(q′ - q, Δ_work)
+            for _q = q:q′ - 1
+                i = idx[_q]
+                j₀ = hst[i] - 1
+                x_net += j₀ < ocl_j
+                Δ_net[j₀ + 1] -= 1
+                hst[i] = ocl_j′ + 1
+            end
+            if hst[ocl_j′] < ocl_j′ + 1
+                x_net += 1
+            end
+            hst[ocl_j′] = ocl_j′ + 1
+            ocl_j′ += 1
+        end
+        if j == j′ - 1
+            ocl_j = j′ - 1
+            x_net = Δ_net[ocl_j + 1]
+        elseif j == j′
+            ocl_j = j′
+            x_net = Ti(0)
+        else
+            while j < ocl_j
+                ocl_j -= 1
+                x_work += max(pos[ocl_j + 1] - pos[ocl_j], Δ_work)
+                x_net += Δ_net[ocl_j + 1]
+            end
+            while j > ocl_j
+                x_work -= max(pos[ocl_j + 1] - pos[ocl_j], Δ_work)
+                x_net -= Δ_net[ocl_j + 1]
+                ocl_j += 1
+            end
+        end
+
+        ocl.j = ocl_j
+        ocl.j′ = ocl_j′
+        ocl.x_work = x_work
+        ocl.x_net = x_net
+        return ocl.mdl(j′ - j, x_work, x_net, k...)
+    end
 end
