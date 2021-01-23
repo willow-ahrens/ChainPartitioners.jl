@@ -9,7 +9,7 @@ using Cthulhu
 using Profile
 
 for mtx in [
-            #"DIMACS10/chesapeake",
+            "DIMACS10/chesapeake",
             #"HB/can_292",
             "Boeing/ct20stif",
             "Schmid/thermal1",
@@ -22,7 +22,7 @@ for mtx in [
     x = rand(n)
     ref_time = @belapsed(mul!($y, $A, $x))
 
-    mdl = ConstrainedCost(AffineNetCostModel{Int64}(0, 0, 0, 1), WidthCost{Int}(), fld(n, 3))
+    mdl = ConstrainedCost(AffineNetCostModel{Int64}(0, 0, 0, 1), WidthCost{Int}(), cld(n, 8))
 
     #println()
     #println()
@@ -33,8 +33,8 @@ for mtx in [
         ("dynamic16", DynamicTotalSplitter(mdl)),
         ("quadrangle16", ConvexTotalChunker(mdl)),
     ]
-        setup_time = @belapsed(partition_stripe($A, 4, $method))/ref_time
-        Φ = partition_stripe(A, 4, method)
+        setup_time = @belapsed(partition_stripe($A, 16, $method))/ref_time
+        Φ = partition_stripe(A, 16, method)
         #@descend pack_stripe(A, method)
         comm = total_value(A, Φ, mdl)
         @assert issorted(Φ.spl)

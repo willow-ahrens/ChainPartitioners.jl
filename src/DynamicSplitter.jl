@@ -126,17 +126,50 @@ function column_constraints(A::SparseMatrixCSC{Tv, Ti}, K, w, w_max) where {Tv, 
         return (j′_lo, j′_hi)
     end
 end
+ 
+function part_constraints(A::SparseMatrixCSC{Tv, Ti}, K, w, w_max) where {Tv, Ti}
+    @inbounds begin
+        (m, n) = size(A)
+
+        k_hi = zeros(Ti, n + 1)
+        j′ = n + 1
+        k_hi[end] = K
+        for k = K:-1:1
+            j = j′
+            while j - 1 >= 1 && w(j - 1, j′, k) <= w_max
+                j -= 1
+                k_hi[j] = k - 1
+            end
+            j′ = j
+        end
+
+        k_lo = zeros(Ti, n + 1)
+        j = 1
+        k_lo[1] = 1
+        for k = 1:K
+            j′ = j
+            while j′ + 1 <= n + 1 && w(j, j′ + 1, k) <= w_max
+                j′ += 1
+                k_lo[j′] = k
+            end
+            j = j′
+        end
+
+        return (k_lo, k_hi)
+    end
+end
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamicSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
         f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
+        f′ = f.f
         w = f.w
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)
 
-        @stabilize Tv Ti A K m n f w w_max g begin
+        @stabilize Tv Ti A K m n f f′ w w_max g begin
             (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 
             if j′_hi[K] < n + 1
@@ -163,7 +196,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                     cst[j′, k] = g(cst[j₀, k - 1], f(j₀, j′, k))
                     ptr[j′, k] = j₀
                     for j = j₀ + 1 : min(j′, j′_hi[k - 1])
-                        c′ = g(cst[j, k - 1], f(j, j′, k))
+                        c′ = g(cst[j, k - 1], NextJ(f)(j, j′, k))
                         if c′ <= cst[j′, k]
                             cst[j′, k] = c′ 
                             ptr[j′, k] = j
@@ -173,6 +206,43 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
             end
 
             return unravel_splits(K, n, PermutedDimsArray(ptr, (2, 1)))
+
+            #=
+            (k_lo, k_hi) = part_constraints(A, K, w, w_max)
+
+            if k_lo[n + 1] == 0
+                spl = ones(Ti, K + 1)
+                spl[end] = n + 1
+                #TODO throw(ArgumentError("infeasible"))
+                return SplitPartition(K, spl)
+            end
+
+            ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), K, n + 1, k_lo, k_hi)
+            cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), K, n + 1, k_lo, k_hi, ptr.pos)
+            fill!(cst.val, infinity(cost_type(f)))
+
+            j₀ = 1
+            for j′ = 1:n + 1
+                if k_lo[j′] == 1
+                    cst[k_lo[j′], j′] = f(1, j′, k_lo[j′])
+                    ptr[k_lo[j′], j′] = 1
+                end
+                while k_lo[j₀] < k_lo[j′] - 1
+                    j₀ += 1
+                end
+                for j = j₀:j′
+                    f′(j, j′, k_lo[j])
+                    for k = k_lo[j] + 1:k_hi[j′]
+                        c_lo = extend(NextK(f′)(j, j′, k))
+                        if w(j, j′, k) <= w_max && g(cst[k - 1, j], c_lo) <= cst[k, j′]
+                            cst[k, j′] = g(cst[k - 1, j], c_lo)
+                            ptr[k, j′] = j
+                        end
+                    end
+                end
+            end
+            return unravel_splits(K, n, ptr)
+            =#
         end
     end
 end
