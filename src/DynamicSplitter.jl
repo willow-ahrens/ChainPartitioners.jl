@@ -170,6 +170,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         g = _dynamic_splitter_combine(method)
 
         @stabilize Tv Ti A K m n f f′ w w_max g begin
+            #=
             (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 
             if j′_hi[K] < n + 1
@@ -206,8 +207,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
             end
 
             return unravel_splits(K, n, PermutedDimsArray(ptr, (2, 1)))
+            =#
 
-            #=
             (k_lo, k_hi) = part_constraints(A, K, w, w_max)
 
             if k_lo[n + 1] == 0
@@ -242,7 +243,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 end
             end
             return unravel_splits(K, n, ptr)
-            =#
         end
     end
 end
