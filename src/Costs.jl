@@ -172,3 +172,8 @@ struct NextJ′{Ocl}
     ocl::Ocl
 end
 @propagate_inbounds (ocl::NextJ′{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
+
+struct NextK{Ocl}
+    ocl::Ocl
+end
+@propagate_inbounds (ocl::NextK{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)

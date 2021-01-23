@@ -27,8 +27,9 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 cst[1, j′] = f(1, j′, 1)
                 ptr[1, j′] = 1
                 for j = 1:j′
+                    f(j, j′, 1)
                     for k = 2:K
-                        c_lo = f(j, j′, k)
+                        c_lo = NextK(f)(j, j′, k)
                         if g(cst[k - 1, j], c_lo) <= cst[k, j′]
                             cst[k, j′] = g(cst[k - 1, j], c_lo)
                             ptr[k, j′] = j

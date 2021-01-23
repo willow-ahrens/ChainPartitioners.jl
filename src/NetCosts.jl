@@ -131,6 +131,15 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
+@propagate_inbounds function (stp::NextK{NetCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    q′ = ocl.q′
+    x_net = ocl.x_net
+    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+end
+
 @inline function (ocl::NetCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     @inbounds begin
         ocl_j = ocl.j
