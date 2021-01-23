@@ -117,11 +117,83 @@ end
 function oracle_stripe(hint::StepHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
+        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0), Ti(0))
     end
 end
 
 oracle_model(ocl::SymCostStepOracle) = ocl.mdl
+
+
+@inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    begin
+        ocl_j = ocl.j
+        ocl_j′ = ocl.j′
+        x_work = ocl.x_work
+        x_net = ocl.x_net
+        Δ_net = ocl.Δ_net
+        Δ_work = ocl.mdl.Δ_work
+        A = ocl.A
+        pos = A.colptr
+        idx = A.rowval
+        hst = ocl.hst
+
+        if j′ < ocl_j′
+            ocl_j = Ti(1)
+            ocl_j′ = Ti(1)
+            x_work = Ti(0)
+            x_net = Ti(0)
+            one!(ocl.hst)
+        end
+        while ocl_j′ < j′
+            q = pos[ocl_j′]
+            q′ = pos[ocl_j′ + 1]
+            Δ_net[ocl_j′ + 1] = q′ - q
+            x_work += max(q′ - q - Δ_work, 0)
+            for _q = q:q′ - 1
+                i = idx[_q]
+                j₀ = hst[i] - 1
+                x_net += j₀ < ocl_j
+                Δ_net[j₀ + 1] -= 1
+                hst[i] = ocl_j′ + 1
+            end
+            j₀ = hst[ocl_j′] - 1
+            Δ_net[ocl_j′ + 1] += j₀ < ocl_j′
+            x_net += j₀ < ocl_j
+            Δ_net[j₀ + 1] -= j₀ < ocl_j′
+            hst[ocl_j′] = ocl_j′ + 1
+            ocl_j′ += 1
+        end
+        if j == j′ - 1
+            ocl_j = j′ - 1
+            q = pos[ocl_j]
+            q′ = pos[ocl_j + 1]
+            x_work = max(q′ - q - Δ_work, 0)
+            x_net = Δ_net[ocl_j + 1]
+        elseif j == j′
+            ocl_j = j′
+            x_work = Ti(0)
+            x_net = Ti(0)
+        else
+            while j < ocl_j
+                ocl_j -= 1
+                x_work += max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
+                x_net += Δ_net[ocl_j + 1]
+            end
+            while j > ocl_j
+                x_work -= max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
+                x_net -= Δ_net[ocl_j + 1]
+                ocl_j += 1
+            end
+        end
+
+        ocl.j = ocl_j
+        ocl.j′ = ocl_j′
+        ocl.x_work = x_work
+        ocl.x_net = x_net
+        return ocl.mdl(j′ - j, x_work, x_net, k...)
+    end
+end
+
 
 #=
 @propagate_inbounds function (stp::NextJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
@@ -191,69 +263,3 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 =#
-
-@inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    @inbounds begin
-        ocl_j = ocl.j
-        ocl_j′ = ocl.j′
-        x_work = ocl.x_work
-        x_net = ocl.x_net
-        Δ_net = ocl.Δ_net
-        Δ_work = ocl.mdl.Δ_work
-        A = ocl.A
-        pos = A.colptr
-        idx = A.rowval
-        hst = ocl.hst
-
-        if j′ < ocl_j′
-            ocl_j = Ti(1)
-            ocl_j′ = Ti(1)
-            x_work = Ti(0)
-            x_net = Ti(0)
-            one!(ocl.hst)
-        end
-        while ocl_j′ < j′
-            q = pos[ocl_j′]
-            q′ = pos[ocl_j′ + 1]
-            Δ_net[ocl_j′ + 1] = q′ - q
-            x_work += max(q′ - q - Δ_work, 0)
-            for _q = q:q′ - 1
-                i = idx[_q]
-                j₀ = hst[i] - 1
-                x_net += j₀ < ocl_j
-                Δ_net[j₀ + 1] -= 1
-                hst[i] = ocl_j′ + 1
-            end
-            j₀ = hst[ocl_j′] - 1
-            x_net += j₀ < ocl_j
-            Δ_net[ocl_j′ + 1] += j₀ < ocl_j′
-            Δ_net[j₀ + 1] -= j₀ < ocl_j′
-            hst[ocl_j′] = (ocl_j′ + 1)
-            ocl_j′ += 1
-        end
-        if j == j′ - 1
-            ocl_j = j′ - 1
-            x_net = Δ_net[ocl_j + 1]
-        elseif j == j′
-            ocl_j = j′
-            x_net = Ti(0)
-        else
-            while j < ocl_j
-                ocl_j -= 1
-                x_work += max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
-                x_net += Δ_net[ocl_j + 1]
-            end
-            while j > ocl_j
-                x_work -= max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
-                x_net -= Δ_net[ocl_j + 1]
-                ocl_j += 1
-            end
-        end
-
-        ocl.j = ocl_j
-        ocl.j′ = ocl_j′
-        ocl.x_work = x_work
-        ocl.x_net = x_net
-        return ocl.mdl(j′ - j, x_work, x_net, k...)
-    end
-end
