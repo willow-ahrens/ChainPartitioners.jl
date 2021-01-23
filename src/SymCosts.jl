@@ -123,6 +123,71 @@ end
 
 oracle_model(ocl::SymCostStepOracle) = ocl.mdl
 
+@propagate_inbounds function (stp::NextJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    x_net -= Δ_net[j]
+    x_work -= max(pos[j] - pos[j - 1] - Δ_work, 0)
+    ocl.j = j
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@propagate_inbounds function (stp::PrevJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    x_net += Δ_net[j + 1]
+    x_work += max(pos[j + 1] - pos[j] - Δ_work, 0)
+    ocl.j = j
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@propagate_inbounds function (stp::NextJ′{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    idx = A.rowval
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    Δ_net = ocl.Δ_net
+    Δ_work = ocl.mdl.Δ_work
+    hst = ocl.hst
+    q = pos[j′ - 1]
+    q′ = pos[j′]
+    Δ_net[j′] = q′ - q
+    x_work += max(q′ - q - Δ_work, 0)
+    for _q = q:q′ - 1
+        i = idx[_q]
+        j₀ = hst[i] - 1
+        x_net += j₀ < j
+        Δ_net[j₀ + 1] -= 1
+        hst[i] = j′
+    end
+    j₀ = hst[j′ - 1] - 1
+    Δ_net[j′] += j₀ < j′ - 1
+    x_net += j₀ < j
+    Δ_net[j₀ + 1] -= j₀ < j′ - 1
+    hst[ocl_j′] = j′
+    ocl.j′ = j′
+    ocl.x_work = x_work
+    ocl.x_net = x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
 
 @inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     begin
@@ -193,73 +258,3 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
         return ocl.mdl(j′ - j, x_work, x_net, k...)
     end
 end
-
-
-#=
-@propagate_inbounds function (stp::NextJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    ocl = stp.ocl
-    A = ocl.A
-    pos = A.colptr
-    x_work = ocl.x_work
-    x_net = ocl.x_net
-    Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
-    hst = ocl.hst
-    x_net -= Δ_net[j]
-    x_work -= max(pos[j] - pos[j - 1] - Δ_work, 0)
-    ocl.j = j
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
-end
-
-@propagate_inbounds function (stp::PrevJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    ocl = stp.ocl
-    A = ocl.A
-    pos = A.colptr
-    x_work = ocl.x_work
-    x_net = ocl.x_net
-    Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
-    hst = ocl.hst
-    x_net += Δ_net[j + 1]
-    x_work += max(pos[j + 1] - pos[j] - Δ_work, 0)
-    ocl.j = j
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
-end
-
-@propagate_inbounds function (stp::NextJ′{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    ocl = stp.ocl
-    A = ocl.A
-    pos = A.colptr
-    idx = A.rowval
-    x_work = ocl.x_work
-    x_net = ocl.x_net
-    Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
-    hst = ocl.hst
-    q = pos[j′ - 1]
-    q′ = pos[j′]
-    Δ_net[j′] = q′ - q
-    x_work += max(q′ - q - Δ_work, 0)
-    for _q = q:q′ - 1
-        i = idx[_q]
-        j₀ = hst[i] - 1
-        x_net += j₀ < j
-        Δ_net[j₀ + 1] -= 1
-        hst[i] = j′
-    end
-    j₀ = hst[j′ - 1] - 1
-    x_net += j₀ < j
-    Δ_net[j′] += j₀ < j′
-    Δ_net[j₀ + 1] -= j₀ < j′
-    hst[j′ - 1] = j′
-    ocl.q′ = q′
-    ocl.j′ = j′
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
-end
-=#
