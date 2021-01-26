@@ -1,12 +1,24 @@
-struct DynamicTotalChunker{F}
+abstract type AbstractDynamicChunker{F} end
+
+struct DynamicBottleneckChunker{F} <: AbstractDynamicChunker{F}
     f::F
 end
 
+@inline _dynamic_chunker_combine(::DynamicBottleneckChunker) = max
+
+struct DynamicTotalChunker{F} <: AbstractDynamicChunker{F}
+    f::F
+end
+
+@inline _dynamic_chunker_combine(::DynamicTotalChunker) = +
+
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker, args...; kwargs...) where {Tv, Ti}
+    #Reference Implementation
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
 end
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost}, args...; kwargs...) where {Tv, Ti}
+    #Reference Implementation
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns

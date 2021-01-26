@@ -165,8 +165,8 @@ include("LocalCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 
-include("DynamicSplitter.jl")
 include("DynamicChunker.jl")
+include("DynamicSplitter.jl")
 include("ReferenceSplitter.jl")
 
 include("EquiPartitioner.jl")

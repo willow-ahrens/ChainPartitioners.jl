@@ -86,6 +86,7 @@ end
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceTotalSplitter(f), 0);
                     (DynamicBottleneckSplitter(f), 0);
                     (BisectIndexBottleneckSplitter(f), 0);
                     (BisectCostBottleneckSplitter(f, 0.1), 0.1);
@@ -119,6 +120,7 @@ end
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceTotalSplitter(f), 0);
                     (DynamicBottleneckSplitter(f), 0);
                     (FlipBisectIndexBottleneckSplitter(f), 0);
                     (FlipBisectCostBottleneckSplitter(f, 0.1), 0.1);
@@ -143,6 +145,7 @@ end
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f), Π)
                 c = total_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceTotalSplitter(f), 0);
                     (DynamicTotalSplitter(f), 0);
                 ]
                     Φ′ = partition_stripe(A, K, method, Π)
@@ -168,7 +171,9 @@ end
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
                 c = total_value(A, Φ, f)
                 for method = [
+                    ReferenceTotalSplitter(f);
                     DynamicTotalSplitter(f);
+                    DynamicTotalChunker(f);
                     ConvexTotalChunker(f);
                 ]
                     Φ′ = partition_stripe(A, K, method)
@@ -187,6 +192,7 @@ end
             Φ = pack_stripe(A, ReferenceTotalChunker(f), Π)
             c = total_value(A, Π, Φ, f)
             for method = [
+                ReferenceTotalChunker(f);
                 DynamicTotalChunker(f);
                 StrictChunker(w_max);
                 OverlapChunker(0.9, w_max);

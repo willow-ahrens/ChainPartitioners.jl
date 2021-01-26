@@ -189,7 +189,7 @@ end
     Δ_net[j′] += j₀ < j′ - 1
     x_net += j₀ < j
     Δ_net[j₀ + 1] -= j₀ < j′ - 1
-    hst[ocl_j′] = j′
+    hst[j′ - 1] = j′
     ocl.j′ = j′
     ocl.x_work = x_work
     ocl.x_net = x_net
