@@ -28,10 +28,16 @@ end
 @inline total_value(A, Π, Φ, mdl) = compute_objective(+, A, Π, Φ, mdl)
 @inline total_value(A, Φ, mdl) = compute_objective(+, A, Φ, mdl)
 
-@inline function compute_objective(g, A, Π, Φ, mdl)
+@inline function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl) where {G}
     return compute_objective(g, A, Π, Φ, oracle_stripe(StepHint(), mdl, A, Π))
 end
-function compute_objective(g::G, A, Π, Φ, mdl::AbstractOracleCost) where {G}
+@inline function compute_objective(g::G, A, Π, Φ, mdl) where {G}
+    Φ_dom = convert(DomainPartition, Φ)
+    A_prm = A[:, Φ_dom.prm]
+    Φ_spl = SplitPartition(length(Φ), Φ_dom.spl)
+    return compute_objective(g, A_prm, Π, Φ_spl, mdl)
+end
+function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl::AbstractOracleCost) where {G}
     cst = objective_identity(g, cost_type(mdl))
     for k = 1:Φ.K
         j = Φ.spl[k]
@@ -40,8 +46,14 @@ function compute_objective(g::G, A, Π, Φ, mdl::AbstractOracleCost) where {G}
     end
     return cst
 end
-@inline function compute_objective(g, A, Φ, mdl)
+@inline function compute_objective(g::G, A, Φ::SplitPartition, mdl) where {G}
     return compute_objective(g, A, Φ, oracle_stripe(StepHint(), mdl, A))
+end
+@inline function compute_objective(g::G, A, Φ, mdl) where {G}
+    Φ_dom = convert(DomainPartition, Φ)
+    A_prm = A[:, Φ_dom.prm]
+    Φ_spl = SplitPartition(length(Φ), Φ_dom.spl)
+    return compute_objective(g, A_prm, Φ_spl, mdl)
 end
 function compute_objective(g, A, Φ::SplitPartition, mdl::AbstractOracleCost) where {G}
     cst = objective_identity(g, cost_type(mdl))

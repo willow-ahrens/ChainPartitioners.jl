@@ -74,7 +74,10 @@ end
     end
 end
 
-compute_objective(g, A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) =
+compute_objective(g::G, A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) where {G} =
+    compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
+
+compute_objective(g::G, A::SparseMatrixCSC, Π, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G} =
     compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
 
 function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G}

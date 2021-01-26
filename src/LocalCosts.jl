@@ -73,6 +73,9 @@ end
     end
 end
 
-function compute_objective(g, A, Π, Φ, mdl::AffineLocalCostModel)
+function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl::AffineLocalCostModel) where {G}
+    return compute_objective(g, adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+end
+function compute_objective(g::G, A, Π, Φ, mdl::AffineLocalCostModel) where {G}
     return compute_objective(g, adjointpattern(A), Φ, Π, AffineCommCostModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
 end
