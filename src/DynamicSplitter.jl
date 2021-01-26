@@ -129,8 +129,6 @@ Base.size(A::WindowConstrainedMatrix) = (A.m, A.n)
     if A.idx_lo[j] <= i <= A.idx_hi[j]
         return A.val[A.pos[j] + i - A.idx_lo[j]]
     else
-        if A.z == -1 &&  i < A.idx_lo[j] error("too low") end
-        if A.z == -1 &&  A.idx_hi[j] < i error("too hi") end
         return A.z
     end
 end
@@ -209,9 +207,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(StepHint(), method.f, A, args...)
-        f′ = f.f
-        w = f.w
+        f = oracle_stripe(StepHint(), method.f.f, A, args...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
         g = _dynamic_splitter_combine(method)
 
@@ -225,7 +222,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         end
 
         ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), n + 1, K, j′_lo, j′_hi)
-        cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
+        cst = WindowConstrainedMatrix{cost_type(f), Ti}(typemax(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
 
         for j′ = j′_lo[1] : j′_hi[1]
             cst[j′, 1] = f(1, j′, 1)
