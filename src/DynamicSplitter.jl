@@ -231,8 +231,16 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 while k_lo[j₀] < k_lo[j′] - 1
                     j₀ += 1
                 end
-                for j = j₀:j′
-                    f′(j, j′, k_lo[j])
+                f′(j₀, j′, k_lo[j₀])
+                for k = k_lo[j₀] + 1:k_hi[j′]
+                    c_lo = extend(Step(f′, Same(), Same(), Next())(j₀, j′, k))
+                    if w(j₀, j′, k) <= w_max && g(cst[k - 1, j₀], c_lo) <= cst[k, j′]
+                        cst[k, j′] = g(cst[k - 1, j₀], c_lo)
+                        ptr[k, j′] = j₀
+                    end
+                end
+                for j = j₀ + 1:j′
+                    Step(f′, Next(), Same(), Jump())(j, j′, k_lo[j])
                     for k = k_lo[j] + 1:k_hi[j′]
                         c_lo = extend(Step(f′, Same(), Same(), Next())(j, j′, k))
                         if w(j, j′, k) <= w_max && g(cst[k - 1, j], c_lo) <= cst[k, j′]
