@@ -123,7 +123,14 @@ end
 
 oracle_model(ocl::SymCostStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::NextJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}, Same, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    x_work = ocl.x_work
+    x_net = ocl.x_net
+    return ocl.mdl(j′ - j, x_work, x_net, k...)
+end
+
+@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}, Next, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
@@ -140,7 +147,7 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::PrevJ{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}, Prev, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
@@ -157,7 +164,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::NextJ′{SymCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}, Same, Next})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr

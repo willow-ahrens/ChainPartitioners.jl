@@ -78,7 +78,16 @@ end
 
 oracle_model(ocl::NetCostStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::NextJ{NetCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}, Same, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    ocl = stp.ocl
+    A = ocl.A
+    pos = A.colptr
+    q′ = ocl.q′
+    x_net = ocl.x_net
+    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+end
+
+@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}, Next, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
@@ -92,7 +101,7 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::PrevJ{NetCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}, Prev, Same})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
@@ -106,7 +115,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::NextJ′{NetCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}, Same, Next})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
@@ -128,15 +137,6 @@ end
     ocl.q′ = q′
     ocl.j′ = j′
     ocl.x_net = x_net
-    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
-end
-
-@propagate_inbounds function (stp::NextK{NetCostStepOracle{Tv, Ti, Mdl}})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
-    ocl = stp.ocl
-    A = ocl.A
-    pos = A.colptr
-    q′ = ocl.q′
-    x_net = ocl.x_net
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 

@@ -158,22 +158,20 @@ oracle_model(::WidthCost{Ti}) where {Ti} = WidthCost{Ti}()
 oracle_stripe(::AbstractHint, ::WidthCost{Ti}, ::SparseMatrixCSC; kwargs...) where {Ti} = WidthCost{Ti}()
 #bound_stripe(A::SparseMatrixCSC, K, ::WidthCost) = (size(A)[2]/K, size(A)[2]) $TODO ?
 
-struct NextJ{Ocl}
-    ocl::Ocl
-end
-@propagate_inbounds (ocl::NextJ{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
+struct Next end
+struct Same end
+struct Prev end
+struct Jump end
 
-struct PrevJ{Ocl}
+struct Step{Ocl, J, J′, K}
     ocl::Ocl
+    j::J
+    j′::J′
+    k::K
+    function Step(ocl::Ocl, j::J, j′::J′, k::K=Jump()) where {Ocl, J, J′, K}
+        return new{Ocl, J, J′, K}(ocl, j, j′, k)
+    end
 end
-@propagate_inbounds (ocl::PrevJ{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
 
-struct NextJ′{Ocl}
-    ocl::Ocl
-end
-@propagate_inbounds (ocl::NextJ′{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
 
-struct NextK{Ocl}
-    ocl::Ocl
-end
-@propagate_inbounds (ocl::NextK{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
+@propagate_inbounds (ocl::Step{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
