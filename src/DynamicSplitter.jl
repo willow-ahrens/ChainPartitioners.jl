@@ -17,7 +17,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f, A, args...)
         g = _dynamic_splitter_combine(method)
 
         ptr = zeros(Ti, n + 1, K)
@@ -31,7 +31,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         end
 
         for k = 2:K
-            j′₀ = k != K ? 1 : n + 1
+            j′₀ = k == K ? n + 1 : 1
             for j′ = j′₀ : n + 1
                 cst[j′, k] = g(cst[1, k - 1], f(1, j′, k))
                 ptr[j′, k] = 1 
@@ -53,14 +53,14 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f, A, args...)
         g = _dynamic_chunker_combine(method)
 
         ptr = zeros(Ti, K, n + 1)
         cst = fill(typemax(cost_type(f)), K, n + 1)
 
         for j′ = 1:n + 1
-            K₁ = j′ != n + 1 ? K - 1 : K
+            K₁ = j′ == n + 1 ? K : K - 1
             Δc = f(1, j′)
             cst[1, j′] = Δc
             ptr[1, j′] = 1
@@ -207,7 +207,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(StepHint(), method.f, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f, A, args...)
         f′ = f.f
         w = f.w
         w_max = method.f.w_max
@@ -256,8 +256,8 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
     @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(StepHint(), method.f.f, A, args...; b = 1)
-        w = oracle_stripe(StepHint(), method.f.w, A, args...; b = 1)
+        f = oracle_stripe(StepHint(), method.f.f, A, args...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
         g = _dynamic_chunker_combine(method)
 
