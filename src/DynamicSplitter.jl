@@ -129,6 +129,8 @@ Base.size(A::WindowConstrainedMatrix) = (A.m, A.n)
     if A.idx_lo[j] <= i <= A.idx_hi[j]
         return A.val[A.pos[j] + i - A.idx_lo[j]]
     else
+        if A.z == -1 &&  i < A.idx_lo[j] error("too low") end
+        if A.z == -1 &&  A.idx_hi[j] < i error("too hi") end
         return A.z
     end
 end
@@ -271,8 +273,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         end
 
         ptr = WindowConstrainedMatrix{Ti, Ti}(zero(Ti), K, n + 1, k_lo, k_hi)
-        cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), K, n + 1, k_lo, k_hi, ptr.pos)
-        fill!(cst.val, infinity(cost_type(f)))
+        cst = WindowConstrainedMatrix{cost_type(f), Ti}(typemax(cost_type(f)), K, n + 1, k_lo, k_hi, ptr.pos)
 
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -282,29 +283,26 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
-        cst = Vector{cost_type(f)}(undef, n + 1)
-        cst[1] = zero(cost_type(f))
-        spl = Vector{Int}(undef, n + 1)
         j₀ = 1
         for j′ = 1:n + 1
             while w(j₀, j′) > w_max
                 j₀ += 1
             end
-            @assert j₀ < j′ #TODO infeasibility
+            @assert j₀ <= j′ #TODO infeasibility
 
             Δc = f(j₀, j′)
-            cst[k_lo[j′], j′] = Δc
-            ptr[k_lo[j′], j′] = j₀
-            for k = k_lo[j′] + 1:k_hi[j′]
-                c′ = g(cst[k - 1, j₀], Δc)
-                if c′ <= cst[k, j′]
-                    cst[k, j′] = c′
-                    ptr[k, j′] = j₀
-                end
+            if j₀ == 1
+                cst[1, j′] = Δc
+                ptr[1, j′] = 1
             end
-            for j = 2:j′
+            for k = max(k_lo[j₀] + 1, k_lo[j′]):min(k_hi[j₀] + 1, k_hi[j′])
+                c′ = g(cst[k - 1, j₀], Δc)
+                cst[k, j′] = c′
+                ptr[k, j′] = j₀
+            end
+            for j = j₀ + 1:j′
                 Δc = Step(f, Next(), Same())(j, j′)
-                for k = max(k_lo[j′], 2):k_hi[j′]
+                for k = max(k_lo[j] + 1, k_lo[j′]):min(k_hi[j] + 1, k_hi[j′])
                     c′ = g(cst[k - 1, j], Δc)
                     if c′ <= cst[k, j′]
                         cst[k, j′] = c′
@@ -314,6 +312,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
             end
         end
 
-        return unravel_chunks!(spl, n)
+        return unravel_splits(K, n, ptr)
     end
 end
