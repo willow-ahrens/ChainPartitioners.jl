@@ -72,6 +72,7 @@ export ReferenceBottleneckSplitter
 export ReferenceTotalSplitter
 export DynamicBottleneckSplitter
 export DynamicTotalSplitter
+export ConvexTotalSplitter
 export BisectIndexBottleneckSplitter
 export FlipBisectIndexBottleneckSplitter
 export BisectCostBottleneckSplitter

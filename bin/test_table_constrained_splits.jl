@@ -31,6 +31,7 @@ for mtx in [
     rows = []
     for (key, method) in [
         ("dynamic16", DynamicTotalSplitter(mdl)),
+        ("dynamic′16", DynamicTotalChunker(mdl)),
         ("quadrangle16", ConvexTotalChunker(mdl)),
     ]
         setup_time = @belapsed(partition_stripe($A, 16, $method))/ref_time

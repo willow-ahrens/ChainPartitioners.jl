@@ -2,8 +2,9 @@ struct ConvexTotalChunker{F}
     f::F
 end
 
-#TODO add reference partitioners to test optimized constrained dynamic ones.
-#TODO add optimized constrained dynamic partitioner before optimized convex one.
+struct ConvexTotalSplitter{F}
+    f::F
+end
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, args...) where {Tv, Ti}
     @inbounds begin
@@ -22,7 +23,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker, arg
     end
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker, args...) where {Tv, Ti}
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalSplitter, args...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
@@ -144,39 +145,37 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::ConvexTotalChunker{<:Co
         w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
-        @stabilize Tv Ti A m n f w w_max begin 
-            ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
-            σ_j = undefs(Ti, 2n + 1)
-            σ_j′ = undefs(Ti, 2n + 1)
-            σ_ptr = undefs(Ti, 2n + 1)
-            σ_cst = undefs(cost_type(f), 2n + 1)
+        ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
+        σ_j = undefs(Ti, 2n + 1)
+        σ_j′ = undefs(Ti, 2n + 1)
+        σ_ptr = undefs(Ti, 2n + 1)
+        σ_cst = undefs(cost_type(f), 2n + 1)
 
-            spl = zeros(Ti, n + 1)
-            cst = fill(typemax(cost_type(f)), n + 1)
-            cst[1] = zero(cost_type(f))
-            f′ = let cst=cst, f=f
-                @inline f′(j, j′) = @inbounds cst[j] + f(j, j′)
-            end
-            chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
-
-            return unravel_chunks!(spl, n)
+        spl = zeros(Ti, n + 1)
+        cst = fill(typemax(cost_type(f)), n + 1)
+        cst[1] = zero(cost_type(f))
+        f′ = let cst=cst, f=f
+            @inline f′(j, j′) = @inbounds cst[j] + f(j, j′)
         end
+        chunk_convex_constrained!(cst, spl, f′, w, w_max, 1, n + 1, ftr, σ_j, σ_j′, σ_cst, σ_ptr)
+
+        return unravel_chunks!(spl, n)
     end
 end
 
-function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChunker{<:ConstrainedCost}, args...) where {Tv, Ti}
-    begin
+function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
+    @inbounds begin
         (m, n) = size(A)
 
-        f = oracle_stripe(RandomHint(), method.f, A, args...) #TODO extend the cost type explicitly
-        w = f.w
+        f = oracle_stripe(RandomHint(), method.f.f, A, args...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...)
         w_max = method.f.w_max
 
         ftr = CircularDeque{Tuple{Ti, Ti}}(2n + 1)
         σ_j = undefs(Ti, 2n + 1)
         σ_j′ = undefs(Ti, 2n + 1)
         σ_ptr = undefs(Ti, 2n + 1)
-        σ_cst = undefs(cost_type(f), 2n + 1)
+        σ_cst = undefs(extend(cost_type(f)), 2n + 1)
 
         (j′_lo, j′_hi) = column_constraints(A, K, w, w_max)
 
@@ -191,12 +190,12 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalChun
         cst = WindowConstrainedMatrix{extend(cost_type(f)), Ti}(infinity(cost_type(f)), n + 1, K, j′_lo, j′_hi, ptr.pos)
 
         for j′ = j′_lo[1] : j′_hi[1]
-            cst[j′, 1] = f(1, j′, 1)
+            cst[j′, 1] = extend(f(1, j′, 1))
             ptr[j′, 1] = 1
         end
 
         for k = 2:K
-            f′(j, j′) = cst[j, k - 1] + extend(f.f(j, j′, k))
+            f′(j, j′) = cst[j, k - 1] + extend(f(j, j′, k))
             for j′ = j′_lo[k]:j′_hi[k]
                 cst[j′, k] = f′(j′, j′)
                 ptr[j′, k] = j′ 
