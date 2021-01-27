@@ -32,7 +32,8 @@ for mtx in [
     for (key, method) in [
         ("dynamic16", DynamicTotalSplitter(mdl)),
         ("dynamic′16", DynamicTotalChunker(mdl)),
-        ("quadrangle16", ConvexTotalChunker(mdl)),
+        ("quadrangle16", ConvexTotalSplitter(mdl)),
+
     ]
         setup_time = @belapsed(partition_stripe($A, 16, $method))/ref_time
         Φ = partition_stripe(A, 16, method)
