@@ -158,6 +158,10 @@ include("SparseColorArrays.jl")
 
 include("Costs.jl")
 
+include("DynamicChunker.jl")
+include("DynamicSplitter.jl")
+include("ReferenceSplitter.jl")
+
 include("WorkCosts.jl")
 include("NetCosts.jl")
 include("SymCosts.jl")
@@ -165,10 +169,6 @@ include("CommCosts.jl")
 include("LocalCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
-
-include("DynamicChunker.jl")
-include("DynamicSplitter.jl")
-include("ReferenceSplitter.jl")
 
 include("EquiPartitioner.jl")
 include("AlternatingPacker.jl")
