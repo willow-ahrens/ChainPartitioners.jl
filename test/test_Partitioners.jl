@@ -187,6 +187,8 @@ end
 
         for (f, w_max) = [
             (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), AffineWorkCostModel(0, 1, 0), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(4, 4, 0, 0, (2, identity), (2, identity)), AffineWorkCostModel(0, 1, 0), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(4, 4, identity, identity, (2, identity), (2, identity)), AffineWorkCostModel(0, 1, 0), 4), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
             Φ = pack_stripe(A, ReferenceTotalChunker(f), Π)

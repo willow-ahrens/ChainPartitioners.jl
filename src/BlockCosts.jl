@@ -143,3 +143,85 @@ total_partition_value(Π, mdl::BlockComponentCostModel)
     return c_α
 end
 =#
+
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:BlockComponentCostModel, Tv, Ti}
+    return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
+end
+
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost{F}}, Π; kwargs...) where {Tc, R, F<:BlockComponentCostModel{Tc, R}, Tv, Ti}
+    @inbounds begin
+        m, n = size(A)
+        A_pos = A.colptr
+        A_idx = A.rowval
+
+        f = method.f.f
+        w = oracle_stripe(StepHint(), method.f.w, A, Π) #TODO reverse outer loop so step oracles can have stationary j′
+        w_max = method.f.w_max
+        Π_asg = convert(MapPartition, Π).asg
+        Π_spl = convert(DomainPartition, Π).spl
+        K = length(Π)
+        hst = fill(n + 1, K)
+        Δ = zeros(Tc, R, n + 1)
+        d = zeros(Tc, R)
+        cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
+        spl = Vector{Int}(undef, n + 1)
+        for j = n:-1:1
+            for q = A_pos[j] : A_pos[j + 1] - 1
+                i = A_idx[q]
+                k = Π_asg[i]
+                u = Π_spl[k + 1] - Π_spl[k]
+                if hst[k] > j
+                    for r = 1:R
+                        Δ[r, hst[k]] -= block_component(f.β_row[r], u)
+                    end
+                    for r = 1:R
+                        Δ[r, j] += block_component(f.β_row[r], u)
+                    end
+                end
+                hst[k] = j
+            end
+            zero!(d)
+            for r = 1:R
+                d[r] += Δ[r, j] 
+            end
+            best_c = cst[j + 1]
+            for r = 1:R
+                best_c += d[r] * block_component(f.β_col[r], 1)
+            end
+            best_c += block_component(f.α_col, 1)
+            best_j′ = j + 1
+            for j′ = j + 2: n + 1
+                println((w(j, j′), j′ - j))
+                if w(j, j′) > w_max
+                    break
+                end
+                for r = 1:R
+                    d[r] += Δ[r, j′ - 1] 
+                end
+                c = cst[j′]
+                for r = 1:R
+                    c += d[r] * block_component(f.β_col[r], j′ - j)
+                end
+                c += block_component(f.α_col, j′ - j)
+                if c < best_c
+                    best_c = c
+                    best_j′ = j′
+                end
+            end
+            cst[j] = best_c
+            spl[j] = best_j′
+        end
+
+        K = 0
+        j = 1
+        while j != n + 1
+            j′ = spl[j]
+            K += 1
+            spl[K] = j
+            j = j′
+        end
+        spl[K + 1] = j
+        resize!(spl, K + 1)
+        return SplitPartition{Ti}(K, spl)
+    end
+end

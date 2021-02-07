@@ -213,7 +213,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         A_idx = A.rowval
 
         f = method.f.f
-        w = oracle_stripe(StepHint(), method.f.w, A, args...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...) #TODO reverse outer loop so step oracles can have stationary j′
         w_max = method.f.w_max
 
         Δ_net = zeros(Int, n + 1) # Δ_net is the number of additional distinct entries we see as our part size grows.
