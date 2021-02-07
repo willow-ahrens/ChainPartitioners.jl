@@ -134,6 +134,104 @@ function total_value(A::SparseMatrixCSC, Π, Φ, mdl::BlockComponentCostModel{Tc
 end
 
 #=
+mutable struct BlockComponentCostStepOracle{Tv, Ti, Tc, Mdl<:BlockComponentCostModel{Tc}} <: AbstractOracleCost{Mdl}
+    A::SparseMatrixCSC{Tv, Ti}
+    Π_asg::MapPartition{Ti}
+    Π_spl::SplitPartition{Ti}
+    mdl::Mdl
+    hst::Vector{Ti}
+    Δ::Matrix{Tc}
+    d::Matrix{Tc}
+    j::Ti
+    j′::Ti
+end
+
+function oracle_stripe(hint::StepHint, mdl::BlockComponentCostModel{Tc, R}, A::SparseMatrixCSC{Tv, Ti}, Π; kwargs...) where {Tv, Ti, Tc, R}
+    @inbounds begin
+        m, n = size(A)
+        K = length(Π)
+        return BlockComponentCostStepOracle(A, convert(MapPartition, Π), mdl, ones(Ti, K), undefs(Ti, n + 1), zeros(Tc, R), Ti(1), Ti(1))
+    end
+end
+
+oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
+
+@inline function (ocl::BlockComponentCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+    @inbounds begin
+        ocl_j = ocl.j
+        ocl_j′ = ocl.j′
+        q′ = ocl.q′
+        A = ocl.A
+        Π = ocl.Π
+        d = ocl.d
+        Δ = ocl.Δ
+        pos = A.colptr
+        idx = A.rowval
+        hst = ocl.hst
+
+        if j′ < ocl_j′
+            ocl_j = Ti(1)
+            ocl_j′ = Ti(1)
+            zero!(d)
+            one!(ocl.hst)
+        end
+        while ocl_j′ < j′
+            q = q′
+            q′ = pos[ocl_j′ + 1]
+
+            for _q = q:q′ - 1
+                i = idx[_q]
+                j₀ = hst[i] - 1
+                k = Π_asg[i]
+                u = Π_spl[k + 1] - Π_spl[k]
+                if hst[k] < j′
+                    for r = 1:R
+                        Δ[r, hst[k]] -= block_component(f.β_row[r], u)
+                    end
+                    for r = 1:R
+                        Δ[r, j′ - 1] += block_component(f.β_row[r], u)
+                    end
+                end
+                hst[k] = ocl_j′ + 1
+
+
+            Δ_net[ocl_j′ + 1] = q′ - q
+            for _q = q:q′ - 1
+                i = idx[_q]
+                j₀ = hst[i] - 1
+                x_net += j₀ < ocl_j
+                Δ_net[j₀ + 1] -= 1
+                hst[i] = ocl_j′ + 1
+            end
+            ocl_j′ += 1
+        end
+        if j == j′ - 1
+            ocl_j = j′ - 1
+            x_net = Δ_net[ocl_j + 1]
+        elseif j == j′
+            ocl_j = j′
+            x_net = Ti(0)
+        else
+            while j < ocl_j
+                ocl_j -= 1
+                x_net += Δ_net[ocl_j + 1]
+            end
+            while j > ocl_j
+                x_net -= Δ_net[ocl_j + 1]
+                ocl_j += 1
+            end
+        end
+
+        ocl.j = ocl_j
+        ocl.j′ = ocl_j′
+        ocl.q′ = q′
+        ocl.x_net = x_net
+        return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+    end
+end
+=#
+
+#=
 total_partition_value(Π, mdl::BlockComponentCostModel)
     c_α = zero(Tv)
     for k = 1:K
