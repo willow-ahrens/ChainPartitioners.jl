@@ -1,11 +1,11 @@
 struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
-    W::Int
     α_col::α_Col
     β_col::β_Col
 end
 
-function ColumnBlockComponentCostModel{Tv}(W, α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
-    return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(W, α_col, β_col)
+@deprecate ColumnBlockComponentCostModel{Tv}(w_max::Ti, α_col, β_col) where {Tv, Ti} ConstrianedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost{Ti}(), w_max)
+function ColumnBlockComponentCostModel{Tv}(α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
+    return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(α_col, β_col)
 end
 
 @inline cost_type(::Type{<:ColumnBlockComponentCostModel{Tv}}) where {Tv} = Tv
@@ -13,8 +13,6 @@ end
 (mdl::ColumnBlockComponentCostModel{Tv, α_Col, β_Col})(x_width, x_work, x_net) where {Tv, α_Col, β_Col} = block_component(mdl.α_col, x_width) + x_net * block_component(mdl.β_col, x_width)
 
 struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
-    U::Int
-    W::Int
     α_row::α_Row
     α_col::α_Col
     β_row::β_Row
@@ -22,11 +20,12 @@ struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, 
 end
 
 function Base.permutedims(cst::BlockComponentCostModel{Tv}) where {Tv}
-    return BlockComponentCostModel{Tv}(cst.W, cst.U, cst.α_col, cst.α_row, cst.β_col, cst.β_row)
+    return BlockComponentCostModel{Tv}(cst.α_col, cst.α_row, cst.β_col, cst.β_row)
 end
 
-function BlockComponentCostModel{Tv}(U, W, α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
-    return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(U, W, α_row, α_col, β_row, β_col)
+@deprecate BlockComponentCostModel{Tv}(w_max::Ti, U, α_row, α_col, β_row, β_col) where {Tv, Ti} ConstrainedCost(BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col), WidthCost{Ti}(), w_max)
+function BlockComponentCostModel{Tv}(α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
+    return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(α_row, α_col, β_row, β_col)
 end
 
 @inline cost_type(::Type{<:BlockComponentCostModel{Tv}}) where {Tv} = Tv

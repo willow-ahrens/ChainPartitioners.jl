@@ -162,7 +162,7 @@ oracle_model(::FeasibleCost) = FeasibleCost()
 oracle_stripe(::AbstractHint, ::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
 #bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = (Feasible(), Feasible()) #TODO ?
 
-struct WidthCost{Ti} end
+struct WidthCost{Ti} end #TODO Ti should probably just be Int forever
 
 @inline (::WidthCost{Ti})(j, j′, k...) where {Ti} = Ti(j′ - j)
 @inline cost_type(::Type{WidthCost{Ti}}) where {Ti} = Ti
