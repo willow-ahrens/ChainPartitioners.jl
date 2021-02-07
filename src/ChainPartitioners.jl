@@ -4,6 +4,7 @@ using SparseArrays
 using LinearAlgebra
 using Suppressor
 using Random
+using DataStructures
 using Requires
 
 export SparseSummedArea
@@ -33,9 +34,14 @@ export AbstractModel
 export AbstractIncreasingModel
 export AbstractDecreasingModel
 
+export ConstrainedCost
+export ConstrainedCostOracle
+
 export AbstractWorkCostModel
 export AffineWorkCostModel
 export WorkCostOracle
+
+export WidthCost
 
 export AbstractNetCostModel
 export AffineNetCostModel
@@ -62,6 +68,8 @@ export bound_stripe
 export partition_stripe
 export partition_plaid
 export EquiSplitter
+export ReferenceBottleneckSplitter
+export ReferenceTotalSplitter
 export DynamicBottleneckSplitter
 export DynamicTotalSplitter
 export BisectIndexBottleneckSplitter
@@ -79,6 +87,7 @@ export DisjointPacker
 export AlternatingPacker
 export SymmetricPacker
 export EquiChunker
+export ReferenceTotalChunker
 export DynamicTotalChunker
 export OverlapChunker
 export StrictChunker
@@ -131,19 +140,35 @@ export perm
 export pattern
 
 include("util.jl")
-include("SparsePrefixMatrices.jl")
-include("EnvelopeMatrices.jl")
+
+abstract type AbstractHint end
+struct NoHint <: AbstractHint end
+struct RandomHint <: AbstractHint end
+struct SparseHint <: AbstractHint end
+struct StepHint <: AbstractHint end
+
 include("Partitions.jl")
+
+include("EnvelopeMatrices.jl")
+include("SparsePrefixMatrices.jl")
 include("SparseColorArrays.jl")
+
 include("Costs.jl")
+
+include("DynamicChunker.jl")
+include("DynamicSplitter.jl")
+include("ReferenceSplitter.jl")
+
 include("WorkCosts.jl")
-include("HyperedgeCosts.jl")
+include("NetCosts.jl")
+include("SymCosts.jl")
+include("CommCosts.jl")
+include("LocalCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
+
 include("EquiPartitioner.jl")
-include("DynamicSplitter.jl")
 include("AlternatingPacker.jl")
-include("DynamicChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")
@@ -154,6 +179,8 @@ include("MagneticPartitioner.jl")
 include("Permutations.jl")
 include("CuthillMcKeePermuter.jl")
 include("PermutingPartitioner.jl")
+
+@deprecate DynamicTotalChunker(f, w_max) DynamicTotalChunker(ConstrainedCost(f, WidthCost{typeof(w_max)}(), w_max))
 
 function __init__()
     @require AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e" include("glue_AMD.jl")

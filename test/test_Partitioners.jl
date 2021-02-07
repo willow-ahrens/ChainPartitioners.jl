@@ -53,6 +53,7 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
     for A in [
         [
             matrices["LPnetlib/lpi_itest6"],
+            SparseMatrixCSC(matrices["HB/can_292"]),
         ];
         reshape([sprand(m, n, 0.1) for m = [1, 2, 3, 4, 8], n = [1, 2, 3, 4, 8], trial = 1:4], :);
     ]
@@ -68,9 +69,10 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 m == n ? FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceBottleneckSplitter(f), 0);
                     (DynamicBottleneckSplitter(f), 0);
                     (BisectIndexBottleneckSplitter(f), 0);
                     (BisectCostBottleneckSplitter(f, 0.1), 0.1);
@@ -101,9 +103,10 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 m == n ? FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicBottleneckSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
                 c = bottleneck_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceBottleneckSplitter(f), 0);
                     (DynamicBottleneckSplitter(f), 0);
                     (FlipBisectIndexBottleneckSplitter(f), 0);
                     (FlipBisectCostBottleneckSplitter(f, 0.1), 0.1);
@@ -125,9 +128,10 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
-                Φ = partition_stripe(A, K, DynamicTotalSplitter(f), Π)
+                Φ = partition_stripe(A, K, ReferenceTotalSplitter(f), Π)
                 c = total_value(A, Π, Φ, f)
                 for (method, ϵ) = [
+                    (ReferenceTotalSplitter(f), 0);
                     (DynamicTotalSplitter(f), 0);
                 ]
                     Φ′ = partition_stripe(A, K, method, Π)
@@ -138,16 +142,41 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                     @test total_value(A, Π, Φ′, f) <= total_value(A, Π, Φ, f) * (1 + ϵ)
                 end
             end
+
+            for (f,) = [
+                (AffineNetCostModel(0.0, 0.0, 0.0, 1.0),);
+                (AffineWorkCostModel(0, 0, 0),);
+                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            ]
+                Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
+                c = total_value(A, Φ, f)
+                for method = [
+                    ReferenceTotalSplitter(f);
+                    DynamicTotalSplitter(f);
+                    DynamicTotalChunker(f);
+                ]
+                    Φ′ = partition_stripe(A, K, method)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test total_value(A, Φ′, f) ≈ c
+                end
+            end
         end
 
         for (f, w_max) = [
-            (AffineNetCostModel(0, 3, 1, 3), 4);
+            (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), AffineWorkCostModel(0, 1, 0), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(4, 4, 0, 0, (2, identity), (2, identity)), AffineWorkCostModel(0, 1, 0), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(4, 4, identity, identity, (2, identity), (2, identity)), AffineWorkCostModel(0, 1, 0), 4), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
-            Φ = pack_stripe(A, DynamicTotalChunker(f, w_max), Π)
+            Φ = pack_stripe(A, ReferenceTotalChunker(f), Π)
             c = total_value(A, Π, Φ, f)
             for method = [
-                DynamicTotalChunker(f, w_max);
+                ReferenceTotalChunker(f);
+                DynamicTotalChunker(f);
                 StrictChunker(w_max);
                 OverlapChunker(0.9, w_max);
                 OverlapChunker(0.8, w_max);
@@ -161,5 +190,28 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
                 @test total_value(A, Π, Φ′, f) >= total_value(A, Π, Φ, f)
             end
         end
+
+        for (f,) = [
+            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
+            (AffineNetCostModel(0, 0, 0, 1),);
+            (AffineWorkCostModel(0, 0, 0),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+        ]
+            Φ = pack_stripe(A, ReferenceTotalChunker(f))
+            c = total_value(A, Φ, f)
+            for method = [
+                ReferenceTotalChunker(f);
+                DynamicTotalChunker(f);
+            ]
+                Φ′ = pack_stripe(A, method)
+                @test issorted(Φ′.spl)
+                @test Φ′.spl[1] == 1
+                @test Φ′.spl[end] == n + 1
+                @test total_value(A, Φ′, f) ≈ c
+            end
+        end
+
     end
 end

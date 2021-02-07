@@ -6,15 +6,19 @@ end
 
 Base.size(arg::SparseCountedRowNet) = (arg.n + 1, arg.n + 1)
 
-rownetcount(A::SparseMatrixCSC; kwargs...) =
-    rownetcount!(size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+rownetcount(args...; kwargs...) = rownetcount(NoHint(), args...; kwargs...)
+rownetcount(::AbstractHint, args...; kwargs...) = @assert false
+rownetcount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
+    rownetcount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
 
-rownetcount!(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
-    SparseCountedRowNet(m, n, N, pos, idx; kwargs...)
+rownetcount!(args...; kwargs...) = rownetcount!(NoHint(), args...; kwargs...)
+rownetcount!(::AbstractHint, args...; kwargs...) = @assert false
+rownetcount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SparseCountedRowNet(hint, m, n, N, pos, idx; kwargs...)
 
-SparseCountedRowNet(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
-    SparseCountedRowNet{Ti}(m, n, N, pos, idx; kwargs...)
-function SparseCountedRowNet{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+SparseCountedRowNet(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SparseCountedRowNet{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SparseCountedRowNet{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
     @inbounds begin
         hst = zeros(Ti, m)
         idx′ = undefs(Ti, N)
@@ -27,7 +31,7 @@ function SparseCountedRowNet{Ti}(m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwar
             end
         end
 
-        return SparseCountedRowNet(n, pos, areacount!(n + 1, n + 1, N, pos, idx′; kwargs...))
+        return SparseCountedRowNet(n, pos, areacount!(hint, n + 1, n + 1, N, pos, idx′; kwargs...))
     end
 end
 
@@ -52,15 +56,19 @@ end
 
 Base.size(arg::SparseCountedLocalRowNet) = (arg.n + 1, arg.n + 1, arg.K)
 
-localrownetcount(A::SparseMatrixCSC, Π; kwargs...) =
-    localrownetcount!(size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
+localrownetcount(args...; kwargs...) = localrownetcount(NoHint(), args...; kwargs...)
+localrownetcount(::AbstractHint, args...; kwargs...) = @assert false
+localrownetcount(hint::AbstractHint, A::SparseMatrixCSC, Π; kwargs...) =
+    localrownetcount!(hint, size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
 
-localrownetcount!(m, n, N, K, pos, idx, Π; kwargs...) =
-    SparseCountedLocalRowNet(m, n, N, K, pos, idx, Π; kwargs...)
+localrownetcount!(args...; kwargs...) = localrownetcount!(NoHint(), args...; kwargs...)
+localrownetcount!(::AbstractHint, args...; kwargs...) = @assert false
+localrownetcount!(hint::AbstractHint, m, n, N, K, pos, idx, Π; kwargs...) =
+    SparseCountedLocalRowNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
 
-SparseCountedLocalRowNet(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
-    SparseCountedLocalRowNet{Ti}(m, n, N, K, pos, idx, Π; kwargs...)
-function SparseCountedLocalRowNet{Ti}(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
+SparseCountedLocalRowNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
+    SparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
+function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     @inbounds begin
         hst = undefs(Ti, m)
         Πos = zeros(Ti, K + 1)
@@ -116,7 +124,7 @@ function SparseCountedLocalRowNet{Ti}(m, n, N, K, pos::Vector{Ti}, idx::Vector{T
             Πos[k + 1] = p + 1
         end
 
-        return SparseCountedLocalRowNet(n, m, N, K, prm, Πos, ΔΠos, rookcount!(N + m, idx′; kwargs...))
+        return SparseCountedLocalRowNet(n, m, N, K, prm, Πos, ΔΠos, rookcount!(hint, N + m, idx′; kwargs...))
     end
 end
 
@@ -140,15 +148,19 @@ end
 
 Base.size(arg::SparseCountedLocalColNet) = (arg.n + 1, arg.n + 1, arg.K)
 
-localcolnetcount(A::SparseMatrixCSC{Tv, Ti}, Π; kwargs...) where {Tv, Ti} =
-    localcolnetcount!(size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
+localcolnetcount(args...; kwargs...) = localcolnetcount(NoHint(), args...; kwargs...)
+localcolnetcount(::AbstractHint, args...; kwargs...) = @assert false
+localcolnetcount(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}, Π; kwargs...) where {Tv, Ti} =
+    localcolnetcount!(hint, size(A)..., nnz(A), Π.K, A.colptr, A.rowval, Π; kwargs...)
 
-localcolnetcount!(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} =
-    SparseCountedLocalColNet(m, n, N, K, pos, idx, Π; kwargs...)
+localcolnetcount!(args...; kwargs...) = localcolnetcount!(NoHint(), args...; kwargs...)
+localcolnetcount!(::AbstractHint, args...; kwargs...) = @assert false
+localcolnetcount!(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} =
+    SparseCountedLocalColNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
 
-SparseCountedLocalColNet(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
-    SparseCountedLocalColNet{Ti}(m, n, N, K, pos, idx, Π; kwargs...)
-function SparseCountedLocalColNet{Ti}(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
+SparseCountedLocalColNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
+    SparseCountedLocalColNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
+function SparseCountedLocalColNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     @inbounds begin
         Πos = zeros(Ti, K + 1) 
         hst = zeros(Ti, K)

@@ -24,9 +24,40 @@ end
 @inline undefs(T::Type, dims::Vararg{Any, N}) where {N} = Array{T, N}(undef, dims...)
 
 zero!(arr) = fill!(arr, zero(eltype(arr)))
+one!(arr) = fill!(arr, one(eltype(arr)))
 
 function pattern(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
     return SparseMatrixCSC{Bool, Ti}(size(A)..., A.colptr, A.rowval, ones(Bool, nnz(A)))
+end
+
+macro stabilize(args...)
+    @assert all(map(arg -> arg isa Symbol, args[1:end-1]))
+    syms = args[1:end-1]
+    body = args[end]
+    name = gensym(:stabilized)
+    name_inbounds = gensym(:stabilized_inbounds)
+    Base.eval(__module__, quote
+        function $name($(syms...))
+            begin
+                $body
+            end
+        end
+        function $name_inbounds($(syms...))
+            @inbounds begin
+                $body
+            end
+        end
+    end)
+    inbounds = gensym(:inbounds)
+    return esc(quote
+        $inbounds = true
+        @boundscheck($inbounds = false)
+        if $inbounds
+            $name_inbounds($(syms...))
+        else
+            $name($(syms...))
+        end
+    end)
 end
 
 function adjointpattern(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
