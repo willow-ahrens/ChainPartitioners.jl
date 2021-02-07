@@ -3,7 +3,7 @@ struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
     β_col::β_Col
 end
 
-@deprecate ColumnBlockComponentCostModel{Tv}(w_max::Ti, α_col, β_col) where {Tv, Ti} ConstrianedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost{Ti}(), w_max)
+@deprecate ColumnBlockComponentCostModel{Tv}(w_max::Ti, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost{Ti}(), w_max)
 function ColumnBlockComponentCostModel{Tv}(α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
     return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(α_col, β_col)
 end
