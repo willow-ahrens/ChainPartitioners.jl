@@ -60,7 +60,7 @@ struct SymmetricPartitioner{Mtds}
     mtds::Mtds
 end
 
-SymmetricPartitioner(mtds...) = new{typeof(mtds)}(mtds)
+SymmetricPartitioner(mtds...) = SymmetricPartitioner{typeof(mtds)}(mtds)
 
 function partition_plaid(A::SparseMatrixCSC, K, method::SymmetricPartitioner; adj_A = nothing, kwargs...)
     if adj_A === nothing
