@@ -164,6 +164,11 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         d = zeros(Tc, R)
         cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         spl = Vector{Int}(undef, n + 1)
+
+        for r = 1:R
+            Δ[r, n + 1] = zero(Tc)
+        end
+        cst[n + 1] = zero(Tc)
         for j = n:-1:1
             for q = A_pos[j] : A_pos[j + 1] - 1
                 i = A_idx[q]
