@@ -168,8 +168,8 @@ LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommC
 
         for (f, w_max) = [
             (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), WidthCost(), 4), 4);
-            (ConstrainedCost(BlockComponentCostModel{Int64}(0, 0, (2, identity), (2, identity)), WidthCost(), 4), 4);
-            (ConstrainedCost(BlockComponentCostModel{Int64}(identity, identity, (2, identity), (2, identity)), WidthCost(), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(0, 0, (2, identity), (2, x->2x)), WidthCost(), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(identity, x->3x, (2, identity), (2, x->2x)), WidthCost(), 4), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
             Φ = pack_stripe(A, ReferenceTotalChunker(f), Π)

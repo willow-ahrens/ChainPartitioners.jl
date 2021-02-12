@@ -59,8 +59,8 @@
         Π = pack_stripe(A, EquiChunker(u))
         Φ = pack_stripe(A, EquiChunker(w))
         models = (
-            BlockComponentCostModel{Int64}(4, 4, 0, 0, (2, identity), (2, identity)),
-            BlockComponentCostModel{Int64}(4, 4, identity, identity, (2, identity), (2, identity)),
+            BlockComponentCostModel{Int64}(0, 0, (2, identity), (2, x->2x)),
+            BlockComponentCostModel{Int64}(identity, x->3x, (2, identity), (2, x->2x)),
             )
         for mdl in models
             ocl = oracle_stripe(mdl, A, Π)

@@ -90,9 +90,9 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
                 k = Π_asg[i]
                 j₀ = hst[k] - 1
                 u = Π_spl[k + 1] - Π_spl[k]
-                if hst[k] < j′
+                if j₀  < ocl_j′
                     for r = 1:R
-                        Δ[r, hst[k]] -= block_component(f.β_row[r], u)
+                        Δ[r, j₀ + 1] -= block_component(f.β_row[r], u)
                     end
                     for r = 1:R
                         Δ[r, ocl_j′ + 1] += block_component(f.β_row[r], u)
