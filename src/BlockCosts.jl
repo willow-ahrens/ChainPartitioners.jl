@@ -124,7 +124,7 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
         w = j′ - j
         c = block_component(f.α_col, w)
         for r = 1:R
-            c += d[r] * block_component(f.β_row[r], w)
+            c += d[r] * block_component(f.β_col[r], w)
         end
 
         ocl.j = ocl_j
@@ -133,16 +133,15 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
     end
 end
 
-#=
-total_partition_value(Π, mdl::BlockComponentCostModel)
-    c_α = zero(Tv)
-    for k = 1:K
-        u = Π_spl[k + 1] - Π_spl[k]
+function row_component_value(Π, mdl::BlockComponentCostModel)
+    Π = convert(SplitPartition, Π)
+    c_α = zero(cost_type(mdl))
+    for k = 1:Π.K
+        u = Π.spl[k + 1] - Π.spl[k]
         c_α += block_component(mdl.α_row, u)
     end
     return c_α
 end
-=#
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:BlockComponentCostModel, Tv, Ti}
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
