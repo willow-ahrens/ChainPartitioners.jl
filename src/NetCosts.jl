@@ -220,12 +220,6 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         hst = fill(n + 1, m) # hst is the last time we saw some nonzero
         cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         spl = Vector{Int}(undef, n + 1)
-        if x_net isa Nothing
-            x_net = Ref(Vector{Int}(undef, n + 1)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
-        else
-            @assert x_net isa Ref{Vector{Int}}
-            x_net[] = Vector{Int}(undef, n + 1) # x_net[j] is the corresponding number of distinct nonzero entries in the part
-        end
         Δ_net[n + 1] = 0
         cst[n + 1] = zero(cost_type(f))
         for j = n:-1:1
@@ -253,7 +247,6 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
                 end
             end
             cst[j] = best_c
-            x_net[][j] = best_d
             spl[j] = best_j′
         end
 
@@ -263,12 +256,10 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
             j′ = spl[j]
             K += 1
             spl[K] = j
-            x_net[][K] = x_net[][j]
             j = j′
         end
         spl[K + 1] = j
         resize!(spl, K + 1)
-        resize!(x_net[], K + 1)
         return SplitPartition{Ti}(K, spl)
     end
 end
