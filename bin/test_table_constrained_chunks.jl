@@ -37,8 +37,8 @@ for mtx in [
     println(mtx)
     rows = []
     for (key, method) in [
-        ("dynamic16", DynamicTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 4)))),
-        ("quadrangle16", ConvexTotalChunker(ConstrainedCost(mdl, WidthCost{Int}(), fld(n, 4)))),
+        ("dynamic16", DynamicTotalChunker(ConstrainedCost(mdl, WidthCost(), fld(n, 4)))),
+        ("quadrangle16", ConvexTotalChunker(ConstrainedCost(mdl, WidthCost(), fld(n, 4)))),
     ]
         setup_time = @belapsed(pack_stripe($A, $method))/ref_time
         Φ = pack_stripe(A, method)

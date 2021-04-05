@@ -3,7 +3,7 @@ struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
     β_col::β_Col
 end
 
-@deprecate ColumnBlockComponentCostModel{Tv}(w_max::Ti, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost{Ti}(), w_max)
+@deprecate ColumnBlockComponentCostModel{Tv}(w_max, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost(), w_max)
 function ColumnBlockComponentCostModel{Tv}(α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
     return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(α_col, β_col)
 end
@@ -23,7 +23,7 @@ function Base.permutedims(cst::BlockComponentCostModel{Tv}) where {Tv}
     return BlockComponentCostModel{Tv}(cst.α_col, cst.α_row, cst.β_col, cst.β_row)
 end
 
-@deprecate BlockComponentCostModel{Tv}(w_max::Ti, U, α_row, α_col, β_row, β_col) where {Tv, Ti} ConstrainedCost(BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col), WidthCost{Ti}(), w_max)
+@deprecate BlockComponentCostModel{Tv}(w_max, U, α_row, α_col, β_row, β_col) where {Tv, Ti} ConstrainedCost(BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col), WidthCost(), w_max)
 function BlockComponentCostModel{Tv}(α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
     return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(α_row, α_col, β_row, β_col)
 end
@@ -90,9 +90,9 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
                 k = Π_asg[i]
                 j₀ = hst[k] - 1
                 u = Π_spl[k + 1] - Π_spl[k]
-                if hst[k] < j′
+                if j₀  < ocl_j′
                     for r = 1:R
-                        Δ[r, hst[k]] -= block_component(f.β_row[r], u)
+                        Δ[r, j₀ + 1] -= block_component(f.β_row[r], u)
                     end
                     for r = 1:R
                         Δ[r, ocl_j′ + 1] += block_component(f.β_row[r], u)
@@ -124,7 +124,7 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
         w = j′ - j
         c = block_component(f.α_col, w)
         for r = 1:R
-            c += d[r] * block_component(f.β_row[r], w)
+            c += d[r] * block_component(f.β_col[r], w)
         end
 
         ocl.j = ocl_j
@@ -133,16 +133,15 @@ oracle_model(ocl::BlockComponentCostStepOracle) = ocl.mdl
     end
 end
 
-#=
-total_partition_value(Π, mdl::BlockComponentCostModel)
-    c_α = zero(Tv)
-    for k = 1:K
-        u = Π_spl[k + 1] - Π_spl[k]
+function row_component_value(Π, mdl::BlockComponentCostModel)
+    Π = convert(SplitPartition, Π)
+    c_α = zero(cost_type(mdl))
+    for k = 1:Π.K
+        u = Π.spl[k + 1] - Π.spl[k]
         c_α += block_component(mdl.α_row, u)
     end
     return c_α
 end
-=#
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:BlockComponentCostModel, Tv, Ti}
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
@@ -165,6 +164,11 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         d = zeros(Tc, R)
         cst = Vector{cost_type(f)}(undef, n + 1) # cst[j] is the best cost of a partition from j to n
         spl = Vector{Int}(undef, n + 1)
+
+        for r = 1:R
+            Δ[r, n + 1] = zero(Tc)
+        end
+        cst[n + 1] = zero(Tc)
         for j = n:-1:1
             for q = A_pos[j] : A_pos[j + 1] - 1
                 i = A_idx[q]

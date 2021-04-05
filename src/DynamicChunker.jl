@@ -14,7 +14,7 @@ end
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker, args...; kwargs...) where {Tv, Ti}
     #Reference Implementation
-    return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
+    return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args...; kwargs...)
 end
 
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost}, args...; kwargs...) where {Tv, Ti}
@@ -24,8 +24,8 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         # i = 1:m rows, j = 1:n columns
         m, n = size(A)
 
-        f = oracle_stripe(StepHint(), method.f.f, A, args...)
-        w = oracle_stripe(StepHint(), method.f.w, A, args...)
+        f = oracle_stripe(StepHint(), method.f.f, A, args...; kwargs...)
+        w = oracle_stripe(StepHint(), method.f.w, A, args...; kwargs...)
         w_max = method.f.w_max
 
         cst = Vector{cost_type(f)}(undef, n + 1)

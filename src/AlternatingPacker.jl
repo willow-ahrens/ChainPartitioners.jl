@@ -35,7 +35,7 @@ struct SymmetricPacker{Mtds}
     mtds::Mtds
 end
 
-SymmetricPacker(mtds...) = new{typeof(mtds)}(mtds)
+SymmetricPacker(mtds...) = SymmetricPacker{typeof(mtds)}(mtds)
 
 function pack_plaid(A::SparseMatrixCSC, method::SymmetricPacker; adj_A = nothing, kwargs...)
     if adj_A === nothing
