@@ -134,7 +134,6 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
     end
 end
 
-#=
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostBottleneckSplitter{<:AbstractNetCostModel}, args...; kwargs...) where {Tv, Ti}
     @inbounds begin 
         (m, n) = size(A)
