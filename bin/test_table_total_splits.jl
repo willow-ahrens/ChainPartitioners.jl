@@ -33,7 +33,7 @@ for mtx in [
     rows = []
     for (key, method) in [
         ("dynamic16", DynamicTotalSplitter(mdl)),
-        ("quadrangle16", ConvexTotalChunker(mdl)),
+        ("quadrangle16", ConvexTotalSplitter(mdl)),
     ]
         setup_time = @belapsed(partition_stripe($A, 4, $method))/ref_time
         Φ = partition_stripe(A, 4, method)

@@ -550,19 +550,33 @@ function Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) w
         idx = arg.idx
         arg_i = arg.i
         arg_j = arg.j
-        for q = pos[j + 1] : pos[arg_j + 1] - 1
-            Δ[idx[q]] -= 1
-            c -= idx[q] <= arg_i
-        end
-        for q = pos[arg_j + 1] : pos[j + 1] - 1
-            Δ[idx[q]] += 1
-            c += idx[q] <= arg_i
-        end
-        for q = i + 1 : arg_i
-            c -= Δ[q]
-        end
-        for q = arg_i + 1 : i
-            c += Δ[q]
+        if i == arg_i - 1 && j == arg_j
+            c += Δ[i]
+        elseif i == arg_i + 1 && j == arg_j
+            c -= Δ[i]
+        elseif i == arg_i && j == arg_j + 1
+            for q = pos[j] : pos[j + 1] - 1
+                Δ[idx[q]] += 1
+                c += idx[q] <= arg_i
+            end
+        elseif j == 0 && arg_j != 0
+            zero!(Δ)
+            c = 0
+        else
+            for q = pos[j + 1] : pos[arg_j + 1] - 1
+                Δ[idx[q]] -= 1
+                c -= idx[q] <= arg_i
+            end
+            for q = pos[arg_j + 1] : pos[j + 1] - 1
+                Δ[idx[q]] += 1
+                c += idx[q] <= arg_i
+            end
+            for q = i + 1 : arg_i
+                c -= Δ[q]
+            end
+            for q = arg_i + 1 : i
+                c += Δ[q]
+            end
         end
         arg.i = i
         arg.j = j
@@ -1043,19 +1057,24 @@ function Base.getindex(arg::SparseRookStepCounter{Ti}, i::Integer, j::Integer) w
         idx = arg.idx
         arg_i = arg.i
         arg_j = arg.j
-        for q = j + 1 : arg_j
-            Δ[idx[q]] -= 1
-            c -= idx[q] <= arg_i
-        end
-        for q = arg_j + 1 : j
-            Δ[idx[q]] += 1
-            c += idx[q] <= arg_i
-        end
-        for q = i + 1 : arg_i
-            c -= Δ[q]
-        end
-        for q = arg_i + 1 : i
-            c += Δ[q]
+        if j == 0 && arg_j != 0
+            zero!(Δ)
+            c = 0
+        else
+            for q = j + 1 : arg_j
+                Δ[idx[q]] -= 1
+                c -= idx[q] <= arg_i
+            end
+            for q = arg_j + 1 : j
+                Δ[idx[q]] += 1
+                c += idx[q] <= arg_i
+            end
+            for q = i + 1 : arg_i
+                c -= Δ[q]
+            end
+            for q = arg_i + 1 : i
+                c += Δ[q]
+            end
         end
         arg.i = i
         arg.j = j
