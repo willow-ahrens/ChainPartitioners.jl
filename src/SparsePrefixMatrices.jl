@@ -168,7 +168,8 @@ function SparseSummedArea{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, 
     end
 end
 
-function Base.getindex(arg::SparseSummedArea{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti}
+Base.getindex(arg::SparseSummedArea{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
+function (arg::SparseSummedArea{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
     @inbounds begin
         b = arg.b
         b′ = arg.b′
@@ -374,7 +375,8 @@ function SparseCountedArea{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx
     end
 end
 
-function Base.getindex(arg::SparseCountedArea{Ti}, i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::SparseCountedArea{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::SparseCountedArea{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         b = arg.b
         b′ = arg.b′
@@ -496,7 +498,8 @@ end
 
 #we have removed b′ because increasing it doesn't significantly reduce the storage cost or preprocessing cost of the structure.
 
-function Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb}
+Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
+function (arg::SparseBinaryCountedArea{Ti, Tb})(i::Integer, j::Integer) where {Ti, Tb}
     @inbounds begin
         H = arg.H
         pos = arg.pos
@@ -540,7 +543,8 @@ function SparseAreaStepCounter{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti},
     end
 end
 
-function Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::SparseAreaStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         i -= 1
         j -= 1
@@ -550,33 +554,19 @@ function Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) w
         idx = arg.idx
         arg_i = arg.i
         arg_j = arg.j
-        if i == arg_i - 1 && j == arg_j
-            c += Δ[i]
-        elseif i == arg_i + 1 && j == arg_j
-            c -= Δ[i]
-        elseif i == arg_i && j == arg_j + 1
-            for q = pos[j] : pos[j + 1] - 1
-                Δ[idx[q]] += 1
-                c += idx[q] <= arg_i
-            end
-        elseif j == 0 && arg_j != 0
-            zero!(Δ)
-            c = 0
-        else
-            for q = pos[j + 1] : pos[arg_j + 1] - 1
-                Δ[idx[q]] -= 1
-                c -= idx[q] <= arg_i
-            end
-            for q = pos[arg_j + 1] : pos[j + 1] - 1
-                Δ[idx[q]] += 1
-                c += idx[q] <= arg_i
-            end
-            for q = i + 1 : arg_i
-                c -= Δ[q]
-            end
-            for q = arg_i + 1 : i
-                c += Δ[q]
-            end
+        for q = pos[j + 1] : pos[arg_j + 1] - 1
+            Δ[idx[q]] -= 1
+            c -= idx[q] <= arg_i
+        end
+        for q = pos[arg_j + 1] : pos[j + 1] - 1
+            Δ[idx[q]] += 1
+            c += idx[q] <= arg_i
+        end
+        for q = i + 1 : arg_i
+            c -= Δ[q]
+        end
+        for q = arg_i + 1 : i
+            c += Δ[q]
         end
         arg.i = i
         arg.j = j
@@ -718,7 +708,8 @@ function SparseSummedRooks{Ti, Tv}(hint::AbstractHint, N, idx::Vector{Ti}, val::
     end
 end
 
-function Base.getindex(arg::SparseSummedRooks{Ti, Tv}, i::Integer, j::Integer) where {Ti, Tv}
+Base.getindex(arg::SparseSummedRooks{Ti, Tv}, i::Integer, j::Integer) where {Ti, Tv} = arg(i, j)
+function (arg::SparseSummedRooks{Ti, Tv})(i::Integer, j::Integer) where {Ti, Tv}
     @inbounds begin
         N = arg.N
         b = arg.b
@@ -900,7 +891,8 @@ function SparseCountedRooks{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; b = noth
     end
 end
 
-function Base.getindex(arg::SparseCountedRooks{Ti}, i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::SparseCountedRooks{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::SparseCountedRooks{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         N = arg.N
         b = arg.b
@@ -1008,7 +1000,8 @@ function SparseBinaryCountedRooks{Tb, Ti}(hint::AbstractHint, N, idx::Vector{Ti}
     end
 end
 
-function Base.getindex(arg::SparseBinaryCountedRooks{Tb, Ti}, i::Integer, j::Integer) where {Ti, Tb}
+Base.getindex(arg::SparseBinaryCountedRooks{Tb, Ti}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
+function (arg::SparseBinaryCountedRooks{Tb, Ti})(i::Integer, j::Integer) where {Ti, Tb}
     @inbounds begin
         H = arg.H
         byt = arg.byt
@@ -1048,7 +1041,8 @@ function SparseRookStepCounter{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwarg
     end
 end
 
-function Base.getindex(arg::SparseRookStepCounter{Ti}, i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::SparseRookStepCounter{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::SparseRookStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         i -= 1
         j -= 1

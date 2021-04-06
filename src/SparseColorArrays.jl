@@ -35,7 +35,8 @@ function SparseCountedRowNet{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, i
     end
 end
 
-function Base.getindex(arg::SparseCountedRowNet{Ti}, j::Integer, j′::Integer) where {Ti}
+Base.getindex(arg::SparseCountedRowNet{Ti}, j::Integer, j′::Integer) where {Ti} = arg(j, j′)
+function (arg::SparseCountedRowNet{Ti})(j::Integer, j′::Integer) where {Ti}
     @inbounds begin
         return (arg.pos[j′] - arg.pos[j]) - arg.lnk[(arg.n + 2) - j, j′]
     end
@@ -128,7 +129,8 @@ function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
     end
 end
 
-function Base.getindex(arg::SparseCountedLocalRowNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti}
+Base.getindex(arg::SparseCountedLocalRowNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
+function (arg::SparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
         tmp = @view arg.prm[arg.Πos[k] - arg.ΔΠos[k] : arg.Πos[k + 1] - arg.ΔΠos[k + 1] - 1]
         rnk_j = arg.Πos[k] + searchsortedfirst(tmp, j) - 1
@@ -201,7 +203,8 @@ function SparseCountedLocalColNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
     end
 end
 
-function Base.getindex(arg::SparseCountedLocalColNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti}
+Base.getindex(arg::SparseCountedLocalColNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
+function (arg::SparseCountedLocalColNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
         tmp = (@view arg.prm[arg.Πos[k] : arg.Πos[k + 1] - 1])
         rnk_j = searchsortedfirst(tmp, j) - 1
