@@ -68,8 +68,17 @@ end
 @inline function (cst::CommCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
-        d = cst.net[j, j′]
-        l = cst.lcr[j, j′, k]
+        d = cst.net(j, j′)
+        l = cst.lcr(j, j′, k)
+        return cst.mdl(j′ - j, w, l, d - l, k)
+    end
+end
+
+@inline function (cst::Step{CommCostOracle{Ti, Mdl}})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+    @inbounds begin
+        w = cst.ocl.pos[j′] - cst.ocl.pos[j]
+        d = Step(cst.ocl.net, cst.j, cst.j′)(j, j′)
+        l = Step(cst.ocl.lcr, cst.j, cst.j′, cst.k)(j, j′, k)
         return cst.mdl(j′ - j, w, l, d - l, k)
     end
 end

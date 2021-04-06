@@ -68,7 +68,7 @@ end
     @inbounds begin
         w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
         d = cst.lcc.Πos[k + 1] - cst.lcc.Πos[k]
-        l = cst.lcc[i, i′, k]
+        l = cst.lcc(i, i′, k)
         return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], w, l, d - l, k)
     end
 end

@@ -153,10 +153,11 @@ struct StepHint <: AbstractHint end
 include("Partitions.jl")
 
 include("EnvelopeMatrices.jl")
-include("SparsePrefixMatrices.jl")
-include("SparseColorArrays.jl")
 
 include("Costs.jl")
+
+include("SparsePrefixMatrices.jl")
+include("SparseColorArrays.jl")
 
 include("DynamicChunker.jl")
 include("DynamicSplitter.jl")

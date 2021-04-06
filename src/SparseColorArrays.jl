@@ -38,7 +38,14 @@ end
 Base.getindex(arg::SparseCountedRowNet{Ti}, j::Integer, j′::Integer) where {Ti} = arg(j, j′)
 function (arg::SparseCountedRowNet{Ti})(j::Integer, j′::Integer) where {Ti}
     @inbounds begin
-        return (arg.pos[j′] - arg.pos[j]) - arg.lnk[(arg.n + 2) - j, j′]
+        return (arg.pos[j′] - arg.pos[j]) - arg.lnk((arg.n + 2) - j, j′)
+    end
+end
+
+function (ocl::Step{SparseCountedRowNet{Ti}})(j::Integer, j′::Integer) where {Ti}
+    @inbounds begin
+        arg = ocl.ocl
+        return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk, -arg.j, arg.j′)((arg.n + 2) - j, j′)
     end
 end
 
@@ -135,7 +142,7 @@ function (arg::SparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integ
         tmp = @view arg.prm[arg.Πos[k] - arg.ΔΠos[k] : arg.Πos[k + 1] - arg.ΔΠos[k + 1] - 1]
         rnk_j = arg.Πos[k] + searchsortedfirst(tmp, j) - 1
         rnk_j′ = arg.Πos[k] + searchsortedlast(tmp, j′ - 1)
-        return (rnk_j′ - rnk_j) - arg.lnk[(arg.N + arg.m + 2) - (rnk_j + arg.ΔΠos[k + 1] - arg.ΔΠos[k]), rnk_j′]
+        return (rnk_j′ - rnk_j) - arg.lnk((arg.N + arg.m + 2) - (rnk_j + arg.ΔΠos[k + 1] - arg.ΔΠos[k]), rnk_j′)
     end
 end
 
