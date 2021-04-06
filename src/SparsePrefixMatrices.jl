@@ -262,6 +262,20 @@ end
 
 Base.size(arg::SparseBinaryCountedArea) = (arg.m + 1, arg.n + 1)
 
+mutable struct SparseAreaStepCounter{Ti} <: AbstractMatrix{Ti}
+    m::Int
+    n::Int
+    N::Int
+    i::Ti
+    j::Ti
+    pos::Vector{Ti}
+    idx::Vector{Ti}
+    Δ::Vector{Ti}
+    c::Ti
+end
+
+Base.size(arg::SparseAreaStepCounter) = (arg.m + 1, arg.n + 1)
+
 areacount(args...; kwargs...) = areacount(NoHint(), args...; kwargs...)
 areacount(::AbstractHint, args...; kwargs...) = @assert false
 function areacount(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
@@ -279,6 +293,9 @@ function areacount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti
 end
 function areacount!(hint::SparseHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
     SparseCountedArea(hint, m, n, N, pos, idx; kwargs...)
+end
+function areacount!(hint::StepHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    SparseAreaStepCounter(hint, m, n, N, pos, idx; kwargs...)
 end
 
 SparseCountedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
@@ -512,6 +529,50 @@ end
 
 
 
+SparseAreaStepCounter(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} =
+    SparseAreaStepCounter{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SparseAreaStepCounter{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    @inbounds begin
+        i = j = 0
+        Δ = zeros(Ti, m)
+        c = Ti(0)
+        return SparseAreaStepCounter(m, n, N, i, j, pos, idx, Δ, c)
+    end
+end
+
+function Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) where {Ti}
+    @inbounds begin
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        arg_i = arg.i
+        arg_j = arg.j
+        for q = pos[j + 1] : pos[arg_j + 1] - 1
+            Δ[idx[q]] -= 1
+            c -= idx[q] <= arg_i
+        end
+        for q = pos[arg_j + 1] : pos[j + 1] - 1
+            Δ[idx[q]] += 1
+            c += idx[q] <= arg_i
+        end
+        for q = i + 1 : arg_i
+            c -= Δ[q]
+        end
+        for q = arg_i + 1 : i
+            c += Δ[q]
+        end
+        arg.i = i
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+
+
 struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}
     N::Int
     b::Int
@@ -729,6 +790,17 @@ end
 
 Base.size(arg::SparseBinaryCountedRooks) = (arg.N + 1, arg.N + 1)
 
+mutable struct SparseRookStepCounter{Ti} <: AbstractMatrix{Ti}
+    N::Int
+    i::Ti
+    j::Ti
+    idx::Vector{Ti}
+    Δ::Vector{Ti}
+    c::Ti
+end
+
+Base.size(arg::SparseRookStepCounter) = (arg.N + 1, arg.N + 1)
+
 rookcount!(args...; kwargs...) = rookcount!(NoHint(), args...; kwargs...)
 rookcount!(::AbstractHint, args...; kwargs...) = @assert false
 function rookcount!(hint::AbstractHint, N, idx; kwargs...)
@@ -736,6 +808,9 @@ function rookcount!(hint::AbstractHint, N, idx; kwargs...)
 end
 function rookcount!(hint::SparseHint, N, idx; kwargs...)
     SparseCountedRooks(hint, N, idx; kwargs...)
+end
+function rookcount!(hint::StepHint, N, idx; kwargs...)
+    SparseRookStepCounter(hint, N, idx; kwargs...)
 end
 
 SparseCountedRooks(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
@@ -945,5 +1020,46 @@ function Base.getindex(arg::SparseBinaryCountedRooks{Tb, Ti}, i::Integer, j::Int
         end
 
         return s + Δq
+    end
+end
+
+SparseRookStepCounter(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
+    SparseRookStepCounter{Ti}(hint, N, idx; kwargs...)
+function SparseRookStepCounter{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti}
+    @inbounds begin
+        i = j = 0
+        Δ = zeros(Ti, N)
+        c = Ti(0)
+        return SparseRookStepCounter(N, i, j, idx, Δ, c)
+    end
+end
+
+function Base.getindex(arg::SparseRookStepCounter{Ti}, i::Integer, j::Integer) where {Ti}
+    @inbounds begin
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        idx = arg.idx
+        arg_i = arg.i
+        arg_j = arg.j
+        for q = j + 1 : arg_j
+            Δ[idx[q]] -= 1
+            c -= idx[q] <= arg_i
+        end
+        for q = arg_j + 1 : j
+            Δ[idx[q]] += 1
+            c += idx[q] <= arg_i
+        end
+        for q = i + 1 : arg_i
+            c -= Δ[q]
+        end
+        for q = arg_i + 1 : i
+            c += Δ[q]
+        end
+        arg.i = i
+        arg.j = j
+        arg.c = c
+        return c
     end
 end
