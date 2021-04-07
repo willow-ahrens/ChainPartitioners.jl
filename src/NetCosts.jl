@@ -56,6 +56,19 @@ end
     end
 end
 
+#=
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: NetCostDominanceOracle{Ti, Mdl}}
+    @inbounds begin
+        cst = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        k = maptuple(destep, _k...)
+        w = cst.pos[j′] - cst.pos[j]
+        d = Step(cst.net)(_j, _j′)
+        return cst.mdl(j′ - j, w, d, k...)
+    end
+end
+=#
 
 
 mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
@@ -78,7 +91,7 @@ end
 
 oracle_model(ocl::NetCostStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -90,7 +103,7 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -107,7 +120,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -124,7 +137,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{NetCostStepOracle{Tv, Ti, Mdl}})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)

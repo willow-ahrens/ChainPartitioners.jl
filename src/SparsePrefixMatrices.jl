@@ -575,6 +575,87 @@ function (arg::SparseAreaStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
     end
 end
 
+function (stp::Step{Cnt})(i::Same, j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        return arg.c
+    end
+end
+
+function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        for q = pos[j] : pos[j + 1] - 1
+            Δ[idx[q]] += 1
+            c += idx[q] <= i
+        end
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        for q = pos[j + 1] : pos[j + 2] - 1
+            Δ[idx[q]] -= 1
+            c -= idx[q] <= i
+        end
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        c -= Δ[i - 1]
+        arg.i = i
+        arg.c = c
+        return c
+    end
+end
+
+function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        c += Δ[i]
+        arg.i = i
+        arg.c = c
+        return c
+    end
+end
+
 
 
 struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}

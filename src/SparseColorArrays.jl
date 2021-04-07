@@ -42,10 +42,30 @@ function (arg::SparseCountedRowNet{Ti})(j::Integer, j′::Integer) where {Ti}
     end
 end
 
-function (ocl::Step{SparseCountedRowNet{Ti}})(j::Integer, j′::Integer) where {Ti}
+function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SparseCountedRowNet{Ti}}
     @inbounds begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk)(Same((arg.n + 2) - j), _j′)
+    end
+end
+
+function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
+    @inbounds begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk)(Prev((arg.n + 2) - j), _j′)
+    end
+end
+
+function (ocl::Step{Net})(_j::Prev, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
+    @inbounds begin
+        j = destep(_j)
+        j′ = destep(_j′)
         arg = ocl.ocl
-        return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk, -arg.j, arg.j′)((arg.n + 2) - j, j′)
+        return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk)(Next((arg.n + 2) - j), _j′)
     end
 end
 
@@ -147,16 +167,14 @@ function (arg::SparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integ
         tmp = @view arg.prm[arg.πos[k] : arg.πos[k + 1] - 1]
         rnk_j = arg.πos[k] + searchsortedfirst(tmp, j) - 1
         rnk_j′ = arg.πos[k] + searchsortedfirst(tmp, j′) - 1
-        #@info "hmm" rnk_j rnk_j′ arg.prm[rnk_j] j arg.prm[rnk_j′] j′
         return arg.net(rnk_j, rnk_j′)
     end
 end
 
-#=
-struct SteppedSparseCountedLocalRowNet{Ti, Lnk} <: AbstractArray{Ti, 3}
+mutable struct SteppedSparseCountedLocalRowNet{Ti, Net} <: AbstractArray{Ti, 3}
     rnk_j::Ti
     rnk_j′::Ti
-    net::Lnk
+    net::Net
 end
 
 Base.size(arg::SteppedSparseCountedLocalRowNet) = size(arg.net)
@@ -164,6 +182,8 @@ Base.size(arg::SteppedSparseCountedLocalRowNet) = size(arg.net)
 localrownetcount!(hint::StepHint, m, n, N, K, pos, idx, Π; kwargs...) =
     SteppedSparseCountedLocalRowNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
 
+SteppedSparseCountedLocalRowNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
+    SteppedSparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
 function SteppedSparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     rnk_j = 0
     rnk_j′ = 0
@@ -173,22 +193,36 @@ end
 
 Base.getindex(arg::SteppedSparseCountedLocalRowNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
 function (arg::SteppedSparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
-    tmp = @view arg.net.prm[arg.net.Πos[k] - arg.net.ΔΠos[k] : arg.net.Πos[k + 1] - arg.net.ΔΠos[k + 1] - 1]
-    arg.rnk_j = arg.net.Πos[k] + searchsortedfirst(tmp, j) - 1
-    arg.rnk_j′ = arg.net.Πos[k] + searchsortedlast(tmp, j′ - 1)
-    return (rnk_j′ - rnk_j) - arg.net.lnk((arg.N + arg.m + 2) - (rnk_j + arg.net.ΔΠos[k + 1] - arg.net.ΔΠos[k]), rnk_j′)
-end
-
-function (arg::Step{SteppedSparseCountedLocalRowNet{Ti}})(_j::Next{Integer}, _j′::Same{Integer}, _k::Same{Integer}) where {Ti}
-    j = destep(_j)
-    j′ = destep(_j′)
-    rnk_j = arg.rnk_j
-    rnk_j′ = arg.rnk_j′
-    while arg.prm[rnk_j] < 
-        arg.net.lnk((arg.N + arg.m + 2) - (rnk_j + arg.net.ΔΠos[k + 1] - arg.net.ΔΠos[k]), rnk_j′)
+    @inbounds begin
+        tmp = @view arg.net.prm[arg.net.πos[k] : arg.net.πos[k + 1] - 1]
+        rnk_j = arg.net.πos[k] + searchsortedfirst(tmp, j) - 1
+        arg.rnk_j = rnk_j
+        rnk_j′ = arg.net.πos[k] + searchsortedfirst(tmp, j′) - 1
+        arg.rnk_j′ = rnk_j′
+        return arg.net.net(rnk_j, rnk_j′)
     end
 end
-=#
+
+function (stp::Step{Net})(_j::Same{Integer}, _j′::Next{Integer}, _k::Same{Integer}) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        rnk_j = arg.rnk_j
+        rnk_j′ = arg.rnk_j′
+        πos = arg.net.πos
+        prm = arg.net.prm
+        n′ = arg.net.n′
+
+        if rnk_j′ < πos[k + 1] && prm[rnk_j′] < j′
+            rnk_j′ += 1
+            arg.rnk_j′ = rnk_j′
+            return Step(arg.net.net)(Same(rnk_j), Next(rnk_j′))
+        else
+            return Step(arg.net.net)(Same(rnk_j), Same(rnk_j′))
+        end
+    end
+end
 
 struct SparseCountedLocalColNet{Ti} <: AbstractArray{Ti, 3}
     n::Int

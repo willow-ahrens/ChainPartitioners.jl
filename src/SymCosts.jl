@@ -123,7 +123,7 @@ end
 
 oracle_model(ocl::SymCostStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -133,7 +133,7 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -153,7 +153,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -173,7 +173,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{SymCostStepOracle{Tv, Ti, Mdl}})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
