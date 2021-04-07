@@ -143,6 +143,7 @@ function row_component_value(Π, mdl::BlockComponentCostModel)
     return c_α
 end
 
+#=
 function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:BlockComponentCostModel, Tv, Ti}
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
 end
@@ -228,3 +229,4 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:C
         return SplitPartition{Ti}(K, spl)
     end
 end
+=#
