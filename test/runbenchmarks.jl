@@ -17,8 +17,8 @@ function main(args)
     sym_model = (AffineSymCostModel(0, 0, 1, 100, 90), "sym_model")
     comm_model = (AffineCommCostModel(0, 10, 1, 0, 100), "comm_model")
     local_model = (AffineLocalCostModel(0, 10, 1, 0, 100), "local_model")
-    col_block_model = (ColumnBlockComponentCostModel{Int}(8, 3, (w) -> 1 + w), "col_block_model")
-    block_model = (BlockComponentCostModel{Int}(8, 8, 1, 3, (1, identity), (1, identity)), "block_model")
+    col_block_model = (ColumnBlockComponentCostModel{Int}(3, (w) -> 1 + w), "col_block_model")
+    block_model = (BlockComponentCostModel{Int}(1, 3, (1, identity), (1, identity)), "block_model")
 
     for mtx in [
         "Pajek/GD99_c",

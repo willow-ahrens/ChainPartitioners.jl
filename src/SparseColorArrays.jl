@@ -74,6 +74,9 @@ localrownetcount!(::AbstractHint, args...; kwargs...) = @assert false
 localrownetcount!(hint::AbstractHint, m, n, N, K, pos, idx, Π; kwargs...) =
     SparseCountedLocalRowNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
 
+#You should avoid the searchsorted if you do the stepped oracle.
+#The stepped interface should specify the previous input so that we don't need to track it in multiple places.
+#Consider using hints in accesses (pushfirst, popfirst, push, pop, incstart, decstop, etc...) instead of complicated funky call.
 SparseCountedLocalRowNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
     SparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
 function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
