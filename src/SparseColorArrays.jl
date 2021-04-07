@@ -51,15 +51,67 @@ end
 
 
 
-struct SparseCountedLocalRowNet{Ti, Lnk} <: AbstractArray{Ti, 3}
+@propagate_inbounds function localize(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}) where {Ti}
+    Πos = zeros(Ti, K + 1)
+    πos = zeros(Ti, K + 1)
+    idx′ = zeros(Ti, N)
+
+    for j = 1:n
+        k₀ = 0
+        for q in pos[j] : pos[j + 1] - 1
+            i = idx[q]
+            k = Π.asg[i]
+            πos[k + 1] += k != k₀
+            k₀ = k
+            Πos[k + 1] += 1
+        end
+    end
+
+    q = 1
+    j′ = 1
+    for k = 1:(K + 1)
+        (Πos[k], q) = (q, q + Πos[k])
+        (πos[k], j′) = (j′, j′ + πos[k])
+    end
+    n′ = j′ - 1
+
+    pos′ = undefs(Ti, n′ + 1)
+    prm = zeros(Ti, n′)
+
+    for j = 1:n
+        k₀ = 0
+        for q in pos[j] : pos[j + 1] - 1
+            i = idx[q]
+            k = Π.asg[i]
+            q = Πos[k + 1]
+            idx′[q] = i
+            Πos[k + 1] = q + 1
+            if k != k₀
+                j′ = πos[k + 1]
+                pos′[j′] = q
+                prm[j′] = j
+                πos[k + 1] = j′ + 1
+            end
+            k₀ = k
+        end
+    end
+    pos′[n′ + 1] = N + 1
+    return (n′, πos, prm, pos′, idx′)
+end
+
+#A = sparse([1, 2, 3, 4, 5, 6, 7, 8, 11, 2, 4, 5, 9, 10, 11, 1, 4, 6, 9, 10, 1, 5, 10, 7, 8, 3, 8, 7, 3], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 17], [1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 0.8, 1.0, 1.0, -0.05, -0.04, 1.0, 1.0, -0.05, -3.0, 0.5, 2.0, 0.6, 1.0, -1.0], 11, 17)
+
+#println(A)
+#println(localize(size(A)..., nnz(A), 3, A.colptr, A.rowval, MapPartition(3, [1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3])))
+#exit()
+
+struct SparseCountedLocalRowNet{Ti, Net} <: AbstractArray{Ti, 3}
     n::Int
-    m::Int
-    N::Int
     K::Int
+    n′::Int
+    πos::Vector{Ti}
     prm::Vector{Ti}
-    Πos::Vector{Ti}
-    ΔΠos::Vector{Ti}
-    lnk::Lnk
+    net::Net
 end
 
 Base.size(arg::SparseCountedLocalRowNet) = (arg.n + 1, arg.n + 1, arg.K)
@@ -81,75 +133,62 @@ SparseCountedLocalRowNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::V
     SparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
 function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     @inbounds begin
-        hst = undefs(Ti, m)
-        Πos = zeros(Ti, K + 1)
-        ΔΠos = zeros(Ti, K + 1)
-        prm = zeros(Ti, N)
-        idx′ = zeros(Ti, N + m)
+        (n′, πos, prm, pos′, idx′) = localize(m, n, N, K, pos, idx, Π)
 
-        for q in 1:N
-            i = idx[q]
-            k = Π.asg[i]
-            Πos[k + 1] += 1
-        end
+        net = SparseCountedRowNet(hint, m, n′, N, pos′, idx′; kwargs...)
 
-        for i = 1:m
-            k = Π.asg[i]
-            Πos[k + 1] += 1
-        end
-
-        q = 1
-        for k = 1:(K + 1)
-            (Πos[k], q) = (q, q + Πos[k])
-        end
-
-        for i = 1:m
-            k = Π.asg[i]
-            p = Πos[k + 1]
-            Δp = ΔΠos[k + 1]
-            hst[i] = p + Δp
-            ΔΠos[k + 1] = Δp + 1
-        end
-
-        for k = 1:K
-            ΔΠos[k + 1] += ΔΠos[k]
-        end
-
-        for j = 1:n
-            for q in pos[j] : pos[j + 1] - 1
-                i = idx[q]
-                k = Π.asg[i]
-                p = Πos[k + 1]
-                Δp = ΔΠos[k + 1] - ΔΠos[k]
-                prm[p - ΔΠos[k]] = j
-                idx′[p] = (N + m + 1) - hst[i]
-                hst[i] = p + Δp
-                Πos[k + 1] = p + 1
-            end
-        end
-
-        for i = 1:m
-            k = Π.asg[i]
-            p = Πos[k + 1]
-            idx′[p] = (N + m + 1) - hst[i]
-            Πos[k + 1] = p + 1
-        end
-
-        return SparseCountedLocalRowNet(n, m, N, K, prm, Πos, ΔΠos, rookcount!(hint, N + m, idx′; kwargs...))
+        return SparseCountedLocalRowNet{Ti, typeof(net)}(n, K, n′, πos, prm, net)
     end
 end
 
 Base.getindex(arg::SparseCountedLocalRowNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
 function (arg::SparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
-        tmp = @view arg.prm[arg.Πos[k] - arg.ΔΠos[k] : arg.Πos[k + 1] - arg.ΔΠos[k + 1] - 1]
-        rnk_j = arg.Πos[k] + searchsortedfirst(tmp, j) - 1
-        rnk_j′ = arg.Πos[k] + searchsortedlast(tmp, j′ - 1)
-        return (rnk_j′ - rnk_j) - arg.lnk((arg.N + arg.m + 2) - (rnk_j + arg.ΔΠos[k + 1] - arg.ΔΠos[k]), rnk_j′)
+        tmp = @view arg.prm[arg.πos[k] : arg.πos[k + 1] - 1]
+        rnk_j = arg.πos[k] + searchsortedfirst(tmp, j) - 1
+        rnk_j′ = arg.πos[k] + searchsortedfirst(tmp, j′) - 1
+        #@info "hmm" rnk_j rnk_j′ arg.prm[rnk_j] j arg.prm[rnk_j′] j′
+        return arg.net(rnk_j, rnk_j′)
     end
 end
 
+#=
+struct SteppedSparseCountedLocalRowNet{Ti, Lnk} <: AbstractArray{Ti, 3}
+    rnk_j::Ti
+    rnk_j′::Ti
+    net::Lnk
+end
 
+Base.size(arg::SteppedSparseCountedLocalRowNet) = size(arg.net)
+
+localrownetcount!(hint::StepHint, m, n, N, K, pos, idx, Π; kwargs...) =
+    SteppedSparseCountedLocalRowNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
+
+function SteppedSparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
+    rnk_j = 0
+    rnk_j′ = 0
+    net = SparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
+    return SteppedSparseCountedLocalRowNet(rnk_j, rnk_j′, net)
+end
+
+Base.getindex(arg::SteppedSparseCountedLocalRowNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
+function (arg::SteppedSparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
+    tmp = @view arg.net.prm[arg.net.Πos[k] - arg.net.ΔΠos[k] : arg.net.Πos[k + 1] - arg.net.ΔΠos[k + 1] - 1]
+    arg.rnk_j = arg.net.Πos[k] + searchsortedfirst(tmp, j) - 1
+    arg.rnk_j′ = arg.net.Πos[k] + searchsortedlast(tmp, j′ - 1)
+    return (rnk_j′ - rnk_j) - arg.net.lnk((arg.N + arg.m + 2) - (rnk_j + arg.net.ΔΠos[k + 1] - arg.net.ΔΠos[k]), rnk_j′)
+end
+
+function (arg::Step{SteppedSparseCountedLocalRowNet{Ti}})(_j::Next{Integer}, _j′::Same{Integer}, _k::Same{Integer}) where {Ti}
+    j = destep(_j)
+    j′ = destep(_j′)
+    rnk_j = arg.rnk_j
+    rnk_j′ = arg.rnk_j′
+    while arg.prm[rnk_j] < 
+        arg.net.lnk((arg.N + arg.m + 2) - (rnk_j + arg.net.ΔΠos[k + 1] - arg.net.ΔΠos[k]), rnk_j′)
+    end
+end
+=#
 
 struct SparseCountedLocalColNet{Ti} <: AbstractArray{Ti, 3}
     n::Int
