@@ -26,7 +26,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
         cst[1, 1] = f(1, 1, 1)
         ptr[1, 1] = 1
         for j′ = 2 : n + 1
-            cst[j′, 1] = Step(f, Same(), Next(), Same())(1, j′, 1)
+            cst[j′, 1] = Step(f)(Same(1), Next(j′), Same(1))
             ptr[j′, 1] = 1
         end
 
@@ -36,7 +36,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 cst[j′, k] = g(cst[1, k - 1], f(1, j′, k))
                 ptr[j′, k] = 1 
                 for j = 2 : j′
-                    c′ = g(cst[j, k - 1], Step(f, Next(), Same(), Same())(j, j′, k))
+                    c′ = g(cst[j, k - 1], Step(f)(Next(j), Same(j′), Same(k)))
                     if c′ <= cst[j′, k]
                         cst[j′, k] = c′ 
                         ptr[j′, k] = j
@@ -72,7 +72,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 end
             end
             for j = 2:j′
-                Δc = Step(f, Next(), Same())(j, j′)
+                Δc = Step(f)(Next(j), Same(j′))
                 for k = 2:K₁
                     c′ = g(cst[k - 1, j], Δc)
                     if c′ <= cst[k, j′]
@@ -238,7 +238,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 cst[j′, k] = g(cst[j₀, k - 1], f(j₀, j′, k))
                 ptr[j′, k] = j₀
                 for j = j₀ + 1 : min(j′, j′_hi[k - 1])
-                    c′ = g(cst[j, k - 1], Step(f, Next(), Same(), Same())(j, j′, k))
+                    c′ = g(cst[j, k - 1], Step(f)(Next(j), Same(j′), Same(k)))
                     if c′ <= cst[j′, k]
                         cst[j′, k] = c′ 
                         ptr[j′, k] = j
@@ -298,7 +298,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::AbstractDynamic
                 ptr[k, j′] = j₀
             end
             for j = j₀ + 1:j′
-                Δc = Step(f, Next(), Same())(j, j′)
+                Δc = Step(f)(Next(j), Same(j′))
                 for k = max(k_lo[j] + 1, k_lo[j′]):min(k_hi[j] + 1, k_hi[j′])
                     c′ = g(cst[k - 1, j], Δc)
                     if c′ <= cst[k, j′]

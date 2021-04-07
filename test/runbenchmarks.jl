@@ -1,5 +1,6 @@
 using BenchmarkTools
 using ChainPartitioners
+using Cthulhu
 using SparseArrays
 using JSON
 

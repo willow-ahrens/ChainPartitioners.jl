@@ -170,20 +170,25 @@ oracle_model(::WidthCost) = WidthCost()
 oracle_stripe(::AbstractHint, ::WidthCost, ::SparseMatrixCSC; kwargs...) = WidthCost()
 #bound_stripe(A::SparseMatrixCSC, K, ::WidthCost) = (size(A)[2]/K, size(A)[2]) $TODO ?
 
-struct Next end
-struct Same end
-struct Prev end
-struct Jump end
+struct Next{T}
+    arg::T
+end
+@inline destep(arg::Next) = arg.arg
+struct Same{T}
+    arg::T
+end
+@inline destep(arg::Same) = arg.arg
+struct Prev{T}
+    arg::T
+end
+@inline destep(arg::Prev) = arg.arg
+struct Jump{T}
+    arg::T
+end
+@inline destep(arg::Jump) = arg.arg
 
-struct Step{Ocl, J, J′, K}
+struct Step{Ocl}
     ocl::Ocl
-    j::J
-    j′::J′
-    k::K
-    function Step(ocl::Ocl, j::J, j′::J′, k::K=Jump()) where {Ocl, J, J′, K}
-        return new{Ocl, J, J′, K}(ocl, j, j′, k)
-    end
 end
 
-
-@propagate_inbounds (ocl::Step{Ocl})(j, j′, k...) where {Ocl} = ocl.ocl(j, j′, k...)
+@propagate_inbounds (ocl::Step{Ocl})(args...) where {Ocl} = ocl.ocl(maptuple(destep, args...)...)

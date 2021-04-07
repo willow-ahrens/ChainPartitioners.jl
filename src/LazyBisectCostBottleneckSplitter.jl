@@ -28,7 +28,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
                 f(1, 1, 1)
 
                 for j′ = 2:n + 1
-                    if Step(f, Same(), Next(), Same())(j, j′, k) > c
+                    if Step(f)(Same(j), Next(j′), Same(k)) > c
                         while true
                             if k == K
                                 return false
@@ -99,7 +99,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectC
                 f(1, 1, 1)
 
                 for j′ = 2:n + 1
-                    if Step(f, Same(), Next(), Same())(j, j′, k) <= c
+                    if Step(f)(Same(j), Next(j′), Same(k)) <= c
                         while true
                             if k == K
                                 spl[K + 1] = n + 1

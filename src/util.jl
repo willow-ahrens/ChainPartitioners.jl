@@ -26,6 +26,10 @@ end
 zero!(arr) = fill!(arr, zero(eltype(arr)))
 one!(arr) = fill!(arr, one(eltype(arr)))
 
+@inline maptuple(f::F) where {F} = ()
+@inline maptuple(f::F, x) where {F} = (f(x),)
+@inline maptuple(f::F, x, y, z...) where {F} = (f(x), maptuple(f, y, z...)...)
+
 function pattern(A::SparseMatrixCSC{Tv, Ti}) where {Tv, Ti}
     return SparseMatrixCSC{Bool, Ti}(size(A)..., A.colptr, A.rowval, ones(Bool, nnz(A)))
 end
