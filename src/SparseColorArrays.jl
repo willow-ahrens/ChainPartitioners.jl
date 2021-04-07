@@ -203,11 +203,12 @@ function (arg::SteppedSparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k
     end
 end
 
-function (stp::Step{Net})(_j::Same{Integer}, _j′::Next{Integer}, _k::Same{Integer}) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
+function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
     @inbounds begin
         arg = stp.ocl
         j = destep(_j)
         j′ = destep(_j′)
+        k = destep(_k)
         rnk_j = arg.rnk_j
         rnk_j′ = arg.rnk_j′
         πos = arg.net.πos
@@ -218,6 +219,28 @@ function (stp::Step{Net})(_j::Same{Integer}, _j′::Next{Integer}, _k::Same{Inte
             rnk_j′ += 1
             arg.rnk_j′ = rnk_j′
             return Step(arg.net.net)(Same(rnk_j), Next(rnk_j′))
+        else
+            return Step(arg.net.net)(Same(rnk_j), Same(rnk_j′))
+        end
+    end
+end
+
+function (stp::Step{Net})(_j::Next, _j′::Same, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
+    @inbounds begin
+        arg = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        k = destep(_k)
+        rnk_j = arg.rnk_j
+        rnk_j′ = arg.rnk_j′
+        πos = arg.net.πos
+        prm = arg.net.prm
+        n′ = arg.net.n′
+
+        if rnk_j < πos[k + 1] && prm[rnk_j] < j
+            rnk_j += 1
+            arg.rnk_j = rnk_j
+            return Step(arg.net.net)(Next(rnk_j), Same(rnk_j′))
         else
             return Step(arg.net.net)(Same(rnk_j), Same(rnk_j′))
         end

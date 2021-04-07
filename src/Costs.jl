@@ -192,3 +192,7 @@ struct Step{Ocl}
 end
 
 @propagate_inbounds (ocl::Step{Ocl})(args...) where {Ocl} = ocl.ocl(maptuple(destep, args...)...)
+#function (ocl::Step{Ocl})(args...) where {Ocl}
+#    @info "whoopsies" ocl.ocl args
+#    assert false
+#end
