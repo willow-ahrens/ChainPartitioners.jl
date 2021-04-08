@@ -101,8 +101,19 @@ end
     end
 end
 
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: SymCostOracle{Ti, Mdl}}
+    @inbounds begin
+        cst = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        k = maptuple(destep, _k...)
+        w = cst.wrk[j′] - cst.wrk[j]
+        d = Step(cst.net)(_j, _j′)
+        return cst.mdl(j′ - j, w, d, k...)
+    end
+end
 
-
+#=
 mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
@@ -277,3 +288,4 @@ end
         return ocl.mdl(j′ - j, x_work, x_net, k...)
     end
 end
+=#

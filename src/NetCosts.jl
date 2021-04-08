@@ -56,7 +56,6 @@ end
     end
 end
 
-#=
 @inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: NetCostDominanceOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
@@ -68,9 +67,9 @@ end
         return cst.mdl(j′ - j, w, d, k...)
     end
 end
-=#
 
 
+#=
 mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
@@ -221,6 +220,7 @@ end
         return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
     end
 end
+=#
 
 
 #=
