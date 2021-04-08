@@ -575,15 +575,15 @@ function (arg::SparseAreaStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
     end
 end
 
-function (stp::Step{Cnt})(i::Same, j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    begin
         arg = stp.ocl
         return arg.c
     end
 end
 
-function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    begin
         arg = stp.ocl
         i = destep(_i)
         j = destep(_j)
@@ -603,8 +603,8 @@ function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseAreaStepCo
     end
 end
 
-function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    begin
         arg = stp.ocl
         i = destep(_i)
         j = destep(_j)
@@ -624,8 +624,8 @@ function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseAreaStepCo
     end
 end
 
-function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    begin
         arg = stp.ocl
         i = destep(_i)
         j = destep(_j)
@@ -640,8 +640,8 @@ function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseAreaStepCo
     end
 end
 
-function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+    begin
         arg = stp.ocl
         i = destep(_i)
         j = destep(_j)

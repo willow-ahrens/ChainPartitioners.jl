@@ -42,8 +42,8 @@ function (arg::SparseCountedRowNet{Ti})(j::Integer, j′::Integer) where {Ti}
     end
 end
 
-function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SparseCountedRowNet{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SparseCountedRowNet{Ti}}
+    begin
         j = destep(_j)
         j′ = destep(_j′)
         arg = stp.ocl
@@ -51,8 +51,8 @@ function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SparseCountedRowNet
     end
 end
 
-function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
+    begin
         j = destep(_j)
         j′ = destep(_j′)
         arg = stp.ocl
@@ -60,8 +60,8 @@ function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SparseCounted
     end
 end
 
-function (ocl::Step{Net})(_j::Prev, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
-    @inbounds begin
+@propagate_inbounds function (ocl::Step{Net})(_j::Prev, _j′::Same) where {Ti, Net <: SparseCountedRowNet{Ti}}
+    begin
         j = destep(_j)
         j′ = destep(_j′)
         arg = ocl.ocl
@@ -203,8 +203,8 @@ function (arg::SteppedSparseCountedLocalRowNet{Ti})(j::Integer, j′::Integer, k
     end
 end
 
-function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
+    begin
         arg = stp.ocl
         j = destep(_j)
         j′ = destep(_j′)
@@ -225,8 +225,8 @@ function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: Ste
     end
 end
 
-function (stp::Step{Net})(_j::Next, _j′::Same, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
-    @inbounds begin
+@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same, _k::Same) where {Ti, Net <: SteppedSparseCountedLocalRowNet{Ti}}
+    begin
         arg = stp.ocl
         j = destep(_j)
         j′ = destep(_j′)
