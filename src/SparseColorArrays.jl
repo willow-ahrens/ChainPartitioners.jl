@@ -71,60 +71,6 @@ end
 
 
 
-@propagate_inbounds function localize(m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}) where {Ti}
-    Πos = zeros(Ti, K + 1)
-    πos = zeros(Ti, K + 1)
-    idx′ = zeros(Ti, N)
-
-    for j = 1:n
-        k₀ = 0
-        for q in pos[j] : pos[j + 1] - 1
-            i = idx[q]
-            k = Π.asg[i]
-            πos[k + 1] += k != k₀
-            k₀ = k
-            Πos[k + 1] += 1
-        end
-    end
-
-    q = 1
-    j′ = 1
-    for k = 1:(K + 1)
-        (Πos[k], q) = (q, q + Πos[k])
-        (πos[k], j′) = (j′, j′ + πos[k])
-    end
-    n′ = j′ - 1
-
-    pos′ = undefs(Ti, n′ + 1)
-    prm = zeros(Ti, n′)
-
-    for j = 1:n
-        k₀ = 0
-        for q in pos[j] : pos[j + 1] - 1
-            i = idx[q]
-            k = Π.asg[i]
-            q = Πos[k + 1]
-            idx′[q] = i
-            Πos[k + 1] = q + 1
-            if k != k₀
-                j′ = πos[k + 1]
-                pos′[j′] = q
-                prm[j′] = j
-                πos[k + 1] = j′ + 1
-            end
-            k₀ = k
-        end
-    end
-    pos′[n′ + 1] = N + 1
-    return (n′, πos, prm, pos′, idx′)
-end
-
-#A = sparse([1, 2, 3, 4, 5, 6, 7, 8, 11, 2, 4, 5, 9, 10, 11, 1, 4, 6, 9, 10, 1, 5, 10, 7, 8, 3, 8, 7, 3], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 17], [1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 0.8, 1.0, 1.0, -0.05, -0.04, 1.0, 1.0, -0.05, -3.0, 0.5, 2.0, 0.6, 1.0, -1.0], 11, 17)
-
-#println(A)
-#println(localize(size(A)..., nnz(A), 3, A.colptr, A.rowval, MapPartition(3, [1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3])))
-#exit()
-
 struct SparseCountedLocalRowNet{Ti, Net} <: AbstractArray{Ti, 3}
     n::Int
     K::Int
@@ -146,14 +92,56 @@ localrownetcount!(::AbstractHint, args...; kwargs...) = @assert false
 localrownetcount!(hint::AbstractHint, m, n, N, K, pos, idx, Π; kwargs...) =
     SparseCountedLocalRowNet(hint, m, n, N, K, pos, idx, Π; kwargs...)
 
-#You should avoid the searchsorted if you do the stepped oracle.
-#The stepped interface should specify the previous input so that we don't need to track it in multiple places.
-#Consider using hints in accesses (pushfirst, popfirst, push, pop, incstart, decstop, etc...) instead of complicated funky call.
+
+
 SparseCountedLocalRowNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π; kwargs...) where {Ti} = 
     SparseCountedLocalRowNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
 function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     @inbounds begin
-        (n′, πos, prm, pos′, idx′) = localize(m, n, N, K, pos, idx, Π)
+        Πos = zeros(Ti, K + 1)
+        πos = zeros(Ti, K + 1)
+        idx′ = zeros(Ti, N)
+
+        for j = 1:n
+            k₀ = 0
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                k = Π.asg[i]
+                πos[k + 1] += k != k₀
+                k₀ = k
+                Πos[k + 1] += 1
+            end
+        end
+
+        q = 1
+        j′ = 1
+        for k = 1:(K + 1)
+            (Πos[k], q) = (q, q + Πos[k])
+            (πos[k], j′) = (j′, j′ + πos[k])
+        end
+        n′ = j′ - 1
+
+        pos′ = undefs(Ti, n′ + 1)
+        prm = zeros(Ti, n′)
+
+        for j = 1:n
+            k₀ = 0
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                k = Π.asg[i]
+                q = Πos[k + 1]
+                idx′[q] = i
+                Πos[k + 1] = q + 1
+                if k != k₀
+                    j′ = πos[k + 1]
+                    pos′[j′] = q
+                    prm[j′] = j
+                    πos[k + 1] = j′ + 1
+                end
+                k₀ = k
+            end
+        end
+        pos′[n′ + 1] = N + 1
 
         net = SparseCountedRowNet(hint, m, n′, N, pos′, idx′; kwargs...)
 
