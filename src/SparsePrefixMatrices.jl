@@ -13,6 +13,19 @@ struct SparseSummedArea{Tv, Ti} <: AbstractMatrix{Tv}
     scn::Array{Tv, 3}
 end
 
+mutable struct SparseAreaStepAdder{Tv, Ti} <: AbstractMatrix{Tv}
+    m::Int
+    n::Int
+    N::Int
+    i::Ti
+    j::Ti
+    pos::Vector{Ti}
+    idx::Vector{Ti}
+    val::Vector{Tv}
+    Δ::Vector{Ti}
+    c::Tv
+end
+
 Base.size(arg::SparseSummedArea) = (arg.m + 1, arg.n + 1)
 
 areasum(args...; kwargs...) = areasum(NoHint(), args...; kwargs...)
@@ -37,6 +50,9 @@ function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; H = nothing, b = n
 end
 function areasum!(hint::SparseHint, m, n, N, pos, idx, val; kwargs...)
     return SparseSummedArea(hint, m, n, N, pos, idx, val; kwargs...)
+end
+function areasum!(hint::StepHint, m, n, N, pos, idx, val; kwargs...)
+    SparseAreaStepCounter(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
 SparseSummedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
@@ -230,6 +246,142 @@ function (arg::SparseSummedArea{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
         end
 
         return s
+    end
+end
+
+
+
+SparseAreaStepAdder(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
+    SparseAreaStepAdder{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
+function SparseAreaStepAdder{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti}
+    @inbounds begin
+        i = j = 0
+        Δ = zeros(Ti, m)
+        c = Tv(0)
+        return SparseAreaStepAdder(m, n, N, i, j, pos, idx, val, Δ, c)
+    end
+end
+
+Base.getindex(arg::SparseAreaStepAdder{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
+function (arg::SparseAreaStepAdder{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
+    @inbounds begin
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        val = arg.val
+        arg_i = arg.i
+        arg_j = arg.j
+        for q = pos[j + 1] : pos[arg_j + 1] - 1
+            Δ[idx[q]] -= val[q]
+            if idx[q] <= i
+                c -= val[q]
+            end
+        end
+        for q = pos[arg_j + 1] : pos[j + 1] - 1
+            Δ[idx[q]] += val[q]
+            if idx[q] <= i
+                c += val[q]
+            end
+        end
+        for q = i + 1 : arg_i
+            c -= Δ[q]
+        end
+        for q = arg_i + 1 : i
+            c += Δ[q]
+        end
+        arg.i = i
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+    begin
+        arg = stp.ocl
+        return arg.c
+    end
+end
+
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+    begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        for q = pos[j] : pos[j + 1] - 1
+            Δ[idx[q]] += val[q]
+            if idx[q] <= i
+                c += val[q]
+            end
+        end
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+    begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        pos = arg.pos
+        idx = arg.idx
+        val = arg.val
+        for q = pos[j + 1] : pos[j + 2] - 1
+            Δ[idx[q]] -= val[q]
+            if idx[q] <= i
+                c -= val[q]
+            end
+        end
+        arg.j = j
+        arg.c = c
+        return c
+    end
+end
+
+@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+    begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        c += Δ[i]
+        arg.i = i
+        arg.c = c
+        return c
+    end
+end
+
+@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+    begin
+        arg = stp.ocl
+        i = destep(_i)
+        j = destep(_j)
+        i -= 1
+        j -= 1
+        c = arg.c
+        Δ = arg.Δ
+        c -= Δ[i + 1]
+        arg.i = i
+        arg.c = c
+        return c
     end
 end
 
