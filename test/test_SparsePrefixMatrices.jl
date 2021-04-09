@@ -1,32 +1,57 @@
-@testset "SparsePrefixMatrices" begin
-    trials = 100
+using ChainPartitioners: destep
 
-    @testset "generic" begin
-        for m = 1:40, kwargs = ((H = 1,), (H = 2,), (H = 3,), (H = 4,), (b = 1,), (b = 2,), (b = 3,), (b = 4,))
-            for n = 1:40
-                A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacount(ChainPartitioners.SparseHint(), A; kwargs...)
-                @test typeof(C) <: SparseCountedArea
-                S = areasum(A; kwargs...)
-                @test typeof(S) <: SparseSummedArea
-                @testset "kwargs = $kwargs, m = $m" begin
-                    for _ = 1:trials
-                        i = rand(0:m)
-                        j = rand(0:n)
-                        @test C[i + 1, j + 1] == sum(A[1:i, 1:j] .!= 0)
-                        @test S[i + 1, j + 1] == sum(A[1:i, 1:j])
+function Δ(i, is) 
+    moves = [ChainPartitioners.Same(i), ChainPartitioners.Same(i), ChainPartitioners.Jump(rand(is))]
+    if i - 1 in is
+        push!(moves, ChainPartitioners.Prev(i - 1))
+    end
+    if i + 1 in is
+        push!(moves, ChainPartitioners.Next(i + 1))
+    end
+    return moves
+end
+
+ref_areacount(A, i, j) = sum(A[1:i - 1, 1:j - 1] .!= 0)
+ref_areasum(A, i, j) = sum(A[1:i - 1, 1:j - 1])
+
+test_points(trials, Is...) = collect(Iterators.flatten((
+    Iterators.product(map(I -> (first(I), last(I)), Is)...),
+    zip(map(I -> rand(I, trials), Is)...)
+)))[randperm(end)]
+
+test_dims = [1:16..., 31, 32, 33, 63, 64, 65]
+
+test_dims = [1:3..., 7, 8, 9]
+
+@testset "SparsePrefixMatrices" begin
+    @testset "jump" begin
+        for (hint, kwargs) = (
+            ((), ()),
+            ((), (H = 1,)),
+            ((ChainPartitioners.SparseHint(),), (H = 1,)),
+            ((ChainPartitioners.SparseHint(),), (H = 2,)),
+            ((ChainPartitioners.SparseHint(),), (H = 3,)),
+            ((ChainPartitioners.SparseHint(),), (H = 4,)),
+            ((ChainPartitioners.SparseHint(),), (b = 1,)),
+            ((ChainPartitioners.SparseHint(),), (b = 2,)),
+            ((ChainPartitioners.SparseHint(),), (b = 3,)),
+            ((ChainPartitioners.SparseHint(),), (b = 4,)),
+            ((ChainPartitioners.RandomHint(),), ()),
+            ((), (b = 1,)),
+        )
+            for m = test_dims
+                for n = test_dims
+                    A = dropzeros!(sprand(UInt, m, n, 0.5))
+
+                    C = areacount(hint..., A; kwargs...)
+                    S = areasum(hint..., A; kwargs...)
+                    @testset "kwargs = $kwargs, m = $m" begin
+                        for (i, j) in test_points(10, 1:m + 1, 1:n + 1)
+                            @test C[i, j] == ref_areacount(A, i, j)
+                            @test S[i, j] == ref_areasum(A, i, j)
+                        end
                     end
                 end
-
-                @test C[1, 1] == 0
-                @test C[1, n + 1] == 0
-                @test C[m + 1, 1] == 0
-                @test C[m + 1, n + 1] == nnz(A)
-
-                @test S[1, 1] == 0
-                @test S[1, n + 1] == 0
-                @test S[m + 1, 1] == 0
-                @test S[m + 1, n + 1] == sum(A)
 
                 N = m
                 idx = randperm(N)
@@ -34,69 +59,34 @@
                 for j = 1:N
                     B[idx[j], j] = (rand(UInt) << 1) + 1
                 end
-                RC = rookcount!(ChainPartitioners.SparseHint(), N, copy(idx); kwargs...)
-                @test typeof(RC) <: SparseCountedRooks
-                RS = rooksum!(N, copy(idx), B.nzval; kwargs...)
-                @test typeof(RS) <: SparseSummedRooks
+                RC = rookcount!(hint..., N, copy(idx); kwargs...)
+                RS = rooksum!(hint..., N, copy(idx), B.nzval; kwargs...)
                 @testset "kwargs = $kwargs, N = $N" begin
-                    for _ = 1:trials
-                        i = rand(0:N)
-                        j = rand(0:N)
-                        @test RC[i + 1, j + 1] == sum(B[1:i, 1:j] .!= 0)
-                        @test RS[i + 1, j + 1] == sum(B[1:i, 1:j])
+                    for (i, j) in test_points(100, 1:N + 1, 1:N + 1)
+                        @test RC[i, j] == ref_areacount(B, i, j)
+                        @test RS[i, j] == ref_areasum(B, i, j)
                     end
                 end
-                @test RC[1, 1] == 0
-                @test RC[1, N + 1] == 0
-                @test RC[N + 1, 1] == 0
-                @test RC[N + 1, N + 1] == sum(B .!= 0)
-
-                @test RS[1, 1] == 0
-                @test RS[1, N + 1] == 0
-                @test RS[N + 1, 1] == 0
-                @test RS[N + 1, N + 1] == sum(B)
             end
         end
     end
 
-    @testset "binary" begin
+    @testset "step" begin
         for m = 1:40
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacount(A, b=1)
-                @test typeof(C) <: SparseBinaryCountedArea
+                C = areacount(ChainPartitioners.StepHint(), A)
                 @testset "m = $m" begin
-                    for _ = 1:trials
-                        i = rand(0:m)
-                        j = rand(0:n)
-                        @test C[i + 1, j + 1] == sum(A[1:i, 1:j] .!= 0)
+                    for (i, j) = test_points(10, 1:m + 1, 1:n + 1)
+                        @test C[i, j] == sum(A[1:i - 1, 1:j - 1] .!= 0)
+
+                        for _ = 1:8
+                            (_i, _j) = (rand(Δ(i, 1:m + 1)), rand(Δ(j, 1:n + 1)))
+                            (i, j) = map(destep, (_i, _j))
+                            @test ChainPartitioners.Step(C)(_i, _j) == ref_areacount(A, i, j)
+                        end
                     end
                 end
-
-                @test C[1, 1] == 0
-                @test C[1, n + 1] == 0
-                @test C[m + 1, 1] == 0
-                @test C[m + 1, n + 1] == nnz(A)
-
-                N = m
-                idx = randperm(N)
-                B = spzeros(UInt, N, N)
-                for j = 1:N
-                    B[idx[j], j] = (rand(UInt) << 1) + 1
-                end
-                RC = rookcount!(N, copy(idx); b=1)
-                @test typeof(RC) <: SparseBinaryCountedRooks
-                @testset "N = $N" begin
-                    for _ = 1:trials
-                        i = rand(0:N)
-                        j = rand(0:N)
-                        @test RC[i + 1, j + 1] == sum(B[1:i, 1:j] .!= 0)
-                    end
-                end
-                @test RC[1, 1] == 0
-                @test RC[1, N + 1] == 0
-                @test RC[N + 1, 1] == 0
-                @test RC[N + 1, N + 1] == sum(B .!= 0)
             end
         end
     end
