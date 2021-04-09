@@ -895,9 +895,6 @@ end
 function rookcount!(hint::SparseHint, N, idx; kwargs...)
     SparseCountedRooks(hint, N, idx; kwargs...)
 end
-function rookcount!(hint::StepHint, N, idx; kwargs...)
-    SparseRookStepCounter(hint, N, idx; kwargs...)
-end
 
 SparseCountedRooks(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
     SparseCountedRooks{Ti}(hint, N, idx; kwargs...)
@@ -1108,52 +1105,5 @@ function (arg::SparseBinaryCountedRooks{Tb, Ti})(i::Integer, j::Integer) where {
         end
 
         return s + Δq
-    end
-end
-
-SparseRookStepCounter(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
-    SparseRookStepCounter{Ti}(hint, N, idx; kwargs...)
-function SparseRookStepCounter{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti}
-    @inbounds begin
-        i = j = 0
-        Δ = zeros(Ti, N)
-        c = Ti(0)
-        return SparseRookStepCounter(N, i, j, idx, Δ, c)
-    end
-end
-
-Base.getindex(arg::SparseRookStepCounter{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
-function (arg::SparseRookStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
-    @inbounds begin
-        i -= 1
-        j -= 1
-        c = arg.c
-        Δ = arg.Δ
-        idx = arg.idx
-        arg_i = arg.i
-        arg_j = arg.j
-        if j == 0 && arg_j != 0
-            zero!(Δ)
-            c = 0
-        else
-            for q = j + 1 : arg_j
-                Δ[idx[q]] -= 1
-                c -= idx[q] <= arg_i
-            end
-            for q = arg_j + 1 : j
-                Δ[idx[q]] += 1
-                c += idx[q] <= arg_i
-            end
-            for q = i + 1 : arg_i
-                c -= Δ[q]
-            end
-            for q = arg_i + 1 : i
-                c += Δ[q]
-            end
-        end
-        arg.i = i
-        arg.j = j
-        arg.c = c
-        return c
     end
 end
