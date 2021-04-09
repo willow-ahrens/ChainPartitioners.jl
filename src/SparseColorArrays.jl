@@ -100,14 +100,15 @@ function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
     @inbounds begin
         Πos = zeros(Ti, K + 1)
         πos = zeros(Ti, K + 1)
+        hst = zeros(Ti, K)
         idx′ = zeros(Ti, N)
 
         for j = 1:n
-            k₀ = 0
             for q in pos[j] : pos[j + 1] - 1
                 i = idx[q]
                 k = Π.asg[i]
-                πos[k + 1] += k != k₀
+                πos[k + 1] += hst[k] != j
+                hst[k] = j
                 k₀ = k
                 Πos[k + 1] += 1
             end
@@ -123,22 +124,22 @@ function SparseCountedLocalRowNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
 
         pos′ = undefs(Ti, n′ + 1)
         prm = zeros(Ti, n′)
+        zero!(hst)
 
         for j = 1:n
-            k₀ = 0
             for q in pos[j] : pos[j + 1] - 1
                 i = idx[q]
                 k = Π.asg[i]
-                q = Πos[k + 1]
-                idx′[q] = i
-                Πos[k + 1] = q + 1
-                if k != k₀
+                q′ = Πos[k + 1]
+                idx′[q′] = i
+                Πos[k + 1] = q′ + 1
+                if hst[k] != j
                     j′ = πos[k + 1]
-                    pos′[j′] = q
+                    pos′[j′] = q′
                     prm[j′] = j
                     πos[k + 1] = j′ + 1
                 end
-                k₀ = k
+                hst[k] = j
             end
         end
         pos′[n′ + 1] = N + 1
@@ -238,7 +239,7 @@ end
 struct SparseCountedLocalColNet{Ti} <: AbstractArray{Ti, 3}
     n::Int
     K::Int
-    Πos::Vector{Ti}
+    πos::Vector{Ti}
     prm::Vector{Ti}
 end
 
@@ -258,7 +259,7 @@ SparseCountedLocalColNet(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::V
     SparseCountedLocalColNet{Ti}(hint, m, n, N, K, pos, idx, Π; kwargs...)
 function SparseCountedLocalColNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vector{Ti}, idx::Vector{Ti}, Π::MapPartition{Ti}; kwargs...) where {Ti}
     @inbounds begin
-        Πos = zeros(Ti, K + 1) 
+        πos = zeros(Ti, K + 1) 
         hst = zeros(Ti, K)
 
         for j = 1:n
@@ -266,18 +267,19 @@ function SparseCountedLocalColNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
                 i = idx[q]
                 k = Π.asg[i]
                 if hst[k] != j
-                    Πos[k + 1] += 1
+                    πos[k + 1] += 1
                     hst[k] = j
                 end
             end
         end
         
-        q = 1
+        j′ = 1
         for k = 1:(K + 1)
-            (Πos[k], q) = (q, q + Πos[k])
+            (πos[k], j′) = (j′, j′ + πos[k])
         end
+        n′ = j′ - 1
 
-        prm = undefs(Ti, q)
+        prm = undefs(Ti, n′)
         zero!(hst)
 
         for j = 1:n
@@ -285,24 +287,24 @@ function SparseCountedLocalColNet{Ti}(hint::AbstractHint, m, n, N, K, pos::Vecto
                 i = idx[q]
                 k = Π.asg[i]
                 if hst[k] != j
-                    p = Πos[k + 1]
+                    p = πos[k + 1]
                     prm[p] = j
-                    Πos[k + 1] = p + 1
+                    πos[k + 1] = p + 1
                     hst[k] = j
                 end
             end
         end
 
-        return SparseCountedLocalColNet{Ti}(n, K, Πos, prm)
+        return SparseCountedLocalColNet{Ti}(n, K, πos, prm)
     end
 end
 
 Base.getindex(arg::SparseCountedLocalColNet{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
 function (arg::SparseCountedLocalColNet{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
-        tmp = (@view arg.prm[arg.Πos[k] : arg.Πos[k + 1] - 1])
-        rnk_j = searchsortedfirst(tmp, j) - 1
-        rnk_j′ = searchsortedlast(tmp, j′ - 1)
+        tmp = (@view arg.prm[arg.πos[k] : arg.πos[k + 1] - 1])
+        rnk_j = searchsortedfirst(tmp, j)
+        rnk_j′ = searchsortedfirst(tmp, j′)
         return rnk_j′ - rnk_j
     end
 end

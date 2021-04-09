@@ -38,7 +38,7 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostO
         for k = 1:K
             x_width = Π.spl[k + 1] - Π.spl[k]
             x_work = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
-            x_comm = ocl.lcc.Πos[k + 1] - ocl.lcc.Πos[k]
+            x_comm = ocl.lcc.πos[k + 1] - ocl.lcc.πos[k]
             c_lo = max(c_lo, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work)
             c_hi = max(c_hi, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_comm * mdl.β_comm)
         end
@@ -67,7 +67,7 @@ end
 @inline function (cst::LocalCostOracle{Ti, Mdl})(i::Ti, i′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
-        d = cst.lcc.Πos[k + 1] - cst.lcc.Πos[k]
+        d = cst.lcc.πos[k + 1] - cst.lcc.πos[k]
         l = cst.lcc(i, i′, k)
         return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], w, l, d - l, k)
     end

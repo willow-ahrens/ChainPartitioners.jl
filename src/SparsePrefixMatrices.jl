@@ -633,7 +633,7 @@ end
         j -= 1
         c = arg.c
         Δ = arg.Δ
-        c -= Δ[i - 1]
+        c += Δ[i]
         arg.i = i
         arg.c = c
         return c
@@ -649,7 +649,7 @@ end
         j -= 1
         c = arg.c
         Δ = arg.Δ
-        c += Δ[i]
+        c -= Δ[i + 1]
         arg.i = i
         arg.c = c
         return c
