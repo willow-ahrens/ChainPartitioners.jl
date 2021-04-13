@@ -24,6 +24,7 @@ end
 struct LocalCostOracle{Ti, Lcc, Mdl} <: AbstractOracleCost{Mdl}
     Π::SplitPartition{Ti}
     pos::Vector{Ti}
+    πos::Vector{Ti}
     lcc::Lcc
     mdl::Mdl
 end
@@ -34,11 +35,12 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::LocalCostO
     @inbounds begin
         c_lo = 0
         c_hi = 0
+        (m, n) = size(A)
         mdl = oracle_model(ocl)
         for k = 1:K
             x_width = Π.spl[k + 1] - Π.spl[k]
             x_work = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
-            x_comm = ocl.lcc.πos[k + 1] - ocl.lcc.πos[k]
+            x_comm = ocl.πos[k + 1] - ocl.πos[k]
             c_lo = max(c_lo, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work)
             c_hi = max(c_hi, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_comm * mdl.β_comm)
         end
@@ -58,16 +60,17 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractLocalCostModel, A::Spars
             adj_pos = adj_A.colptr
         end
 
-        lcc = localcolnetcount(hint, A, convert(MapPartition, Π); kwargs...)
+        (n, K, n′, πos, prm), _ = partwise(A, convert(MapPartition, Π))
+        lcc = partwisecost!(hint, n, K, n′, πos, prm, WidthCost(); kwargs...)
 
-        return LocalCostOracle(Π, adj_pos, lcc, mdl)
+        return LocalCostOracle(Π, adj_pos, πos, lcc, mdl)
     end
 end
 
 @inline function (cst::LocalCostOracle{Ti, Mdl})(i::Ti, i′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
-        d = cst.lcc.πos[k + 1] - cst.lcc.πos[k]
+        d = cst.πos[k + 1] - cst.πos[k]
         l = cst.lcc(i, i′, k)
         return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], w, l, d - l, k)
     end

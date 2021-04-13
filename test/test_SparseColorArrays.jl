@@ -33,8 +33,9 @@ ref_colnetcount(At, Φ_domain, j, j′, k) = length(intersect(union(At[:, Φ_dom
                 A = dropzeros!(sprand(UInt, m, n, 0.5))
                 At = SparseMatrixCSC(A')
                 if nnz(A) > 0
-                    rownet = localrownetcount(hint..., A, Φ_map)
-                    colnet = localcolnetcount(A, Φ_map)
+                    args, Ap = partwise(A, Φ_map)
+                    rownet = partwisecost!(hint..., args..., rownetcount(hint..., Ap))
+                    colnet = partwisecost!(hint..., args..., WidthCost())
                     @testset "hint=$hint, m = $m, n = $n, K = $K" begin
                         for (j, j′, k) in test_points(10, 1:n + 1, 1:n + 1, 1:K)
                             (j, j′) = minmax(j, j′)

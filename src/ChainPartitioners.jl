@@ -24,11 +24,10 @@ export EnvelopeMatrix
 export rowenvelope
 
 export SparseCountedRowNet
-export SparseCountedLocalRowNet
-export SparseCountedLocalColNet
 export rownetcount
-export localrownetcount
-export localcolnetcount
+
+export partwise
+export partwisecost!
 
 export AbstractModel
 export AbstractIncreasingModel
@@ -171,6 +170,8 @@ include("CommCosts.jl")
 include("LocalCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
+
+include("PartwiseCosts.jl")
 
 include("EquiPartitioner.jl")
 include("AlternatingPacker.jl")
