@@ -73,6 +73,7 @@ export ReferenceTotalSplitter
 export DynamicBottleneckSplitter
 export DynamicTotalSplitter
 export ConvexTotalSplitter
+export ConcaveTotalSplitter
 export BisectIndexBottleneckSplitter
 export FlipBisectIndexBottleneckSplitter
 export BisectCostBottleneckSplitter
@@ -173,7 +174,8 @@ include("BlockCosts.jl")
 
 include("EquiPartitioner.jl")
 include("AlternatingPacker.jl")
-include("QuadrangleTotalChunker.jl")
+include("ConvexTotalChunker.jl")
+include("ConcaveTotalChunker.jl")
 include("OverlapChunker.jl")
 include("StrictChunker.jl")
 include("BisectIndexBottleneckSplitter.jl")

@@ -33,7 +33,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConvexTotalSpli
             return SplitPartition{Ti}(1, [Ti(1), Ti(n + 1)])
         end
 
-        ftr = Stack{Tuple{Ti, Ti}}(n + 1)
+        ftr = CircularDeque{Tuple{Ti, Ti}}(n + 1)
 
         ptr = zeros(Ti, n + 1, K)
         cst = fill(typemax(cost_type(f)), n + 1, K)

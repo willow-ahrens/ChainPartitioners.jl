@@ -61,6 +61,16 @@ end
 
 @inline ChainPartitioners.cost_type(::Type{ConvexWorkCostModel}) = Float64
 
+struct ConcaveWorkCostModel <: AbstractWorkCostModel
+    α::Float64
+    β_width::Float64
+    β_work::Float64
+end
+
+(mdl::ConcaveWorkCostModel)(x_width, x_work) = mdl.α + (x_width * mdl.β_width + x_work * mdl.β_work)^2
+
+@inline ChainPartitioners.cost_type(::Type{ConcaveWorkCostModel}) = Float64
+
 
 
 @testset "Partitioners" begin
@@ -183,6 +193,29 @@ end
                     @test total_value(A, Φ′, f) ≈ c
                 end
             end
+
+            for (f,) = [
+                (ConcaveWorkCostModel(0, 0, 1),);
+                (AffineWorkCostModel(0, 0, 0),);
+                (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
+                (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
+                (ConstrainedCost(ConcaveWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            ]
+                Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
+                c = total_value(A, Φ, f)
+                for method = [
+                    ReferenceTotalSplitter(f);
+                    DynamicTotalSplitter(f);
+                    DynamicTotalChunker(f);
+                    ConcaveTotalSplitter(f);
+                ]
+                    Φ′ = partition_stripe(A, K, method)
+                    @test issorted(Φ′.spl)
+                    @test Φ′.spl[1] == 1
+                    @test Φ′.spl[end] == n + 1
+                    @test total_value(A, Φ′, f) ≈ c
+                end
+            end
         end
 
         for (f, w_max) = [
@@ -229,6 +262,29 @@ end
                 ReferenceTotalChunker(f);
                 DynamicTotalChunker(f);
                 ConvexTotalChunker(f);
+            ]
+                Φ′ = pack_stripe(A, method)
+                @test issorted(Φ′.spl)
+                @test Φ′.spl[1] == 1
+                @test Φ′.spl[end] == n + 1
+                @test total_value(A, Φ′, f) ≈ c
+            end
+        end
+
+        for (f,) = [
+            (ConcaveWorkCostModel(0.0, 0, 1),);
+            (ConcaveWorkCostModel(-0.7, 0, 1),);
+            (AffineWorkCostModel(0, 0, 0),);
+            (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
+            (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConstrainedCost(ConcaveWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+        ]
+            Φ = pack_stripe(A, ReferenceTotalChunker(f))
+            c = total_value(A, Φ, f)
+            for method = [
+                ReferenceTotalChunker(f);
+                DynamicTotalChunker(f);
+                ConcaveTotalChunker(f);
             ]
                 Φ′ = pack_stripe(A, method)
                 @test issorted(Φ′.spl)
