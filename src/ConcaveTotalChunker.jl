@@ -63,7 +63,7 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
             (j, h) = first(ftr)
             c = f(j, j′)
             c′ = f(j′ - 1, j′)
-            if c >= c′
+            if c′ <= c
                 if c′ <= cst[j′]
                     cst[j′] = c′
                     ptr[j′] = j′ - 1
@@ -79,7 +79,7 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     pop!(ftr)
                 end
                 (j, h) = last(ftr)
-                h_lo = h
+                h_lo = h + 1
                 h_hi = j′₁
 
                 h_ref = h_lo
@@ -117,7 +117,6 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
 end
 
 =#
-
 function chunk_concave!(cst, ptr, f, j₀, j′₁, ftr)
     @inbounds begin
         for a = j₀:j′₁

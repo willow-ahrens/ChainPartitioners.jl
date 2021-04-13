@@ -57,7 +57,7 @@ end
 function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
     @inbounds begin
         empty!(ftr)
-        push!(ftr, (j₀, j′₁))
+        push!(ftr, (j₀, j′₁ + 1))
         for j′ = j₀ + 1:j′₁
             (j, h) = last(ftr)
             c = f(j, j′)
@@ -67,7 +67,7 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     cst[j′] = c
                     ptr[j′] = j
                 end
-                if h == j′
+                if h == j′ + 1
                     pop!(ftr)
                 end
             else
@@ -75,25 +75,25 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     cst[j′] = c′
                     ptr[j′] = j′ - 1
                 end
-                while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h) < f(j, h)))
+                while !isempty(ftr) && ((j, h) = last(ftr); (f(j′ - 1, h - 1) < f(j, h - 1)))
                     pop!(ftr)
                 end
                 if isempty(ftr)
-                    push!(ftr, (j′ - 1, j′₁))
+                    push!(ftr, (j′ - 1, j′₁ + 1))
                 else
                     (j, h) = last(ftr)
-                    h_lo = j′
-                    h_hi = h
+                    h_lo = j′ + 1
+                    h_hi = h - 1
                     #=
                     h_ref = h_lo
-                    while h_ref < h_hi && f(j′ - 1, h_ref + 1) < f(j, h_ref + 1)
+                    while h_ref < h_hi && f(j′ - 1, h_ref) < f(j, h_ref)
                         h_ref += 1
                     end
                     h = h_ref
                     =#
                     while h_lo <= h_hi
                         h = fld2(h_lo + h_hi)
-                        if f(j′ - 1, h) < f(j, h)
+                        if f(j′ - 1, h - 1) < f(j, h - 1)
                             h_lo = h + 1
                         else
                             h_hi = h - 1
@@ -101,7 +101,7 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     end
                     h = h_hi
 
-                    if j′ < h
+                    if j′ + 1 < h
                         push!(ftr, (j′ - 1, h))
                     end
                 end
