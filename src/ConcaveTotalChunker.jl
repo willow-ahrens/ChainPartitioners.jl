@@ -54,12 +54,19 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConcaveTotalSpl
     end
 end
 
-#=
 function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
     @inbounds begin
         empty!(ftr)
         push!(ftr, (j₀, j₀ + 1))
         for j′ = j₀ + 1:j′₁
+
+            for i = 1:length(ftr) - 1
+                @assert ftr[i][1] < ftr[i + 1][1]
+                @assert ftr[i][2] < ftr[i + 1][2]
+            end
+            @assert ftr[1][1] <= j′ - 1
+            @assert ftr[1][2] == j′
+
             (j, h) = first(ftr)
             c = f(j, j′)
             c′ = f(j′ - 1, j′)
@@ -80,7 +87,7 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                 end
                 (j, h) = last(ftr)
                 h_lo = h + 1
-                h_hi = j′₁
+                h_hi = j′₁ + 1
 
                 h_ref = h_lo
                 while h_ref < h_hi && f(j′ - 1, h_ref) > f(j, h_ref)
@@ -88,8 +95,8 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                 end
                 h = h_ref
 
-                @assert h == h_hi || f(j′ - 1, h) <= f(j, h)
-                @assert h <= min(j′ - 1, j) || f(j′ - 1, h - 1) > f(j, h - 1)
+                #@assert h == h_hi || f(j′ - 1, h) <= f(j, h)
+                #@assert h <= min(j′ - 1, j) || f(j′ - 1, h - 1) > f(j, h - 1)
                 #=
                 while h_lo <= h_hi
                     h = fld2(h_lo + h_hi)
@@ -101,22 +108,21 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                 end
                 h = h_hi
                 =#
-                @assert h > last(ftr)[2]
-                push!(ftr, (j′ - 1, h))
+                #@assert h > last(ftr)[2]
+                if h != h_hi
+                    push!(ftr, (j′ - 1, h))
+                end
 
-                (j, h) = first(ftr)
-                if j′ + 1 == h
-                    popfirst!(ftr)
-                else
-                    (j, h) = popfirst!(ftr)
-                    pushfirst!(ftr, (j, h + 1))
+                (j, _) = popfirst!(ftr)
+                if isempty(ftr) || ((_, h) = first(ftr); j′ + 1 != h)
+                    pushfirst!(ftr, (j, j′ + 1))
                 end
             end
         end
     end
 end
 
-=#
+#=
 function chunk_concave!(cst, ptr, f, j₀, j′₁, ftr)
     @inbounds begin
         for a = j₀:j′₁
@@ -141,6 +147,7 @@ function chunk_concave!(cst, ptr, f, j₀, j′₁, ftr)
         end
     end
 end
+=#
 
 function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::ConcaveTotalSplitter{<:ConstrainedCost}, args...) where {Tv, Ti}
     @inbounds begin
