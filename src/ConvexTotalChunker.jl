@@ -82,15 +82,16 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     push!(ftr, (j′ - 1, j′₁ + 1))
                 else
                     (j, h) = last(ftr)
-                    h_lo = j′ + 1
-                    h_hi = h - 1
                     #=
-                    h_ref = h_lo
-                    while h_ref < h_hi && f(j′ - 1, h_ref) < f(j, h_ref)
+                    h_ref = j′ + 1
+                    while h_ref < h - 1 && f(j′ - 1, h_ref) < f(j, h_ref)
                         h_ref += 1
                     end
                     h = h_ref
                     =#
+
+                    h_lo = j′ + 1
+                    h_hi = h - 1
                     while h_lo <= h_hi
                         h = fld2(h_lo + h_hi)
                         if f(j′ - 1, h - 1) < f(j, h - 1)
@@ -101,7 +102,7 @@ function chunk_convex!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     end
                     h = h_hi
 
-                    if j′ + 1 < h
+                    if j′ + 1 != h
                         push!(ftr, (j′ - 1, h))
                     end
                 end

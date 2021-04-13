@@ -86,30 +86,28 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
                     pop!(ftr)
                 end
                 (j, h) = last(ftr)
-                h_lo = h + 1
-                h_hi = j′₁ + 1
-
-                h_ref = h_lo
-                while h_ref < h_hi && f(j′ - 1, h_ref) > f(j, h_ref)
+                
+                #=
+                h_ref = h + 1
+                while h_ref < j′₁ + 1 && f(j′ - 1, h_ref) > f(j, h_ref)
                     h_ref += 1
                 end
                 h = h_ref
+                =#
 
-                #@assert h == h_hi || f(j′ - 1, h) <= f(j, h)
-                #@assert h <= min(j′ - 1, j) || f(j′ - 1, h - 1) > f(j, h - 1)
-                #=
+                h_lo = h + 1
+                h_hi = j′₁
                 while h_lo <= h_hi
                     h = fld2(h_lo + h_hi)
-                    if f(j′ - 1, h) <= f(j, h)
-                        h_hi = h - 1
-                    else
+                    if f(j′ - 1, h) > f(j, h)
                         h_lo = h + 1
+                    else
+                        h_hi = h - 1
                     end
                 end
-                h = h_hi
-                =#
-                #@assert h > last(ftr)[2]
-                if h != h_hi
+                h = h_lo
+
+                if h != j′₁ + 1
                     push!(ftr, (j′ - 1, h))
                 end
 
