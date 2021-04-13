@@ -60,13 +60,6 @@ function chunk_concave!(cst, ptr, f::F, j₀, j′₁, ftr) where {F}
         push!(ftr, (j₀, j₀ + 1))
         for j′ = j₀ + 1:j′₁
 
-            for i = 1:length(ftr) - 1
-                @assert ftr[i][1] < ftr[i + 1][1]
-                @assert ftr[i][2] < ftr[i + 1][2]
-            end
-            @assert ftr[1][1] <= j′ - 1
-            @assert ftr[1][2] == j′
-
             (j, h) = first(ftr)
             c = f(j, j′)
             c′ = f(j′ - 1, j′)
