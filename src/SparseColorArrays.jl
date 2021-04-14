@@ -1,3 +1,49 @@
+struct VertexCount end
+
+@inline (::VertexCount)(j, j′, k...) = Int(j′ - j)
+@inline cost_type(::Type{VertexCount}) = Int
+oracle_model(::VertexCount) = VertexCount()
+oracle_stripe(::AbstractHint, ::VertexCount, ::SparseMatrixCSC; kwargs...) = VertexCount()
+#bound_stripe(A::SparseMatrixCSC, K, ::VertexCount) = (size(A)[2]/K, size(A)[2]) $TODO ?
+
+struct PinCount{Ti} <: AbstractMatrix{Ti}
+    n::Int
+    pos::Vector{Ti}
+end
+
+#@inline (::PinCount)(j, j′, k...) = Int(j′ - j)
+#@inline cost_type(::Type{VertexCount}) = Int
+#oracle_model(::VertexCount) = VertexCount()
+#oracle_stripe(::AbstractHint, ::VertexCount, ::SparseMatrixCSC; kwargs...) = VertexCount()
+#bound_stripe(A::SparseMatrixCSC, K, ::VertexCount) = (size(A)[2]/K, size(A)[2]) $TODO ?
+
+Base.size(arg::PinCount) = (arg.n + 1, arg.n + 1)
+
+pincount(args...; kwargs...) = pincount(NoHint(), args...; kwargs...)
+pincount(::AbstractHint, args...; kwargs...) = @assert false
+pincount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
+    pincount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+
+pincount!(args...; kwargs...) = pincount!(NoHint(), args...; kwargs...)
+pincount!(::AbstractHint, args...; kwargs...) = @assert false
+pincount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}; kwargs...) where {Ti} = 
+    PinCount(hint, n, pos; kwargs...)
+
+PinCount(hint::AbstractHint, n, pos::Vector{Ti}; kwargs...) where {Ti} = 
+    PinCount{Ti}(hint, n, pos; kwargs...)
+function PinCount{Ti}(hint::AbstractHint, n, pos::Vector{Ti}; kwargs...) where {Ti}
+    return PinCount(n, pos)
+end
+
+Base.getindex(arg::PinCount{Ti}, j::Integer, j′::Integer) where {Ti} = arg(j, j′)
+function (arg::PinCount{Ti})(j::Integer, j′::Integer) where {Ti}
+    @inbounds begin
+        return arg.pos[j′] - arg.pos[j]
+    end
+end
+
+
+
 struct NetCount{Ti, Lnk} <: AbstractMatrix{Ti}
     n::Int
     pos::Vector{Ti}
