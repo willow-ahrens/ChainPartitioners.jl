@@ -114,3 +114,188 @@ end
         return (arg.pos[j′] - arg.pos[j]) - Step(arg.lnk)(Next((arg.n + 2) - j), _j′)
     end
 end
+
+
+
+struct SelfNetCount{Ti, Lnk} <: AbstractMatrix{Ti}
+    n::Int
+    pos::Vector{Ti}
+    lnk::Lnk
+end
+
+Base.size(arg::SelfNetCount) = (arg.n + 1, arg.n + 1)
+
+selfnetcount(args...; kwargs...) = selfnetcount(NoHint(), args...; kwargs...)
+selfnetcount(::AbstractHint, args...; kwargs...) = @assert false
+selfnetcount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
+    selfnetcount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+
+selfnetcount!(args...; kwargs...) = selfnetcount!(NoHint(), args...; kwargs...)
+selfnetcount!(::AbstractHint, args...; kwargs...) = @assert false
+selfnetcount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SelfNetCount(hint, m, n, N, pos, idx; kwargs...)
+
+SelfNetCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SelfNetCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SelfNetCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    @inbounds begin
+        hst = zeros(Ti, m)
+        hst′ = zeros(Ti, m)
+        idx′ = undefs(Ti, N)
+        pos′ = zeros(Ti, n)
+
+        for j = 1:n
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                if hst[i] == 0
+                    pos′[(n + 1) - j] += 1
+                    hst[i] = j
+                end
+                hst′[i] = j
+            end
+        end
+
+        q = 1
+        for j = 1:n + 1
+            (pos′[j], q) = (q, q + pos′[j])
+        end
+
+        N′ = q - 1
+
+        idx′ = undefs(Ti, N′)
+
+        for i = 1:m
+            if hst[i] != 0
+                j = hst[i]
+                j′ = hst[i]
+                q = pos′[(n + 1) - j]
+                idx[q] = j′
+                pos′[(n + 1) - j] = q + 1
+            end
+        end
+
+        return SelfNetCount(n, pos, dominancecount!(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
+    end
+end
+
+Base.getindex(arg::SelfNetCount{Ti}, j::Integer, j′::Integer) where {Ti} = arg(j, j′)
+function (arg::SelfNetCount{Ti})(j::Integer, j′::Integer) where {Ti}
+    @inbounds begin
+        return arg.lnk((arg.n + 2) - j, j′)
+    end
+end
+
+@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SelfNetCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return Step(arg.lnk)(Same((arg.n + 2) - j), _j′)
+    end
+end
+
+@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SelfNetCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return Step(arg.lnk)(Prev((arg.n + 2) - j), _j′)
+    end
+end
+
+@propagate_inbounds function (ocl::Step{Net})(_j::Prev, _j′::Same) where {Ti, Net <: SelfNetCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = ocl.ocl
+        return Step(arg.lnk)(Next((arg.n + 2) - j), _j′)
+    end
+end
+
+
+
+struct SelfPinCount{Ti, Lnk} <: AbstractMatrix{Ti}
+    n::Int
+    lnk::Lnk
+end
+
+Base.size(arg::SelfPinCount) = (arg.n + 1, arg.n + 1)
+
+selfpincount(args...; kwargs...) = selfpincount(NoHint(), args...; kwargs...)
+selfpincount(::AbstractHint, args...; kwargs...) = @assert false
+selfpincount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
+    selfpincount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+
+selfpincount!(args...; kwargs...) = selfpincount!(NoHint(), args...; kwargs...)
+selfpincount!(::AbstractHint, args...; kwargs...) = @assert false
+selfpincount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SelfPinCount(hint, m, n, N, pos, idx; kwargs...)
+
+SelfPinCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    SelfPinCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SelfPinCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    @inbounds begin
+        hst = zeros(Ti, m)
+        pos′ = zeros(Ti, m)
+        idx′ = zeros(Ti, N)
+
+        for j = 1:n
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                (i, i′) = minmax(j, i)
+                pos′[i′] += 1
+            end
+        end
+
+        q = 1
+        for j = 1:n + 1
+            (pos′[j], q) = (q, q + pos′[j])
+        end
+
+        for j = 1:n
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                (i, i′) = minmax(j, i)
+                q′ = pos′[i′ + 1]
+                idx′[q] = (n + 1) - i
+                pos′[i′ + 1] = q′ + 1
+            end
+        end
+
+        return SelfPinCount(n, dominancecount!(hint, n + 1, n + 1, N, pos, idx′; kwargs...))
+    end
+end
+
+Base.getindex(arg::SelfPinCount{Ti}, j::Integer, j′::Integer) where {Ti} = arg(j, j′)
+function (arg::SelfPinCount{Ti})(j::Integer, j′::Integer) where {Ti}
+    @inbounds begin
+        return arg.lnk((arg.n + 2) - j, j′)
+    end
+end
+
+@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′) where {Ti, Net <: SelfPinCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return Step(arg.lnk)(Same((arg.n + 2) - j), _j′)
+    end
+end
+
+@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same) where {Ti, Net <: SelfPinCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = stp.ocl
+        return Step(arg.lnk)(Prev((arg.n + 2) - j), _j′)
+    end
+end
+
+@propagate_inbounds function (ocl::Step{Net})(_j::Prev, _j′::Same) where {Ti, Net <: SelfPinCount{Ti}}
+    begin
+        j = destep(_j)
+        j′ = destep(_j′)
+        arg = ocl.ocl
+        return Step(arg.lnk)(Next((arg.n + 2) - j), _j′)
+    end
+end
