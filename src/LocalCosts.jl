@@ -61,7 +61,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractLocalCostModel, A::Spars
         end
 
         (n, K, n′, πos, prm), _ = partwise(A, convert(MapPartition, Π))
-        lcc = partwisecost!(hint, n, K, n′, πos, prm, WidthCost(); kwargs...)
+        lcc = partwisecost!(hint, n, K, n′, πos, prm, VertexCount(); kwargs...)
 
         return LocalCostOracle(Π, adj_pos, πos, lcc, mdl)
     end

@@ -1,4 +1,4 @@
-struct SparseSummedArea{Tv, Ti} <: AbstractMatrix{Tv}
+struct DominanceSum{Tv, Ti} <: AbstractMatrix{Tv}
     m::Int
     n::Int
     N::Int
@@ -13,7 +13,7 @@ struct SparseSummedArea{Tv, Ti} <: AbstractMatrix{Tv}
     scn::Array{Tv, 3}
 end
 
-mutable struct SparseAreaStepAdder{Tv, Ti} <: AbstractMatrix{Tv}
+mutable struct SparseStepwiseDominanceSum{Tv, Ti} <: AbstractMatrix{Tv}
     m::Int
     n::Int
     N::Int
@@ -26,38 +26,38 @@ mutable struct SparseAreaStepAdder{Tv, Ti} <: AbstractMatrix{Tv}
     c::Tv
 end
 
-Base.size(arg::SparseSummedArea) = (arg.m + 1, arg.n + 1)
+Base.size(arg::DominanceSum) = (arg.m + 1, arg.n + 1)
 
-areasum(args...; kwargs...) = areasum(NoHint(), args...; kwargs...)
-areasum(::AbstractHint, args...; kwargs...) = @assert false
-function areasum(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+dominancesum(args...; kwargs...) = dominancesum(NoHint(), args...; kwargs...)
+dominancesum(::AbstractHint, args...; kwargs...) = @assert false
+function dominancesum(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     (m, n) = size(A)
     N = nnz(A)
     pos = copy(A.colptr)
     idx = copy(A.rowval)
     val = A.nzval
-    return areasum!(hint, m, n, N, pos, idx, val; kwargs...)
+    return dominancesum!(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
-areasum!(args...; kwargs...) = areasum!(NoHint(), args...; kwargs...)
-areasum!(::AbstractHint, args...; kwargs...) = @assert false
-function areasum!(hint::AbstractHint, m, n, N, pos, idx, val; H = nothing, b = nothing, b′ = nothing, kwargs...)
+dominancesum!(args...; kwargs...) = dominancesum!(NoHint(), args...; kwargs...)
+dominancesum!(::AbstractHint, args...; kwargs...) = @assert false
+function dominancesum!(hint::AbstractHint, m, n, N, pos, idx, val; H = nothing, b = nothing, b′ = nothing, kwargs...)
     if H === b === b′ === nothing
-        return SparseSummedArea(hint, m, n, N, pos, idx, val; b = 4, kwargs...)
+        return DominanceSum(hint, m, n, N, pos, idx, val; b = 4, kwargs...)
     else
-        return SparseSummedArea(hint, m, n, N, pos, idx, val; H = H, b = b, b′ = b′, kwargs...)
+        return DominanceSum(hint, m, n, N, pos, idx, val; H = H, b = b, b′ = b′, kwargs...)
     end
 end
-function areasum!(hint::SparseHint, m, n, N, pos, idx, val; kwargs...)
-    return SparseSummedArea(hint, m, n, N, pos, idx, val; kwargs...)
+function dominancesum!(hint::SparseHint, m, n, N, pos, idx, val; kwargs...)
+    return DominanceSum(hint, m, n, N, pos, idx, val; kwargs...)
 end
-function areasum!(hint::StepHint, m, n, N, pos, idx, val; kwargs...)
-    SparseAreaStepCounter(hint, m, n, N, pos, idx, val; kwargs...)
+function dominancesum!(hint::StepHint, m, n, N, pos, idx, val; kwargs...)
+    SparseStepwiseDominanceCount(hint, m, n, N, pos, idx, val; kwargs...)
 end
 
-SparseSummedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
-    SparseSummedArea{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
-function SparseSummedArea{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Tv, Ti}
+DominanceSum(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
+    DominanceSum{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
+function DominanceSum{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing) where {Tv, Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
             if H === nothing
@@ -180,12 +180,12 @@ function SparseSummedArea{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, 
 
         byt = idx
 
-        return SparseSummedArea{Tv, Ti}(m, n, N, b, b′, H, pos, qos, byt, cnt, wgt, scn)
+        return DominanceSum{Tv, Ti}(m, n, N, b, b′, H, pos, qos, byt, cnt, wgt, scn)
     end
 end
 
-Base.getindex(arg::SparseSummedArea{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
-function (arg::SparseSummedArea{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
+Base.getindex(arg::DominanceSum{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
+function (arg::DominanceSum{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
     @inbounds begin
         b = arg.b
         b′ = arg.b′
@@ -251,19 +251,19 @@ end
 
 
 
-SparseAreaStepAdder(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
-    SparseAreaStepAdder{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
-function SparseAreaStepAdder{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti}
+SparseStepwiseDominanceSum(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti} =
+    SparseStepwiseDominanceSum{Tv, Ti}(hint, m, n, N, pos, idx, val; kwargs...)
+function SparseStepwiseDominanceSum{Tv, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Tv, Ti}
     @inbounds begin
         i = j = 0
         Δ = zeros(Ti, m)
         c = Tv(0)
-        return SparseAreaStepAdder(m, n, N, i, j, pos, idx, val, Δ, c)
+        return SparseStepwiseDominanceSum(m, n, N, i, j, pos, idx, val, Δ, c)
     end
 end
 
-Base.getindex(arg::SparseAreaStepAdder{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
-function (arg::SparseAreaStepAdder{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
+Base.getindex(arg::SparseStepwiseDominanceSum{Tv, Ti}, i::Integer, j::Integer) where {Tv, Ti} = arg(i, j)
+function (arg::SparseStepwiseDominanceSum{Tv, Ti})(i::Integer, j::Integer) where {Tv, Ti}
     @inbounds begin
         i -= 1
         j -= 1
@@ -299,14 +299,14 @@ function (arg::SparseAreaStepAdder{Tv, Ti})(i::Integer, j::Integer) where {Tv, T
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Tv, Ti, Cnt <: SparseStepwiseDominanceSum{Tv, Ti}}
     begin
         arg = stp.ocl
         return arg.c
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Tv, Ti, Cnt <: SparseStepwiseDominanceSum{Tv, Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -329,7 +329,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Tv, Ti, Cnt <: SparseStepwiseDominanceSum{Tv, Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -353,7 +353,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Tv, Ti, Cnt <: SparseStepwiseDominanceSum{Tv, Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -369,7 +369,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Tv, Ti, Cnt <: SparseAreaStepAdder{Tv, Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Tv, Ti, Cnt <: SparseStepwiseDominanceSum{Tv, Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -387,7 +387,7 @@ end
 
 
 
-struct SparseCountedArea{Ti} <: AbstractMatrix{Ti}
+struct DominanceCount{Ti} <: AbstractMatrix{Ti}
     m::Int
     n::Int
     N::Int
@@ -400,9 +400,9 @@ struct SparseCountedArea{Ti} <: AbstractMatrix{Ti}
     cnt::Array{Ti, 3}
 end
 
-Base.size(arg::SparseCountedArea) = (arg.m + 1, arg.n + 1)
+Base.size(arg::DominanceCount) = (arg.m + 1, arg.n + 1)
 
-struct SparseBinaryCountedArea{Ti, Tb} <: AbstractMatrix{Ti}
+struct BinaryDominanceCount{Ti, Tb} <: AbstractMatrix{Ti}
     m::Int
     n::Int
     N::Int
@@ -413,9 +413,9 @@ struct SparseBinaryCountedArea{Ti, Tb} <: AbstractMatrix{Ti}
     cnt::Array{Ti, 2}
 end
 
-Base.size(arg::SparseBinaryCountedArea) = (arg.m + 1, arg.n + 1)
+Base.size(arg::BinaryDominanceCount) = (arg.m + 1, arg.n + 1)
 
-mutable struct SparseAreaStepCounter{Ti} <: AbstractMatrix{Ti}
+mutable struct SparseStepwiseDominanceCount{Ti} <: AbstractMatrix{Ti}
     m::Int
     n::Int
     N::Int
@@ -427,33 +427,33 @@ mutable struct SparseAreaStepCounter{Ti} <: AbstractMatrix{Ti}
     c::Ti
 end
 
-Base.size(arg::SparseAreaStepCounter) = (arg.m + 1, arg.n + 1)
+Base.size(arg::SparseStepwiseDominanceCount) = (arg.m + 1, arg.n + 1)
 
-areacount(args...; kwargs...) = areacount(NoHint(), args...; kwargs...)
-areacount(::AbstractHint, args...; kwargs...) = @assert false
-function areacount(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+dominancecount(args...; kwargs...) = dominancecount(NoHint(), args...; kwargs...)
+dominancecount(::AbstractHint, args...; kwargs...) = @assert false
+function dominancecount(hint::AbstractHint, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         (m, n) = size(A)
 
-        return areacount!(hint, m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
+        return dominancecount!(hint, m, n, nnz(A), copy(A.colptr), copy(A.rowval); kwargs...)
     end
 end
 
-areacount!(args...; kwargs...) = areacount!(NoHint(), args...; kwargs...)
-areacount!(::AbstractHint, args...; kwargs...) = @assert false
-function areacount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
-    SparseBinaryCountedArea(hint, m, n, N, pos, idx; kwargs...)
+dominancecount!(args...; kwargs...) = dominancecount!(NoHint(), args...; kwargs...)
+dominancecount!(::AbstractHint, args...; kwargs...) = @assert false
+function dominancecount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    BinaryDominanceCount(hint, m, n, N, pos, idx; kwargs...)
 end
-function areacount!(hint::SparseHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
-    SparseCountedArea(hint, m, n, N, pos, idx; kwargs...)
+function dominancecount!(hint::SparseHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    DominanceCount(hint, m, n, N, pos, idx; kwargs...)
 end
-function areacount!(hint::StepHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
-    SparseAreaStepCounter(hint, m, n, N, pos, idx; kwargs...)
+function dominancecount!(hint::StepHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+    SparseStepwiseDominanceCount(hint, m, n, N, pos, idx; kwargs...)
 end
 
-SparseCountedArea(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
-    SparseCountedArea{Ti}(hint, m, n, N, pos, idx; kwargs...)
-function SparseCountedArea{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
+DominanceCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
+    DominanceCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function DominanceCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         if b === nothing #b = branching factor of tree
             if H === nothing
@@ -523,12 +523,12 @@ function SparseCountedArea{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx
             idx, byt = byt, idx
         end
         byt = idx
-        return SparseCountedArea{Ti}(m, n, N, b, b′, H, pos, qos, byt, cnt)
+        return DominanceCount{Ti}(m, n, N, b, b′, H, pos, qos, byt, cnt)
     end
 end
 
-Base.getindex(arg::SparseCountedArea{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
-function (arg::SparseCountedArea{Ti})(i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::DominanceCount{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::DominanceCount{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         b = arg.b
         b′ = arg.b′
@@ -597,11 +597,11 @@ function (arg::SparseCountedArea{Ti})(i::Integer, j::Integer) where {Ti}
     end
 end
 
-SparseBinaryCountedArea(hint::AbstractHint, m, n, N, pos, idx; kwargs...) =
-    SparseBinaryCountedArea{UInt}(hint, m, n, N, pos, idx; kwargs...)
-SparseBinaryCountedArea{Tb}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
-    SparseBinaryCountedArea{Tb, Ti}(hint, m, n, N, pos, idx; kwargs...)
-function SparseBinaryCountedArea{Tb, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+BinaryDominanceCount(hint::AbstractHint, m, n, N, pos, idx; kwargs...) =
+    BinaryDominanceCount{UInt}(hint, m, n, N, pos, idx; kwargs...)
+BinaryDominanceCount{Tb}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    BinaryDominanceCount{Tb, Ti}(hint, m, n, N, pos, idx; kwargs...)
+function BinaryDominanceCount{Tb, Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
     @inbounds begin
         #b = branching factor of tree = 1
 
@@ -644,14 +644,14 @@ function SparseBinaryCountedArea{Tb, Ti}(hint::AbstractHint, m, n, N, pos::Vecto
 
             idx, idx′ = idx′, idx
         end
-        return SparseBinaryCountedArea{Ti, Tb}(m, n, N, H, pos, qos, byt, cnt)
+        return BinaryDominanceCount{Ti, Tb}(m, n, N, H, pos, qos, byt, cnt)
     end
 end
 
 #we have removed b′ because increasing it doesn't significantly reduce the storage cost or preprocessing cost of the structure.
 
-Base.getindex(arg::SparseBinaryCountedArea{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
-function (arg::SparseBinaryCountedArea{Ti, Tb})(i::Integer, j::Integer) where {Ti, Tb}
+Base.getindex(arg::BinaryDominanceCount{Ti, Tb}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
+function (arg::BinaryDominanceCount{Ti, Tb})(i::Integer, j::Integer) where {Ti, Tb}
     @inbounds begin
         H = arg.H
         pos = arg.pos
@@ -684,19 +684,19 @@ end
 
 
 
-SparseAreaStepCounter(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} =
-    SparseAreaStepCounter{Ti}(hint, m, n, N, pos, idx; kwargs...)
-function SparseAreaStepCounter{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
+SparseStepwiseDominanceCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} =
+    SparseStepwiseDominanceCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
+function SparseStepwiseDominanceCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
     @inbounds begin
         i = j = 0
         Δ = zeros(Ti, m)
         c = Ti(0)
-        return SparseAreaStepCounter(m, n, N, i, j, pos, idx, Δ, c)
+        return SparseStepwiseDominanceCount(m, n, N, i, j, pos, idx, Δ, c)
     end
 end
 
-Base.getindex(arg::SparseAreaStepCounter{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
-function (arg::SparseAreaStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::SparseStepwiseDominanceCount{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::SparseStepwiseDominanceCount{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         i -= 1
         j -= 1
@@ -727,14 +727,14 @@ function (arg::SparseAreaStepCounter{Ti})(i::Integer, j::Integer) where {Ti}
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(i::Same, j::Same) where {Ti, Cnt <: SparseStepwiseDominanceCount{Ti}}
     begin
         arg = stp.ocl
         return arg.c
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Next) where {Ti, Cnt <: SparseStepwiseDominanceCount{Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -755,7 +755,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Same, _j::Prev) where {Ti, Cnt <: SparseStepwiseDominanceCount{Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -776,7 +776,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Next, _j::Same) where {Ti, Cnt <: SparseStepwiseDominanceCount{Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -792,7 +792,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Ti, Cnt <: SparseAreaStepCounter{Ti}}
+@propagate_inbounds function (stp::Step{Cnt})(_i::Prev, _j::Same) where {Ti, Cnt <: SparseStepwiseDominanceCount{Ti}}
     begin
         arg = stp.ocl
         i = destep(_i)
@@ -810,7 +810,7 @@ end
 
 
 
-struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}
+struct RookSum{Ti, Tv} <: AbstractMatrix{Tv}
     N::Int
     b::Int
     b′::Int
@@ -821,24 +821,24 @@ struct SparseSummedRooks{Ti, Tv} <: AbstractMatrix{Tv}
     scn::Array{Tv, 3}
 end
 
-Base.size(arg::SparseSummedRooks) = (arg.N + 1, arg.N + 1)
+Base.size(arg::RookSum) = (arg.N + 1, arg.N + 1)
 
 rooksum!(args...; kwargs...) = rooksum!(NoHint(), args...; kwargs...)
 rooksum!(::AbstractHint, args...; kwargs...) = @assert false
 function rooksum!(hint::AbstractHint, N, idx, val; H = nothing, b = nothing, b′ = nothing, kwargs...)
     if H === b === b′ === nothing
-        return SparseSummedRooks(hint, N, idx, val; b = 4, kwargs...)
+        return RookSum(hint, N, idx, val; b = 4, kwargs...)
     else
-        return SparseSummedRooks(hint, N, idx, val; H = H, b = b, b′ = b′, kwargs...)
+        return RookSum(hint, N, idx, val; H = H, b = b, b′ = b′, kwargs...)
     end
 end
 function rooksum!(hint::SparseHint, N, idx, val; kwargs...)
-    return SparseSummedRooks(hint, N, idx, val; kwargs...)
+    return RookSum(hint, N, idx, val; kwargs...)
 end
 
-SparseSummedRooks(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} =
-    SparseSummedRooks{Ti, Tv}(hint, N, idx, val; kwargs...)
-function SparseSummedRooks{Ti, Tv}(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti, Tv}
+RookSum(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; kwargs...) where {Ti, Tv} =
+    RookSum{Ti, Tv}(hint, N, idx, val; kwargs...)
+function RookSum{Ti, Tv}(hint::AbstractHint, N, idx::Vector{Ti}, val::Vector{Tv}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti, Tv}
     @inbounds begin
         @debug begin
             @assert length(idx) == N
@@ -937,12 +937,12 @@ function SparseSummedRooks{Ti, Tv}(hint::AbstractHint, N, idx::Vector{Ti}, val::
         end
 
         byt = idx
-        return SparseSummedRooks{Ti, Tv}(N, b, b′, H, byt, cnt, wgt, scn)
+        return RookSum{Ti, Tv}(N, b, b′, H, byt, cnt, wgt, scn)
     end
 end
 
-Base.getindex(arg::SparseSummedRooks{Ti, Tv}, i::Integer, j::Integer) where {Ti, Tv} = arg(i, j)
-function (arg::SparseSummedRooks{Ti, Tv})(i::Integer, j::Integer) where {Ti, Tv}
+Base.getindex(arg::RookSum{Ti, Tv}, i::Integer, j::Integer) where {Ti, Tv} = arg(i, j)
+function (arg::RookSum{Ti, Tv})(i::Integer, j::Integer) where {Ti, Tv}
     @inbounds begin
         N = arg.N
         b = arg.b
@@ -1008,7 +1008,7 @@ end
 
 
 
-struct SparseCountedRooks{Ti} <: AbstractMatrix{Ti}
+struct RookCount{Ti} <: AbstractMatrix{Ti}
     N::Int
     b::Int
     b′::Int
@@ -1017,16 +1017,16 @@ struct SparseCountedRooks{Ti} <: AbstractMatrix{Ti}
     cnt::Array{Ti, 3}
 end
 
-Base.size(arg::SparseCountedRooks) = (arg.N + 1, arg.N + 1)
+Base.size(arg::RookCount) = (arg.N + 1, arg.N + 1)
 
-struct SparseBinaryCountedRooks{Tb, Ti} <: AbstractMatrix{Ti}
+struct BinaryRookCount{Tb, Ti} <: AbstractMatrix{Ti}
     N::Int
     H::Int
     byt::Array{Tb, 2}
     cnt::Array{Ti, 2}
 end
 
-Base.size(arg::SparseBinaryCountedRooks) = (arg.N + 1, arg.N + 1)
+Base.size(arg::BinaryRookCount) = (arg.N + 1, arg.N + 1)
 
 mutable struct SparseRookStepCounter{Ti} <: AbstractMatrix{Ti}
     N::Int
@@ -1042,15 +1042,15 @@ Base.size(arg::SparseRookStepCounter) = (arg.N + 1, arg.N + 1)
 rookcount!(args...; kwargs...) = rookcount!(NoHint(), args...; kwargs...)
 rookcount!(::AbstractHint, args...; kwargs...) = @assert false
 function rookcount!(hint::AbstractHint, N, idx; kwargs...)
-    return SparseBinaryCountedRooks(hint, N, idx; kwargs...)
+    return BinaryRookCount(hint, N, idx; kwargs...)
 end
 function rookcount!(hint::SparseHint, N, idx; kwargs...)
-    SparseCountedRooks(hint, N, idx; kwargs...)
+    RookCount(hint, N, idx; kwargs...)
 end
 
-SparseCountedRooks(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
-    SparseCountedRooks{Ti}(hint, N, idx; kwargs...)
-function SparseCountedRooks{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
+RookCount(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Ti} =
+    RookCount{Ti}(hint, N, idx; kwargs...)
+function RookCount{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; b = nothing, H = nothing, b′ = nothing, kwargs...) where {Ti}
     @inbounds begin
         @debug begin
             @assert length(idx) == N
@@ -1117,12 +1117,12 @@ function SparseCountedRooks{Ti}(hint::AbstractHint, N, idx::Vector{Ti}; b = noth
             idx, byt = byt, idx
         end
         byt = idx
-        return SparseCountedRooks{Ti}(N, b, b′, H, byt, cnt)
+        return RookCount{Ti}(N, b, b′, H, byt, cnt)
     end
 end
 
-Base.getindex(arg::SparseCountedRooks{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
-function (arg::SparseCountedRooks{Ti})(i::Integer, j::Integer) where {Ti}
+Base.getindex(arg::RookCount{Ti}, i::Integer, j::Integer) where {Ti} = arg(i, j)
+function (arg::RookCount{Ti})(i::Integer, j::Integer) where {Ti}
     @inbounds begin
         N = arg.N
         b = arg.b
@@ -1189,11 +1189,11 @@ function (arg::SparseCountedRooks{Ti})(i::Integer, j::Integer) where {Ti}
     end
 end
 
-SparseBinaryCountedRooks(hint::AbstractHint, N, idx; kwargs...) =
-    SparseBinaryCountedRooks{UInt}(hint, N, idx; kwargs...)
-SparseBinaryCountedRooks{Tb}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
-    SparseBinaryCountedRooks{Tb, Ti}(hint, N, idx; kwargs...)
-function SparseBinaryCountedRooks{Tb, Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
+BinaryRookCount(hint::AbstractHint, N, idx; kwargs...) =
+    BinaryRookCount{UInt}(hint, N, idx; kwargs...)
+BinaryRookCount{Tb}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti} =
+    BinaryRookCount{Tb, Ti}(hint, N, idx; kwargs...)
+function BinaryRookCount{Tb, Ti}(hint::AbstractHint, N, idx::Vector{Ti}; kwargs...) where {Tb, Ti}
     @inbounds begin
         #b = branching factor of tree = 1
 
@@ -1226,12 +1226,12 @@ function SparseBinaryCountedRooks{Tb, Ti}(hint::AbstractHint, N, idx::Vector{Ti}
 
             idx, idx′ = idx′, idx
         end
-        return SparseBinaryCountedRooks{Tb, Ti}(N, H, byt, cnt)
+        return BinaryRookCount{Tb, Ti}(N, H, byt, cnt)
     end
 end
 
-Base.getindex(arg::SparseBinaryCountedRooks{Tb, Ti}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
-function (arg::SparseBinaryCountedRooks{Tb, Ti})(i::Integer, j::Integer) where {Ti, Tb}
+Base.getindex(arg::BinaryRookCount{Tb, Ti}, i::Integer, j::Integer) where {Ti, Tb} = arg(i, j)
+function (arg::BinaryRookCount{Tb, Ti})(i::Integer, j::Integer) where {Ti, Tb}
     @inbounds begin
         H = arg.H
         byt = arg.byt

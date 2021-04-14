@@ -219,9 +219,9 @@ end
         end
 
         for (f, w_max) = [
-            (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), WidthCost(), 4), 4);
-            (ConstrainedCost(BlockComponentCostModel{Int64}(0, 0, (10, identity), (2, x->2x)), WidthCost(), 4), 4);
-            (ConstrainedCost(BlockComponentCostModel{Int64}(identity, x->3x, (10, identity), (2, x->2x)), WidthCost(), 4), 4);
+            (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), VertexCount(), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(0, 0, (10, identity), (2, x->2x)), VertexCount(), 4), 4);
+            (ConstrainedCost(BlockComponentCostModel{Int64}(identity, x->3x, (10, identity), (2, x->2x)), VertexCount(), 4), 4);
         ]
             Π = pack_stripe(A', EquiChunker(2))
             Φ = pack_stripe(A, DynamicTotalChunker(f), Π) #The dynamic total chunker should be at least as good as optimal

@@ -162,13 +162,13 @@ oracle_model(::FeasibleCost) = FeasibleCost()
 oracle_stripe(::AbstractHint, ::FeasibleCost, ::SparseMatrixCSC; kwargs...) = FeasibleCost()
 #bound_stripe(A::SparseMatrixCSC, K, ::FeasibleCost) = (Feasible(), Feasible()) #TODO ?
 
-struct WidthCost end
+struct VertexCount end
 
-@inline (::WidthCost)(j, j′, k...) = Int(j′ - j)
-@inline cost_type(::Type{WidthCost}) = Int
-oracle_model(::WidthCost) = WidthCost()
-oracle_stripe(::AbstractHint, ::WidthCost, ::SparseMatrixCSC; kwargs...) = WidthCost()
-#bound_stripe(A::SparseMatrixCSC, K, ::WidthCost) = (size(A)[2]/K, size(A)[2]) $TODO ?
+@inline (::VertexCount)(j, j′, k...) = Int(j′ - j)
+@inline cost_type(::Type{VertexCount}) = Int
+oracle_model(::VertexCount) = VertexCount()
+oracle_stripe(::AbstractHint, ::VertexCount, ::SparseMatrixCSC; kwargs...) = VertexCount()
+#bound_stripe(A::SparseMatrixCSC, K, ::VertexCount) = (size(A)[2]/K, size(A)[2]) $TODO ?
 
 struct Next{T}
     arg::T

@@ -42,7 +42,7 @@ function partition_plaid(A::SparseMatrixCSC, K, method::AlternatingNetPartitione
         adj_A = adjointpattern(A)
     end
     if net === nothing
-        net = rownetcount(A; kwargs...)#TODO hint goes here
+        net = netcount(A; kwargs...)#TODO hint goes here
     end
     Φ = partition_stripe(A, K, method.mtds[1]; net=net, adj_A=adj_A, kwargs...)
     Π = partition_stripe(adj_A, K, method.mtds[2], Φ; adj_A=A, kwargs...)

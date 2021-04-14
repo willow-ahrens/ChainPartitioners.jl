@@ -11,8 +11,8 @@ function Δ(i, is)
     return moves
 end
 
-ref_areacount(A, i, j) = sum(A[1:i - 1, 1:j - 1] .!= 0)
-ref_areasum(A, i, j) = sum(A[1:i - 1, 1:j - 1])
+ref_dominancecount(A, i, j) = sum(A[1:i - 1, 1:j - 1] .!= 0)
+ref_dominancesum(A, i, j) = sum(A[1:i - 1, 1:j - 1])
 
 test_points(trials, Is...) = collect(Iterators.flatten((
     Iterators.product(map(I -> (first(I), last(I)), Is)...),
@@ -43,12 +43,12 @@ test_dims = [1:3..., 7, 8, 9]
                 for n = test_dims
                     A = dropzeros!(sprand(UInt, m, n, 0.5))
 
-                    C = areacount(hint..., A; kwargs...)
-                    S = areasum(hint..., A; kwargs...)
+                    C = dominancecount(hint..., A; kwargs...)
+                    S = dominancesum(hint..., A; kwargs...)
                     @testset "kwargs = $kwargs, m = $m" begin
                         for (i, j) in test_points(10, 1:m + 1, 1:n + 1)
-                            @test C[i, j] == ref_areacount(A, i, j)
-                            @test S[i, j] == ref_areasum(A, i, j)
+                            @test C[i, j] == ref_dominancecount(A, i, j)
+                            @test S[i, j] == ref_dominancesum(A, i, j)
                         end
                     end
                 end
@@ -63,8 +63,8 @@ test_dims = [1:3..., 7, 8, 9]
                 RS = rooksum!(hint..., N, copy(idx), B.nzval; kwargs...)
                 @testset "kwargs = $kwargs, N = $N" begin
                     for (i, j) in test_points(100, 1:N + 1, 1:N + 1)
-                        @test RC[i, j] == ref_areacount(B, i, j)
-                        @test RS[i, j] == ref_areasum(B, i, j)
+                        @test RC[i, j] == ref_dominancecount(B, i, j)
+                        @test RS[i, j] == ref_dominancesum(B, i, j)
                     end
                 end
             end
@@ -75,7 +75,7 @@ test_dims = [1:3..., 7, 8, 9]
         for m = 1:40
             for n = 1:40
                 A = dropzeros!(sprand(Int, m, n, 0.5))
-                C = areacount(ChainPartitioners.StepHint(), A)
+                C = dominancecount(ChainPartitioners.StepHint(), A)
                 @testset "m = $m" begin
                     for (i, j) = test_points(10, 1:m + 1, 1:n + 1)
                         @test C[i, j] == sum(A[1:i - 1, 1:j - 1] .!= 0)
@@ -83,7 +83,7 @@ test_dims = [1:3..., 7, 8, 9]
                         for _ = 1:8
                             (_i, _j) = (rand(Δ(i, 1:m + 1)), rand(Δ(j, 1:n + 1)))
                             (i, j) = map(destep, (_i, _j))
-                            @test ChainPartitioners.Step(C)(_i, _j) == ref_areacount(A, i, j)
+                            @test ChainPartitioners.Step(C)(_i, _j) == ref_dominancecount(A, i, j)
                         end
                     end
                 end

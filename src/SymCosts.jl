@@ -62,7 +62,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseM
         pos = A.colptr
         idx = A.rowval
 
-        #The remaining lines are a more efficient expression of net = rownetcount(A + UniformScaling(true))
+        #The remaining lines are a more efficient expression of net = netcount(A + UniformScaling(true))
 
         hst = zeros(Ti, m)
         pos′ = undefs(Ti, n + 1)
@@ -87,7 +87,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseM
         N′ = q′ - 1
         resize!(idx′, N′)
 
-        net = SparseCountedRowNet(n, pos′, SparseCountedArea{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
+        net = NetCount(n, pos′, DominanceCount{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
 
         return SymCostOracle(wrk, net, mdl)
     end

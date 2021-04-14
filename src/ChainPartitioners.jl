@@ -7,24 +7,26 @@ using Random
 using DataStructures
 using Requires
 
-export SparseSummedArea
-export SparseCountedArea
-export SparseBinaryCountedArea
-export SparseSummedRooks
-export SparseCountedRooks
-export SparseBinaryCountedRooks
-export areasum
-export areasum!
+export DominanceSum
+export StepwiseDominanceSum
+export DominanceCount
+export BinaryDominanceCount
+export StepwiseDominanceCount
+export RookSum
+export RookCount
+export BinaryRookCount
+export dominancesum
+export dominancesum!
 export rooksum!
-export areacount
-export areacount!
+export dominancecount
+export dominancecount!
 export rookcount!
 
 export EnvelopeMatrix
 export rowenvelope
 
-export SparseCountedRowNet
-export rownetcount
+export NetCount
+export netcount
 
 export partwise
 export partwisecost!
@@ -40,7 +42,7 @@ export AbstractWorkCostModel
 export AffineWorkCostModel
 export WorkCostOracle
 
-export WidthCost
+export VertexCount
 
 export AbstractNetCostModel
 export AffineNetCostModel
@@ -188,7 +190,7 @@ include("Permutations.jl")
 include("CuthillMcKeePermuter.jl")
 include("PermutingPartitioner.jl")
 
-@deprecate DynamicTotalChunker(f, w_max) DynamicTotalChunker(ConstrainedCost(f, WidthCost(), w_max))
+@deprecate DynamicTotalChunker(f, w_max) DynamicTotalChunker(ConstrainedCost(f, VertexCount(), w_max))
 
 function __init__()
     @require AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e" include("glue_AMD.jl")

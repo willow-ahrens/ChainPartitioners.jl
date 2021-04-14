@@ -3,7 +3,7 @@ struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
     β_col::β_Col
 end
 
-@deprecate ColumnBlockComponentCostModel{Tv}(w_max, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), WidthCost(), w_max)
+@deprecate ColumnBlockComponentCostModel{Tv}(w_max, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), VertexCount(), w_max)
 function ColumnBlockComponentCostModel{Tv}(α_col::α_Col, β_col::β_Col) where {Tv, α_Col, β_Col}
     return ColumnBlockComponentCostModel{Tv, α_Col, β_Col}(α_col, β_col)
 end
@@ -23,7 +23,7 @@ function Base.permutedims(cst::BlockComponentCostModel{Tv}) where {Tv}
     return BlockComponentCostModel{Tv}(cst.α_col, cst.α_row, cst.β_col, cst.β_row)
 end
 
-@deprecate BlockComponentCostModel{Tv}(w_max, U, α_row, α_col, β_row, β_col) where {Tv, Ti} ConstrainedCost(BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col), WidthCost(), w_max)
+@deprecate BlockComponentCostModel{Tv}(w_max, U, α_row, α_col, β_row, β_col) where {Tv, Ti} ConstrainedCost(BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col), VertexCount(), w_max)
 function BlockComponentCostModel{Tv}(α_row::α_Row, α_col::α_Col, β_row::β_Row, β_col::β_Col) where {Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
     return BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row, β_Col}(α_row, α_col, β_row, β_col)
 end
