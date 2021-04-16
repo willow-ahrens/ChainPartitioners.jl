@@ -29,13 +29,13 @@ end
 
 
 
-struct ConnectivityDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
+struct ConnectivityOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
     mdl::Mdl
 end
 
-oracle_model(ocl::ConnectivityDominanceOracle) = ocl.mdl
+oracle_model(ocl::ConnectivityOracle) = ocl.mdl
 
 function oracle_stripe(hint::AbstractHint, mdl::AbstractConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
@@ -44,11 +44,11 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractConnectivityModel, A::Sp
         if net === nothing
             net = netcount(hint, A; kwargs...)
         end
-        return ConnectivityDominanceOracle(pos, net, mdl)
+        return ConnectivityOracle(pos, net, mdl)
     end
 end
 
-@inline function (cst::ConnectivityDominanceOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::ConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net[j, j′]
@@ -56,7 +56,7 @@ end
     end
 end
 
-@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: ConnectivityDominanceOracle{Ti, Mdl}}
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: ConnectivityOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
         j = destep(_j)
