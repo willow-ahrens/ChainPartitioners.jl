@@ -1,19 +1,19 @@
 abstract type AbstractConnectivityModel end
 
-@inline (mdl::AbstractConnectivityModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl(n_vertices, n_pins, n_nets)
 
 
 
 struct AffineConnectivityModel{Tv} <: AbstractConnectivityModel
     α::Tv
-    β_width::Tv
-    β_work::Tv
+    β_vertex::Tv
+    β_pin::Tv
     β_net::Tv
 end
 
 @inline cost_type(::Type{AffineConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineConnectivityModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::AffineConnectivityModel)(n_vertices, n_pins, n_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net 
 
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineConnectivityModel)
     return bound_stripe(A, K, oracle_stripe(StepHint(), mdl, A))
@@ -78,7 +78,7 @@ mutable struct ConnectivityStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     j::Ti
     j′::Ti
     q′::Ti
-    x_net::Ti
+    n_nets::Ti
 end
 
 function oracle_stripe(hint::StepHint, mdl::AbstractConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
@@ -98,8 +98,8 @@ oracle_model(ocl::ConnectivityStepOracle) = ocl.mdl
     A = ocl.A
     pos = A.colptr
     q′ = ocl.q′
-    x_net = ocl.x_net
-    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+    n_nets = ocl.n_nets
+    return ocl.mdl(j′ - j, q′ - pos[j], n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -110,13 +110,13 @@ end
     A = ocl.A
     pos = A.colptr
     q′ = ocl.q′
-    x_net = ocl.x_net
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
     hst = ocl.hst
-    x_net -= Δ_net[j]
+    n_nets -= Δ_net[j]
     ocl.j = j
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, q′ - pos[j], n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -127,13 +127,13 @@ end
     A = ocl.A
     pos = A.colptr
     q′ = ocl.q′
-    x_net = ocl.x_net
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
     hst = ocl.hst
-    x_net += Δ_net[j + 1]
+    n_nets += Δ_net[j + 1]
     ocl.j = j
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, q′ - pos[j], n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -145,7 +145,7 @@ end
     pos = A.colptr
     idx = A.rowval
     q′ = ocl.q′
-    x_net = ocl.x_net
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
     hst = ocl.hst
     q = q′
@@ -154,14 +154,14 @@ end
     for _q = q:q′ - 1
         i = idx[_q]
         j₀ = hst[i] - 1
-        x_net += j₀ < j
+        n_nets += j₀ < j
         Δ_net[j₀ + 1] -= 1
         hst[i] = j′
     end
     ocl.q′ = q′
     ocl.j′ = j′
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, q′ - pos[j], n_nets, k...)
 end
 
 @inline function (ocl::ConnectivityStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
@@ -169,7 +169,7 @@ end
         ocl_j = ocl.j
         ocl_j′ = ocl.j′
         q′ = ocl.q′
-        x_net = ocl.x_net
+        n_nets = ocl.n_nets
         Δ_net = ocl.Δ_net
         A = ocl.A
         pos = A.colptr
@@ -180,7 +180,7 @@ end
             ocl_j = Ti(1)
             ocl_j′ = Ti(1)
             q′ = Ti(1)
-            x_net = Ti(0)
+            n_nets = Ti(0)
             one!(ocl.hst)
         end
         while ocl_j′ < j′
@@ -190,7 +190,7 @@ end
             for _q = q:q′ - 1
                 i = idx[_q]
                 j₀ = hst[i] - 1
-                x_net += j₀ < ocl_j
+                n_nets += j₀ < ocl_j
                 Δ_net[j₀ + 1] -= 1
                 hst[i] = ocl_j′ + 1
             end
@@ -198,17 +198,17 @@ end
         end
         if j == j′ - 1
             ocl_j = j′ - 1
-            x_net = Δ_net[ocl_j + 1]
+            n_nets = Δ_net[ocl_j + 1]
         elseif j == j′
             ocl_j = j′
-            x_net = Ti(0)
+            n_nets = Ti(0)
         else
             while j < ocl_j
                 ocl_j -= 1
-                x_net += Δ_net[ocl_j + 1]
+                n_nets += Δ_net[ocl_j + 1]
             end
             while j > ocl_j
-                x_net -= Δ_net[ocl_j + 1]
+                n_nets -= Δ_net[ocl_j + 1]
                 ocl_j += 1
             end
         end
@@ -216,8 +216,8 @@ end
         ocl.j = ocl_j
         ocl.j′ = ocl_j′
         ocl.q′ = q′
-        ocl.x_net = x_net
-        return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
+        ocl.n_nets = n_nets
+        return ocl.mdl(j′ - j, q′ - pos[j], n_nets, k...)
     end
 end
 =#
@@ -228,7 +228,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F},
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost{F}}, args...; x_net = nothing, kwargs...) where {F<:AbstractConnectivityModel, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost{F}}, args...; n_nets = nothing, kwargs...) where {F<:AbstractConnectivityModel, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns

@@ -29,10 +29,10 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         if adj_A === nothing
             adj_A = adjointpattern(A)
         end
-        x_width = undefs(Ti,K)
-        x_work = undefs(Ti,K)
-        x_local = undefs(Ti,K)
-        x_comm = undefs(Ti,K)
+        n_vertices = undefs(Ti,K)
+        n_pins = undefs(Ti,K)
+        n_local_nets = undefs(Ti,K)
+        n_remote_nets = undefs(Ti,K)
         cst = undefs(cost_type(method.mdl),K)
 
         Π_dmn = convert(DomainPartition, Π)
@@ -43,28 +43,28 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         for k = 1:K
             s = Π_dmn.spl[k]
             s′ = Π_dmn.spl[k + 1]
-            x_width_k = s′ - s
-            x_work_k = 0
-            x_local_k = 0
-            x_comm_k = 0
+            n_vertices_k = s′ - s
+            n_pins_k = 0
+            n_local_nets_k = 0
+            n_remote_nets_k = 0
             for _s = s:(s′ - 1)
                 _i = Π_dmn.prm[_s]
                 q = adj_A.colptr[_i]
                 q′ = adj_A.colptr[_i + 1]
-                x_work_k += q′ - q
+                n_pins_k += q′ - q
                 for _q = q : q′ - 1
                     j = adj_A.rowval[_q]
                     if hst[j] < s
-                        x_comm_k += 1
+                        n_remote_nets_k += 1
                     end
                     hst[j] = s
                 end
             end
-            x_width[k] = x_width_k
-            x_work[k] = x_work_k
-            x_local[k] = x_local_k
-            x_comm[k] = x_comm_k
-            cst[k] = method.mdl(x_width_k, x_work_k, x_local_k, x_comm_k, k)
+            n_vertices[k] = n_vertices_k
+            n_pins[k] = n_pins_k
+            n_local_nets[k] = n_local_nets_k
+            n_remote_nets[k] = n_remote_nets_k
+            cst[k] = method.mdl(n_vertices_k, n_pins_k, n_local_nets_k, n_remote_nets_k, k)
         end
 
         asg = ones(Ti, n)
@@ -83,9 +83,9 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
             end
             if best_k != 0
                 asg[j] = best_k
-                x_local[best_k] += 1
-                x_comm[best_k] -= 1
-                cst[best_k] = method.mdl(x_width[best_k], x_work[best_k], x_local[best_k], x_comm[best_k], best_k)
+                n_local_nets[best_k] += 1
+                n_remote_nets[best_k] -= 1
+                cst[best_k] = method.mdl(n_vertices[best_k], n_pins[best_k], n_local_nets[best_k], n_remote_nets[best_k], best_k)
             end
         end
 
@@ -99,10 +99,10 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
         if adj_A === nothing
             adj_A = adjointpattern(A)
         end
-        x_width = undefs(Ti,K)
-        x_work = undefs(Ti,K)
-        x_local = undefs(Ti,K)
-        x_comm = undefs(Ti,K)
+        n_vertices = undefs(Ti,K)
+        n_pins = undefs(Ti,K)
+        n_local_nets = undefs(Ti,K)
+        n_remote_nets = undefs(Ti,K)
         cst = undefs(cost_type(method.mdl),K)
 
         m, n = size(A)
@@ -112,40 +112,40 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
             for k = 1:K
                 i = Π.spl[k]
                 i′ = Π.spl[k + 1]
-                x_width_k = i′ - i
-                x_work_k = adj_A.colptr[i′] - adj_A.colptr[i]
-                x_local_k = 0
-                x_comm_k = 0
+                n_vertices_k = i′ - i
+                n_pins_k = adj_A.colptr[i′] - adj_A.colptr[i]
+                n_local_nets_k = 0
+                n_remote_nets_k = 0
                 for _i = i:(i′ - 1)
                     q = adj_A.colptr[_i]
                     q′ = adj_A.colptr[_i + 1]
                     for _q = q : q′ - 1
                         j = adj_A.rowval[_q]
                         if hst[j] < i
-                            x_comm_k += 1
+                            n_remote_nets_k += 1
                         end
                         hst[j] = i
                     end
                 end
-                x_width[k] = x_width_k
-                x_work[k] = x_work_k
-                x_local[k] = x_local_k
-                x_comm[k] = x_comm_k
-                cst[k] = method.mdl(x_width_k, x_work_k, x_local_k, x_comm_k, k)
+                n_vertices[k] = n_vertices_k
+                n_pins[k] = n_pins_k
+                n_local_nets[k] = n_local_nets_k
+                n_remote_nets[k] = n_remote_nets_k
+                cst[k] = method.mdl(n_vertices_k, n_pins_k, n_local_nets_k, n_remote_nets_k, k)
             end
         else
             for k = 1:K
                 i = Π.spl[k]
                 i′ = Π.spl[k + 1]
-                x_width_k = i′ - i
-                x_work_k = adj_A.colptr[i′] - adj_A.colptr[i]
-                x_local_k = 0
-                x_comm_k = adj_net[i, i′]
-                x_width[k] = x_width_k
-                x_work[k] = x_work_k
-                x_local[k] = x_local_k
-                x_comm[k] = x_comm_k
-                cst[k] = method.mdl(x_width_k, x_work_k, x_local_k, x_comm_k, k)
+                n_vertices_k = i′ - i
+                n_pins_k = adj_A.colptr[i′] - adj_A.colptr[i]
+                n_local_nets_k = 0
+                n_remote_nets_k = adj_net[i, i′]
+                n_vertices[k] = n_vertices_k
+                n_pins[k] = n_pins_k
+                n_local_nets[k] = n_local_nets_k
+                n_remote_nets[k] = n_remote_nets_k
+                cst[k] = method.mdl(n_vertices_k, n_pins_k, n_local_nets_k, n_remote_nets_k, k)
             end
         end
 
@@ -166,9 +166,9 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::GreedyBottlenec
             end
             if best_k != 0
                 asg[j] = best_k
-                x_local[best_k] += 1
-                x_comm[best_k] -= 1
-                cst[best_k] = method.mdl(x_width[best_k], x_work[best_k], x_local[best_k], x_comm[best_k], best_k)
+                n_local_nets[best_k] += 1
+                n_remote_nets[best_k] -= 1
+                cst[best_k] = method.mdl(n_vertices[best_k], n_pins[best_k], n_local_nets[best_k], n_remote_nets[best_k], best_k)
             end
         end
 

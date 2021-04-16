@@ -1,23 +1,23 @@
 abstract type AbstractSecondaryConnectivityModel end
 
-@inline (mdl::AbstractSecondaryConnectivityModel)(x_width, x_work, x_net, x_local, k) = mdl(x_width, x_work, x_net, x_local)
+@inline (mdl::AbstractSecondaryConnectivityModel)(n_vertices, n_pins, n_nets, n_local_nets, k) = mdl(n_vertices, n_pins, n_nets, n_local_nets)
 
 struct AffineSecondaryConnectivityModel{Tv} <: AbstractSecondaryConnectivityModel
     α::Tv
-    β_width::Tv
-    β_work::Tv
-    β_local::Tv
-    β_comm::Tv
+    β_vertex::Tv
+    β_pin::Tv
+    β_local_net::Tv
+    β_remote_net::Tv
 end
 
 @inline cost_type(::Type{AffineSecondaryConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSecondaryConnectivityModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
+(mdl::AffineSecondaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryConnectivityModel)
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_value(adj_A, Π, AffineConnectivityModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_comm))
-    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_width, mdl.β_work))
+    c_hi = bottleneck_value(adj_A, Π, AffineConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_remote_net))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_pin))
     return (c_lo, c_hi)
 end
 
@@ -38,11 +38,11 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::SecondaryC
         (m, n) = size(A)
         mdl = oracle_model(ocl)
         for k = 1:K
-            x_width = Π.spl[k + 1] - Π.spl[k]
-            x_work = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
-            x_comm = ocl.πos[k + 1] - ocl.πos[k]
-            c_lo = max(c_lo, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work)
-            c_hi = max(c_hi, mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_comm * mdl.β_comm)
+            n_vertices = Π.spl[k + 1] - Π.spl[k]
+            n_pins = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
+            n_remote_nets = ocl.πos[k + 1] - ocl.πos[k]
+            c_lo = max(c_lo, mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)
+            c_hi = max(c_hi, mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_remote_nets * mdl.β_remote_net)
         end
         return (c_lo, c_hi)
     end
@@ -77,8 +77,8 @@ end
 end
 
 function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl::AffineSecondaryConnectivityModel) where {G}
-    return compute_objective(g, adjointpattern(A), Φ, Π, AffinePrimaryConnectivityModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+    return compute_objective(g, adjointpattern(A), Φ, Π, AffinePrimaryConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_local_net, mdl.β_remote_net))
 end
 function compute_objective(g::G, A, Π, Φ, mdl::AffineSecondaryConnectivityModel) where {G}
-    return compute_objective(g, adjointpattern(A), Φ, Π, AffinePrimaryConnectivityModel(mdl.α, mdl.β_width, mdl.β_work, mdl.β_local, mdl.β_comm))
+    return compute_objective(g, adjointpattern(A), Φ, Π, AffinePrimaryConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_local_net, mdl.β_remote_net))
 end

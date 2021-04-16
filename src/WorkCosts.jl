@@ -1,16 +1,16 @@
 abstract type AbstractWorkCostModel end
 
-@inline (mdl::AbstractWorkCostModel)(x_width, x_work, k) = mdl(x_width, x_work)
+@inline (mdl::AbstractWorkCostModel)(n_vertices, n_pins, k) = mdl(n_vertices, n_pins)
 
 struct AffineWorkCostModel{Tv} <: AbstractWorkCostModel
     α::Tv
-    β_width::Tv
-    β_work::Tv
+    β_vertex::Tv
+    β_pin::Tv
 end
 
 @inline cost_type(::Type{AffineWorkCostModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineWorkCostModel)(x_width, x_work) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work
+(mdl::AffineWorkCostModel)(n_vertices, n_pins) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin
 
 struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
@@ -35,10 +35,10 @@ bound_stripe(A::SparseMatrixCSC, K, ocl::WorkCostOracle{<:Any, <:AffineWorkCostM
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     m, n = size(A)
     N = nnz(A)
-    c_lo = mdl.α + fld(mdl.β_width * n + mdl.β_work * N, K)
-    if mdl.β_width ≥ 0 && mdl.β_work ≥ 0
-        c_hi = mdl.α + mdl.β_width * n + mdl.β_work * N
-    elseif mdl.β_width ≤ 0 && mdl.β_work ≤ 0
+    c_lo = mdl.α + fld(mdl.β_vertex * n + mdl.β_pin * N, K)
+    if mdl.β_vertex ≥ 0 && mdl.β_pin ≥ 0
+        c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * N
+    elseif mdl.β_vertex ≤ 0 && mdl.β_pin ≤ 0
         c_hi = mdl.α 
     else
         @assert false
@@ -61,13 +61,13 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::DomainPartition, mdl::A
     for k = 1:Π.K
         s = Π.spl[k]
         s′ = Π.spl[k + 1]
-        x_width = s′ - s
-        x_work = 0
+        n_vertices = s′ - s
+        n_pins = 0
         for _s = s : s′ - 1
             j = Π.prm[_s]
-            x_work += A.colptr[j + 1] - A.colptr[j]
+            n_pins += A.colptr[j + 1] - A.colptr[j]
         end
-        cst = g(cst, mdl(x_width, x_work, k))
+        cst = g(cst, mdl(n_vertices, n_pins, k))
     end
     return cst
 end

@@ -10,7 +10,7 @@ end
 
 @inline cost_type(::Type{<:ColumnBlockComponentCostModel{Tv}}) where {Tv} = Tv
 
-(mdl::ColumnBlockComponentCostModel{Tv, α_Col, β_Col})(x_width, x_work, x_net) where {Tv, α_Col, β_Col} = block_component(mdl.α_col, x_width) + x_net * block_component(mdl.β_col, x_width)
+(mdl::ColumnBlockComponentCostModel{Tv, α_Col, β_Col})(n_vertices, n_pins, n_nets) where {Tv, α_Col, β_Col} = block_component(mdl.α_col, n_vertices) + n_nets * block_component(mdl.β_col, n_vertices)
 
 struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, R}}, β_Col<:Tuple{Vararg{Any, R}}}
     α_row::α_Row

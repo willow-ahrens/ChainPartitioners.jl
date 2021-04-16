@@ -1,37 +1,37 @@
 struct FunkyConnectivityModel{Tv} <: AbstractConnectivityModel
     α::Vector{Tv}
-    β_width::Tv
-    β_work::Tv
+    β_vertex::Tv
+    β_pin::Tv
     β_net::Tv
 end
 
-(mdl::FunkyConnectivityModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::FunkyConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net 
 
 @inline ChainPartitioners.cost_type(::Type{FunkyConnectivityModel{Tv}}) where {Tv} = Tv
 
 struct FunkySymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     α::Vector{Tv}
-    β_width::Tv
-    β_work::Tv
+    β_vertex::Tv
+    β_pin::Tv
     β_net::Tv
-    Δ_work::Tv
+    Δ_pins::Tv
 end
 
 @inline ChainPartitioners.cost_type(::Type{FunkySymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::FunkySymmetricConnectivityModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::FunkySymmetricConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net 
 
 struct FunkyPrimaryConnectivityModel{Tv} <: AbstractPrimaryConnectivityModel
     α::Vector{Tv}
-    β_width::Tv
-    β_work::Tv
-    β_local::Tv
-    β_comm::Tv
+    β_vertex::Tv
+    β_pin::Tv
+    β_local_net::Tv
+    β_remote_net::Tv
 end
 
 @inline ChainPartitioners.cost_type(::Type{FunkyPrimaryConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::FunkyPrimaryConnectivityModel)(x_width, x_work, x_local, x_comm, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
+(mdl::FunkyPrimaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
 function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, mdl::Union{FunkyConnectivityModel, FunkySymmetricConnectivityModel})
     ocl = oracle_stripe(mdl, A)
@@ -53,21 +53,21 @@ LazyBisectCost = Union{AbstractConnectivityModel, AbstractSymmetricConnectivityM
 
 struct ConvexWorkCostModel <: AbstractWorkCostModel
     α::Float64
-    β_width::Float64
-    β_work::Float64
+    β_vertex::Float64
+    β_pin::Float64
 end
 
-(mdl::ConvexWorkCostModel)(x_width, x_work) = mdl.α + (x_width * mdl.β_width + x_work * mdl.β_work)^0.8
+(mdl::ConvexWorkCostModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^0.8
 
 @inline ChainPartitioners.cost_type(::Type{ConvexWorkCostModel}) = Float64
 
 struct ConcaveWorkCostModel <: AbstractWorkCostModel
     α::Float64
-    β_width::Float64
-    β_work::Float64
+    β_vertex::Float64
+    β_pin::Float64
 end
 
-(mdl::ConcaveWorkCostModel)(x_width, x_work) = mdl.α + (x_width * mdl.β_width + x_work * mdl.β_work)^2
+(mdl::ConcaveWorkCostModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^2
 
 @inline ChainPartitioners.cost_type(::Type{ConcaveWorkCostModel}) = Float64
 

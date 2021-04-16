@@ -1,18 +1,18 @@
 abstract type AbstractSymmetricConnectivityModel end
 
-@inline (mdl::AbstractSymmetricConnectivityModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractSymmetricConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl(n_vertices, n_pins, n_nets)
 
 struct AffineSymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     α::Tv
-    β_width::Tv
-    β_work::Tv
+    β_vertex::Tv
+    β_pin::Tv
     β_net::Tv
-    Δ_work::Tv
+    Δ_pins::Tv
 end
 
 @inline cost_type(::Type{AffineSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSymmetricConnectivityModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
+(mdl::AffineSymmetricConnectivityModel)(n_vertices, n_pins, n_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net
 
 function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSymmetricConnectivityModel})
     m, n = size(A)
@@ -29,11 +29,11 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymmetricConnectivityMod
         m, n = size(A)
         @assert m == n
         N = nnz(A)
-        x_work = 0
+        n_pins = 0
         for j = 1:n
-            x_work += max(A.colptr[j + 1] - A.colptr[j] - mdl.Δ_work, 0)
+            n_pins += max(A.colptr[j + 1] - A.colptr[j] - mdl.Δ_pins, 0)
         end
-        c_hi = mdl.α + mdl.β_width * n + mdl.β_work * x_work + mdl.β_net * m
+        c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * n_pins + mdl.β_net * m
         c_lo = mdl.α + fld(c_hi - mdl.α, K)
         return (c_lo, c_hi)
     end
@@ -56,7 +56,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymmetricConnectivityMod
         wrk = undefs(eltype(A.colptr), n + 1)
         wrk[1] = 1
         for j = 1:n
-            wrk[j + 1] = wrk[j] + max(A.colptr[j + 1] - A.colptr[j] - mdl.Δ_work, 0)
+            wrk[j + 1] = wrk[j] + max(A.colptr[j + 1] - A.colptr[j] - mdl.Δ_pins, 0)
         end
 
         pos = A.colptr
@@ -121,8 +121,8 @@ mutable struct SymmetricConnectivityStepOracle{Tv, Ti, Mdl} <: AbstractOracleCos
     Δ_net::Vector{Ti}
     j::Ti
     j′::Ti
-    x_work::Ti
-    x_net::Ti
+    n_pins::Ti
+    n_nets::Ti
 end
 
 function oracle_stripe(hint::StepHint, mdl::AbstractSymmetricConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
@@ -139,9 +139,9 @@ oracle_model(ocl::SymmetricConnectivityStepOracle) = ocl.mdl
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
     ocl = stp.ocl
-    x_work = ocl.x_work
-    x_net = ocl.x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
+    n_pins = ocl.n_pins
+    n_nets = ocl.n_nets
+    return ocl.mdl(j′ - j, n_pins, n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -151,17 +151,17 @@ end
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
-    x_work = ocl.x_work
-    x_net = ocl.x_net
+    n_pins = ocl.n_pins
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
+    Δ_pins = ocl.mdl.Δ_pins
     hst = ocl.hst
-    x_net -= Δ_net[j]
-    x_work -= max(pos[j] - pos[j - 1] - Δ_work, 0)
+    n_nets -= Δ_net[j]
+    n_pins -= max(pos[j] - pos[j - 1] - Δ_pins, 0)
     ocl.j = j
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
+    ocl.n_pins = n_pins
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, n_pins, n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -171,17 +171,17 @@ end
     ocl = stp.ocl
     A = ocl.A
     pos = A.colptr
-    x_work = ocl.x_work
-    x_net = ocl.x_net
+    n_pins = ocl.n_pins
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
+    Δ_pins = ocl.mdl.Δ_pins
     hst = ocl.hst
-    x_net += Δ_net[j + 1]
-    x_work += max(pos[j + 1] - pos[j] - Δ_work, 0)
+    n_nets += Δ_net[j + 1]
+    n_pins += max(pos[j + 1] - pos[j] - Δ_pins, 0)
     ocl.j = j
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
+    ocl.n_pins = n_pins
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, n_pins, n_nets, k...)
 end
 
 @propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
@@ -192,41 +192,41 @@ end
     A = ocl.A
     pos = A.colptr
     idx = A.rowval
-    x_work = ocl.x_work
-    x_net = ocl.x_net
+    n_pins = ocl.n_pins
+    n_nets = ocl.n_nets
     Δ_net = ocl.Δ_net
-    Δ_work = ocl.mdl.Δ_work
+    Δ_pins = ocl.mdl.Δ_pins
     hst = ocl.hst
     q = pos[j′ - 1]
     q′ = pos[j′]
     Δ_net[j′] = q′ - q
-    x_work += max(q′ - q - Δ_work, 0)
+    n_pins += max(q′ - q - Δ_pins, 0)
     for _q = q:q′ - 1
         i = idx[_q]
         j₀ = hst[i] - 1
-        x_net += j₀ < j
+        n_nets += j₀ < j
         Δ_net[j₀ + 1] -= 1
         hst[i] = j′
     end
     j₀ = hst[j′ - 1] - 1
     Δ_net[j′] += j₀ < j′ - 1
-    x_net += j₀ < j
+    n_nets += j₀ < j
     Δ_net[j₀ + 1] -= j₀ < j′ - 1
     hst[j′ - 1] = j′
     ocl.j′ = j′
-    ocl.x_work = x_work
-    ocl.x_net = x_net
-    return ocl.mdl(j′ - j, x_work, x_net, k...)
+    ocl.n_pins = n_pins
+    ocl.n_nets = n_nets
+    return ocl.mdl(j′ - j, n_pins, n_nets, k...)
 end
 
 @inline function (ocl::SymmetricConnectivityStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     begin
         ocl_j = ocl.j
         ocl_j′ = ocl.j′
-        x_work = ocl.x_work
-        x_net = ocl.x_net
+        n_pins = ocl.n_pins
+        n_nets = ocl.n_nets
         Δ_net = ocl.Δ_net
-        Δ_work = ocl.mdl.Δ_work
+        Δ_pins = ocl.mdl.Δ_pins
         A = ocl.A
         pos = A.colptr
         idx = A.rowval
@@ -235,25 +235,25 @@ end
         if j′ < ocl_j′
             ocl_j = Ti(1)
             ocl_j′ = Ti(1)
-            x_work = Ti(0)
-            x_net = Ti(0)
+            n_pins = Ti(0)
+            n_nets = Ti(0)
             one!(ocl.hst)
         end
         while ocl_j′ < j′
             q = pos[ocl_j′]
             q′ = pos[ocl_j′ + 1]
             Δ_net[ocl_j′ + 1] = q′ - q
-            x_work += max(q′ - q - Δ_work, 0)
+            n_pins += max(q′ - q - Δ_pins, 0)
             for _q = q:q′ - 1
                 i = idx[_q]
                 j₀ = hst[i] - 1
-                x_net += j₀ < ocl_j
+                n_nets += j₀ < ocl_j
                 Δ_net[j₀ + 1] -= 1
                 hst[i] = ocl_j′ + 1
             end
             j₀ = hst[ocl_j′] - 1
             Δ_net[ocl_j′ + 1] += j₀ < ocl_j′
-            x_net += j₀ < ocl_j
+            n_nets += j₀ < ocl_j
             Δ_net[j₀ + 1] -= j₀ < ocl_j′
             hst[ocl_j′] = ocl_j′ + 1
             ocl_j′ += 1
@@ -262,30 +262,30 @@ end
             ocl_j = j′ - 1
             q = pos[ocl_j]
             q′ = pos[ocl_j + 1]
-            x_work = max(q′ - q - Δ_work, 0)
-            x_net = Δ_net[ocl_j + 1]
+            n_pins = max(q′ - q - Δ_pins, 0)
+            n_nets = Δ_net[ocl_j + 1]
         elseif j == j′
             ocl_j = j′
-            x_work = Ti(0)
-            x_net = Ti(0)
+            n_pins = Ti(0)
+            n_nets = Ti(0)
         else
             while j < ocl_j
                 ocl_j -= 1
-                x_work += max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
-                x_net += Δ_net[ocl_j + 1]
+                n_pins += max(pos[ocl_j + 1] - pos[ocl_j] - Δ_pins, 0)
+                n_nets += Δ_net[ocl_j + 1]
             end
             while j > ocl_j
-                x_work -= max(pos[ocl_j + 1] - pos[ocl_j] - Δ_work, 0)
-                x_net -= Δ_net[ocl_j + 1]
+                n_pins -= max(pos[ocl_j + 1] - pos[ocl_j] - Δ_pins, 0)
+                n_nets -= Δ_net[ocl_j + 1]
                 ocl_j += 1
             end
         end
 
         ocl.j = ocl_j
         ocl.j′ = ocl_j′
-        ocl.x_work = x_work
-        ocl.x_net = x_net
-        return ocl.mdl(j′ - j, x_work, x_net, k...)
+        ocl.n_pins = n_pins
+        ocl.n_nets = n_nets
+        return ocl.mdl(j′ - j, n_pins, n_nets, k...)
     end
 end
 =#

@@ -3,7 +3,7 @@ struct OverlapChunker
     w_max::Int
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...; x_net = nothing, kwargs...) where {Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...; n_nets = nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns
@@ -18,11 +18,11 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
         hst = zeros(Int, m)
 
         spl = Vector{Int}(undef, n + 1) # Column split locations
-        if x_net isa Nothing
-            x_net = Ref(Vector{Int}(undef, n)) # x_net[j] is the corresponding number of distinct nonzero entries in the part
+        if n_nets isa Nothing
+            n_nets = Ref(Vector{Int}(undef, n)) # n_nets[j] is the corresponding number of distinct nonzero entries in the part
         else
-            @assert x_net isa Ref{Vector{Int}}
-            x_net[] = Vector{Int}(undef, n) # x_net[j] is the corresponding number of distinct nonzero entries in the part
+            @assert n_nets isa Ref{Vector{Int}}
+            n_nets[] = Vector{Int}(undef, n) # n_nets[j] is the corresponding number of distinct nonzero entries in the part
         end
 
         d = A_pos[2] - A_pos[1] #The number of distinct values in the part
@@ -58,7 +58,7 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
             if w == w_max || cc′ < ρ * min(c, c′)
                 K += 1
                 spl[K + 1] = j′
-                x_net[][K] = d
+                n_nets[][K] = d
                 j = j′
                 d = c′
             else
@@ -66,10 +66,10 @@ function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::OverlapChunker, args...
             end
         end
         K += 1
-        x_net[][K] = d
+        n_nets[][K] = d
         spl[K + 1] = n + 1
         resize!(spl, K + 1)
-        resize!(x_net[], K)
+        resize!(n_nets[], K)
         return SplitPartition{Ti}(K, spl)
     end
 end
