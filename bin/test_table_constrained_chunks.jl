@@ -29,7 +29,7 @@ for mtx in [
     x = rand(n)
     ref_time = @belapsed(mul!($y, $A, $x))
 
-    mdl = AffineNetCostModel{Int64}(0, 0, 0, 1)
+    mdl = AffineConnectivityModel{Int64}(0, 0, 0, 1)
 
     #println()
     #println()

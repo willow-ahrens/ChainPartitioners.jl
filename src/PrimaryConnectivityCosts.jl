@@ -1,8 +1,8 @@
-abstract type AbstractCommCostModel end
+abstract type AbstractPrimaryConnectivityModel end
 
-@inline (mdl::AbstractCommCostModel)(x_width, x_work, x_net, x_local, k) = mdl(x_width, x_work, x_net, x_local)
+@inline (mdl::AbstractPrimaryConnectivityModel)(x_width, x_work, x_net, x_local, k) = mdl(x_width, x_work, x_net, x_local)
 
-struct AffineCommCostModel{Tv} <: AbstractCommCostModel
+struct AffinePrimaryConnectivityModel{Tv} <: AbstractPrimaryConnectivityModel
     α::Tv
     β_width::Tv
     β_work::Tv
@@ -10,20 +10,20 @@ struct AffineCommCostModel{Tv} <: AbstractCommCostModel
     β_comm::Tv
 end
 
-@inline cost_type(::Type{AffineCommCostModel{Tv}}) where {Tv} = Tv
+@inline cost_type(::Type{AffinePrimaryConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineCommCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
+(mdl::AffinePrimaryConnectivityModel)(x_width, x_work, x_local, x_comm, k) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 
-struct CommCostOracle{Ti, Net, Lcr, Mdl} <: AbstractOracleCost{Mdl}
+struct PrimaryConnectivityOracle{Ti, Net, Lcr, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
     lcr::Lcr
     mdl::Mdl
 end
 
-oracle_model(ocl::CommCostOracle) = ocl.mdl
+oracle_model(ocl::PrimaryConnectivityOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:Any, <:Any, <:AffineCommCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::PrimaryConnectivityOracle{<:Any, <:Any, <:Any, <:AffinePrimaryConnectivityModel})
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
@@ -32,7 +32,7 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::CommCostOracle{<:Any, <:Any, <
     return (c_lo, c_hi)
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineCommCostModel)
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffinePrimaryConnectivityModel)
     @inbounds begin
         m, n = size(A)
         N = nnz(A)
@@ -53,7 +53,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineCommCostModel)
     end
 end
 
-function oracle_stripe(hint::AbstractHint, mdl::AbstractCommCostModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractPrimaryConnectivityModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
@@ -62,11 +62,11 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractCommCostModel, A::Sparse
         end
         args, Ap = partwise(A, convert(MapPartition, Π))
         lcr = partwisecost!(hint, args..., netcount(hint, Ap, kwargs...); kwargs...)
-        return CommCostOracle(pos, net, lcr, mdl)
+        return PrimaryConnectivityOracle(pos, net, lcr, mdl)
     end
 end
 
-@inline function (cst::CommCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::PrimaryConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net(j, j′)
@@ -75,7 +75,7 @@ end
     end
 end
 
-@inline function (stp::Step{Ocl})(_j, _j′, _k) where {Ti, Mdl, Ocl <: CommCostOracle{Ti, Mdl}}
+@inline function (stp::Step{Ocl})(_j, _j′, _k) where {Ti, Mdl, Ocl <: PrimaryConnectivityOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
         j = destep(_j)
@@ -88,13 +88,13 @@ end
     end
 end
 
-compute_objective(g::G, A::SparseMatrixCSC, Π, Φ, mdl::AbstractCommCostModel) where {G} =
+compute_objective(g::G, A::SparseMatrixCSC, Π, Φ, mdl::AbstractPrimaryConnectivityModel) where {G} =
     compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
 
-compute_objective(g::G, A::SparseMatrixCSC, Π, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G} =
+compute_objective(g::G, A::SparseMatrixCSC, Π, Φ::SplitPartition, mdl::AbstractPrimaryConnectivityModel) where {G} =
     compute_objective(g, A, convert(MapPartition, Π), Φ, mdl)
 
-function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractCommCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::SplitPartition, mdl::AbstractPrimaryConnectivityModel) where {G}
     @assert Φ.K == Π.K
     cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
@@ -127,7 +127,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::Split
     return cst
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractCommCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::DomainPartition, mdl::AbstractPrimaryConnectivityModel) where {G}
     @assert Φ.K == Π.K
     cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
@@ -161,14 +161,14 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::MapPartition, Φ::Domai
     return cst
 end
 
-function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractCommCostModel)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, Φ::MapPartition, mdl::AbstractPrimaryConnectivityModel)
     return compute_objective(g, A, Π, convert(DomainPartition, Φ), mdl)
 end
 
 
 
 #=
-mutable struct CommCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
+mutable struct PrimaryConnectivityStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
     hst::Vector{Ti}
@@ -183,16 +183,16 @@ mutable struct CommCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     x_local::Ti
 end
 
-function oracle_stripe(hint::StepHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::StepHint, mdl::AbstractConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return NetCostStepOracle(A, mdl, ones(Ti, m), ones(Ti, K), undefs(Ti, n + 1), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(1), Ti(0))
+        return ConnectivityStepOracle(A, mdl, ones(Ti, m), ones(Ti, K), undefs(Ti, n + 1), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(1), Ti(0))
     end
 end
 
-oracle_model(ocl::CommCostStepOracle) = ocl.mdl
+oracle_model(ocl::PrimaryConnectivityStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: CommCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: PrimaryConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = destep(_k)
@@ -204,7 +204,7 @@ oracle_model(ocl::CommCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: CommCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: PrimaryConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = destep(_k)
@@ -221,7 +221,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k::Same{Ti}) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = destep(_k)
@@ -238,7 +238,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = destep(_k)
@@ -266,7 +266,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@inline function (ocl::NetCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@inline function (ocl::ConnectivityStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     @inbounds begin
         ocl_j = ocl.j
         ocl_j′ = ocl.j′

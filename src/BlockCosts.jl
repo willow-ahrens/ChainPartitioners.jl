@@ -1,4 +1,4 @@
-struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractNetCostModel
+struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractConnectivityModel
     α_col::α_Col
     β_col::β_Col
 end

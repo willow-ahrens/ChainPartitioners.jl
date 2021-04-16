@@ -1,15 +1,15 @@
-struct FunkyNetCostModel{Tv} <: AbstractNetCostModel
+struct FunkyConnectivityModel{Tv} <: AbstractConnectivityModel
     α::Vector{Tv}
     β_width::Tv
     β_work::Tv
     β_net::Tv
 end
 
-(mdl::FunkyNetCostModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::FunkyConnectivityModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-@inline ChainPartitioners.cost_type(::Type{FunkyNetCostModel{Tv}}) where {Tv} = Tv
+@inline ChainPartitioners.cost_type(::Type{FunkyConnectivityModel{Tv}}) where {Tv} = Tv
 
-struct FunkySymCostModel{Tv} <: AbstractSymCostModel
+struct FunkySymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     α::Vector{Tv}
     β_width::Tv
     β_work::Tv
@@ -17,11 +17,11 @@ struct FunkySymCostModel{Tv} <: AbstractSymCostModel
     Δ_work::Tv
 end
 
-@inline ChainPartitioners.cost_type(::Type{FunkySymCostModel{Tv}}) where {Tv} = Tv
+@inline ChainPartitioners.cost_type(::Type{FunkySymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::FunkySymCostModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::FunkySymmetricConnectivityModel)(x_width, x_work, x_net, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-struct FunkyCommCostModel{Tv} <: AbstractCommCostModel
+struct FunkyPrimaryConnectivityModel{Tv} <: AbstractPrimaryConnectivityModel
     α::Vector{Tv}
     β_width::Tv
     β_work::Tv
@@ -29,25 +29,25 @@ struct FunkyCommCostModel{Tv} <: AbstractCommCostModel
     β_comm::Tv
 end
 
-@inline ChainPartitioners.cost_type(::Type{FunkyCommCostModel{Tv}}) where {Tv} = Tv
+@inline ChainPartitioners.cost_type(::Type{FunkyPrimaryConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::FunkyCommCostModel)(x_width, x_work, x_local, x_comm, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
+(mdl::FunkyPrimaryConnectivityModel)(x_width, x_work, x_local, x_comm, k) = mdl.α[k] + x_width * mdl.β_width + x_work * mdl.β_work + x_local * mdl.β_local + x_comm * mdl.β_comm
 
-function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, mdl::Union{FunkyNetCostModel, FunkySymCostModel})
+function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, mdl::Union{FunkyConnectivityModel, FunkySymmetricConnectivityModel})
     ocl = oracle_stripe(mdl, A)
     m, n = size(A)
     args = (minimum(mdl.α), maximum(mdl.α), maximum(ocl(1, n + 1, k) for k = 1:K))
     return (minimum(args), maximum(args))
 end
 
-function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, Π, mdl::Union{FunkyCommCostModel})
+function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, Π, mdl::Union{FunkyPrimaryConnectivityModel})
     ocl = oracle_stripe(mdl, A, Π)
     m, n = size(A)
     args = (minimum(mdl.α), maximum(mdl.α), maximum(ocl(1, n + 1, k) for k = 1:K))
     return (minimum(args), maximum(args))
 end
 
-LazyBisectCost = Union{AbstractNetCostModel, AbstractSymCostModel, AbstractCommCostModel}
+LazyBisectCost = Union{AbstractConnectivityModel, AbstractSymmetricConnectivityModel, AbstractPrimaryConnectivityModel}
 
 
 
@@ -85,12 +85,12 @@ end
         for K = [1, 2, 3, 4, 8]
             for f = [
                 AffineWorkCostModel(0, 10, 1);
-                AffineNetCostModel(0, 3, 1, 3);
-                AffineCommCostModel(0, 2, 1, 3, 6);
-                m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
-                FunkyNetCostModel(rand(1:10, K), 3, 1, 3);
-                FunkyCommCostModel(rand(1:10, K), 2, 1, 3, 6);
-                m == n ? FunkySymCostModel(rand(1:10, K), 3, 1, 3, 5) : [];
+                AffineConnectivityModel(0, 3, 1, 3);
+                AffinePrimaryConnectivityModel(0, 2, 1, 3, 6);
+                m == n ? AffineSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
+                FunkyConnectivityModel(rand(1:10, K), 3, 1, 3);
+                FunkyPrimaryConnectivityModel(rand(1:10, K), 2, 1, 3, 6);
+                m == n ? FunkySymmetricConnectivityModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
@@ -118,13 +118,13 @@ end
             # Affine cost functions are commented out because their upper and lower bounds assume nonnegative coefficients.
             for f = [
                 #AffineWorkCostModel(1 + nnz(A), 0, -1);
-                #AffineNetCostModel(1 + nnz(A) + 3n + 3m, -3, -1, -3);
-                #AffineCommCostModel(1 + nnz(A) + 3n + 6m, -2, -1, -3, -6);
-                AffineLocalCostModel(0, 2, 1, 3, 6);
-                FunkyNetCostModel(1 + nnz(A) + 3n + 3m .+ rand(1:10, K), -3, -1, -3);
-                FunkyCommCostModel(1 + nnz(A) + 3n + 6m .+ rand(1:10, K), -2, -1, -3, -6);
-                #m == n ? AffineSymCostModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
-                m == n ? FunkySymCostModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
+                #AffineConnectivityModel(1 + nnz(A) + 3n + 3m, -3, -1, -3);
+                #AffinePrimaryConnectivityModel(1 + nnz(A) + 3n + 6m, -2, -1, -3, -6);
+                AffineSecondaryConnectivityModel(0, 2, 1, 3, 6);
+                FunkyConnectivityModel(1 + nnz(A) + 3n + 3m .+ rand(1:10, K), -3, -1, -3);
+                FunkyPrimaryConnectivityModel(1 + nnz(A) + 3n + 6m .+ rand(1:10, K), -2, -1, -3, -6);
+                #m == n ? AffineSymmetricConnectivityModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
+                m == n ? FunkySymmetricConnectivityModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
@@ -148,8 +148,8 @@ end
             end
 
             for f = [
-                AffineNetCostModel(0, 3, 1, 3);
-                m == n ? AffineSymCostModel(0, 3, 1, 3, 5) : [];
+                AffineConnectivityModel(0, 3, 1, 3);
+                m == n ? AffineSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f), Π)
@@ -169,11 +169,11 @@ end
 
             for (f,) = [
                 (ConvexWorkCostModel(0, 0, 1),);
-                (AffineNetCostModel(0.0, 0.0, 0.0, 1.0),);
+                (AffineConnectivityModel(0.0, 0.0, 0.0, 1.0),);
                 (AffineWorkCostModel(0, 0, 0),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
                 (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
                 (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
                 (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
@@ -219,7 +219,7 @@ end
         end
 
         for (f, w_max) = [
-            (ConstrainedCost(AffineNetCostModel(0, 3, 1, 3), VertexCount(), 4), 4);
+            (ConstrainedCost(AffineConnectivityModel(0, 3, 1, 3), VertexCount(), 4), 4);
             (ConstrainedCost(BlockComponentCostModel{Int64}(0, 0, (10, identity), (2, x->2x)), VertexCount(), 4), 4);
             (ConstrainedCost(BlockComponentCostModel{Int64}(identity, x->3x, (10, identity), (2, x->2x)), VertexCount(), 4), 4);
         ]
@@ -246,12 +246,12 @@ end
         for (f,) = [
             (ConvexWorkCostModel(0.0, 0, 1),);
             (ConvexWorkCostModel(-0.7, 0, 1),);
-            (AffineNetCostModel(-0.5, 0.0, 0.0, 1.0),);
-            (AffineNetCostModel(0, 0, 0, 1),);
+            (AffineConnectivityModel(-0.5, 0.0, 0.0, 1.0),);
+            (AffineConnectivityModel(0, 0, 0, 1),);
             (AffineWorkCostModel(0, 0, 0),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-            (ConstrainedCost(AffineNetCostModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
             (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
             (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);

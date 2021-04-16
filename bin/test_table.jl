@@ -25,23 +25,23 @@ for mtx in [
         ("1D", AlternatingPacker(EquiChunker(1), DynamicTotalChunker(mdl, 8))),
         ("strict", AlternatingPacker(StrictChunker(8), StrictChunker(8))),
         ("overlap", AlternatingPacker(OverlapChunker(0.9, 8), OverlapChunker(0.9, 8))),
-        ("dynamic", AlternatingPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 4), 8), DynamicTotalChunker(mdl, 8))),
+        ("dynamic", AlternatingPacker(DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 4), 8), DynamicTotalChunker(mdl, 8))),
         ("dynamic2", AlternatingPacker(
-            DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 4), 8),
+            DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 4), 8),
             DynamicTotalChunker(mdl, 8),
             DynamicTotalChunker(mdl, 8),
             DynamicTotalChunker(mdl, 8),
             DynamicTotalChunker(mdl, 8),
         )),
         ("dynamic3", AlternatingPacker(
-            DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 1), 8),
+            DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 1), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (2, identity)), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (3, identity)), 8),
             DynamicTotalChunker(mdl, 8),
             DynamicTotalChunker(mdl, 8)
         )),
         ("dynamic4", AlternatingPacker(
-            DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 7), 8),
+            DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 7), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (6, identity)), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (5, identity)), 8),
             DynamicTotalChunker(mdl, 8),
@@ -50,15 +50,15 @@ for mtx in [
         #=
         ("strict_sym", SymmetricPacker(StrictChunker(8))),
         ("overlap_sym", SymmetricPacker(OverlapChunker(0.9, 8))),
-        ("dynamic_sym", SymmetricPacker(DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 4), 8), DynamicTotalChunker(mdl, 8))),
+        ("dynamic_sym", SymmetricPacker(DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 4), 8), DynamicTotalChunker(mdl, 8))),
         ("dynamic2_sym", SymmetricPacker(
-            DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 4), 8),
+            DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 4), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (4, identity)), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (4, identity)), 8),
             DynamicTotalChunker(mdl, 8)
         )),
         ("dynamic3_sym", SymmetricPacker(
-            DynamicTotalChunker(AffineFillNetCostModel(0, 0, 1, 1), 8),
+            DynamicTotalChunker(AffineFillConnectivityModel(0, 0, 1, 1), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (2, identity)), 8),
             DynamicTotalChunker(BlockComponentCostModel{Int64}((8, 8), 0, 0, (1, identity), (3, identity)), 8),
             DynamicTotalChunker(mdl, 8)

@@ -1,61 +1,61 @@
-abstract type AbstractEnvNetCostModel end
+abstract type AbstractEnvConnectivityModel end
 
-@inline (mdl::AbstractEnvNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractEnvConnectivityModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
-struct AffineEnvNetCostModel{Tv} <: AbstractEnvNetCostModel
+struct AffineEnvConnectivityModel{Tv} <: AbstractEnvConnectivityModel
     α::Tv
     β_width::Tv
     β_work::Tv
     β_net::Tv
 end
 
-@inline cost_type(::Type{AffineEnvNetCostModel{Tv}}) where {Tv} = Tv
+@inline cost_type(::Type{AffineEnvConnectivityModel{Tv}}) where {Tv} = Tv
 
-AffineEnvNetCostModel(α, β_width, β_work, β_net, k) = AffineEnvNetCostModel(α, β_width, β_work, β_net, k)
+AffineEnvConnectivityModel(α, β_width, β_work, β_net, k) = AffineEnvConnectivityModel(α, β_width, β_work, β_net, k)
 
-(mdl::AffineEnvNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
+(mdl::AffineEnvConnectivityModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-struct EnvNetCostOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
+struct EnvConnectivityOracle{Ti, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     env::EnvelopeMatrix{Ti}
     mdl::Mdl
 end
 
-oracle_model(ocl::EnvNetCostOracle) = ocl.mdl
+oracle_model(ocl::EnvConnectivityOracle) = ocl.mdl
 
-function upperbound_stripe(A::SparseMatrixCSC, K, ocl::EnvNetCostOracle{<:Any, <:AffineEnvNetCostModel})
+function upperbound_stripe(A::SparseMatrixCSC, K, ocl::EnvConnectivityOracle{<:Any, <:AffineEnvConnectivityModel})
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
     (env_lo, env_hi) = ocl.env[1, end]
     return mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * (env_hi - env_lo)
 end
-function upperbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
+function upperbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvConnectivityModel)
     m, n = size(A)
     N = nnz(A)
     (env_lo, env_hi) = extrema(A.rowval)
     return mdl.α + mdl.β_width * n + mdl.β_work * N + mdl.β_net * (env_hi - env_lo)
 end
 
-function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::EnvNetCostOracle{<:Any, <:AffineEnvNetCostModel})
+function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::EnvConnectivityOracle{<:Any, <:AffineEnvConnectivityModel})
     return fld(upperbound_stripe(A, K, mdl), K) #fld is not strictly correct here
 end
-function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvNetCostModel)
+function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvConnectivityModel)
     return fld(upperbound_stripe(A, K, mdl), K)
 end
 
-function oracle_stripe(hint::AbstractHint, mdl::AbstractEnvNetCostModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractEnvConnectivityModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
         if env === nothing
             env = rowenvelope(A) #TODO hint
         end
-        return EnvNetCostOracle(pos, env, mdl)
+        return EnvConnectivityOracle(pos, env, mdl)
     end
 end
 
-@inline function (cst::EnvNetCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::EnvConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d_lo, d_hi = cst.env[j, j′]
@@ -64,7 +64,7 @@ end
     end
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvNetCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractEnvConnectivityModel) where {G}
     cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     for k = 1:Π.K
@@ -89,7 +89,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::Ab
     return cst
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvNetCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, K, Π::DomainPartition, mdl::AbstractEnvConnectivityModel) where {G}
     cst = objective_identity(g, cost_type(mdl))
     m, n = size(A)
     hst = zeros(m)
@@ -116,6 +116,6 @@ function compute_objective(g::G, A::SparseMatrixCSC, K, Π::DomainPartition, mdl
     return cst
 end
 
-function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvNetCostModel)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractEnvConnectivityModel)
     return compute_objective(g, A, convert(DomainPartition, Π), mdl)
 end

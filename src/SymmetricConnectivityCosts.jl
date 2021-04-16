@@ -1,8 +1,8 @@
-abstract type AbstractSymCostModel end
+abstract type AbstractSymmetricConnectivityModel end
 
-@inline (mdl::AbstractSymCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractSymmetricConnectivityModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
-struct AffineSymCostModel{Tv} <: AbstractSymCostModel
+struct AffineSymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     α::Tv
     β_width::Tv
     β_work::Tv
@@ -10,11 +10,11 @@ struct AffineSymCostModel{Tv} <: AbstractSymCostModel
     Δ_work::Tv
 end
 
-@inline cost_type(::Type{AffineSymCostModel{Tv}}) where {Tv} = Tv
+@inline cost_type(::Type{AffineSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSymCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
+(mdl::AffineSymmetricConnectivityModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSymCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSymmetricConnectivityModel})
     m, n = size(A)
     @assert m == n
     N = nnz(A)
@@ -24,7 +24,7 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSym
     return (c_lo, c_hi)
 end
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymmetricConnectivityModel)
     @inbounds begin
         m, n = size(A)
         @assert m == n
@@ -39,16 +39,16 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymCostModel)
     end
 end
 
-struct SymCostOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
+struct SymmetricConnectivityOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     wrk::Vector{Ti}
     net::Net
     mdl::Mdl
 end
 
-oracle_model(ocl::SymCostOracle) = ocl.mdl
+oracle_model(ocl::SymmetricConnectivityOracle) = ocl.mdl
 
 
-function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::AbstractHint, mdl::AbstractSymmetricConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         @assert m == n
@@ -89,11 +89,11 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymCostModel, A::SparseM
 
         net = NetCount(n, pos′, DominanceCount{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
 
-        return SymCostOracle(wrk, net, mdl)
+        return SymmetricConnectivityOracle(wrk, net, mdl)
     end
 end
 
-@inline function (cst::SymCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::SymmetricConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.wrk[j′] - cst.wrk[j]
         d = cst.net[j, j′]
@@ -101,7 +101,7 @@ end
     end
 end
 
-@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: SymCostOracle{Ti, Mdl}}
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: SymmetricConnectivityOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
         j = destep(_j)
@@ -114,7 +114,7 @@ end
 end
 
 #=
-mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
+mutable struct SymmetricConnectivityStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
     hst::Vector{Ti}
@@ -125,16 +125,16 @@ mutable struct SymCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     x_net::Ti
 end
 
-function oracle_stripe(hint::StepHint, mdl::AbstractSymCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::StepHint, mdl::AbstractSymmetricConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return SymCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0), Ti(0))
+        return SymmetricConnectivityStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(0), Ti(0))
     end
 end
 
-oracle_model(ocl::SymCostStepOracle) = ocl.mdl
+oracle_model(ocl::SymmetricConnectivityStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -144,7 +144,7 @@ oracle_model(ocl::SymCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -164,7 +164,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -184,7 +184,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: SymmetricConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -219,7 +219,7 @@ end
     return ocl.mdl(j′ - j, x_work, x_net, k...)
 end
 
-@inline function (ocl::SymCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@inline function (ocl::SymmetricConnectivityStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     begin
         ocl_j = ocl.j
         ocl_j′ = ocl.j′

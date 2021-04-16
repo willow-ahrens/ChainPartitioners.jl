@@ -1,24 +1,24 @@
-abstract type AbstractNetCostModel end
+abstract type AbstractConnectivityModel end
 
-@inline (mdl::AbstractNetCostModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
+@inline (mdl::AbstractConnectivityModel)(x_width, x_work, x_net, k) = mdl(x_width, x_work, x_net)
 
 
 
-struct AffineNetCostModel{Tv} <: AbstractNetCostModel
+struct AffineConnectivityModel{Tv} <: AbstractConnectivityModel
     α::Tv
     β_width::Tv
     β_work::Tv
     β_net::Tv
 end
 
-@inline cost_type(::Type{AffineNetCostModel{Tv}}) where {Tv} = Tv
+@inline cost_type(::Type{AffineConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineNetCostModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
+(mdl::AffineConnectivityModel)(x_width, x_work, x_net) = mdl.α + x_width * mdl.β_width + x_work * mdl.β_work + x_net * mdl.β_net 
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineNetCostModel)
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineConnectivityModel)
     return bound_stripe(A, K, oracle_stripe(StepHint(), mdl, A))
 end
-function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineNetCostModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineConnectivityModel})
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
@@ -29,26 +29,26 @@ end
 
 
 
-struct NetCostDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
+struct ConnectivityDominanceOracle{Ti, Net, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
     mdl::Mdl
 end
 
-oracle_model(ocl::NetCostDominanceOracle) = ocl.mdl
+oracle_model(ocl::ConnectivityDominanceOracle) = ocl.mdl
 
-function oracle_stripe(hint::AbstractHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::AbstractHint, mdl::AbstractConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; net=nothing, adj_A=nothing, kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
         if net === nothing
             net = netcount(hint, A; kwargs...)
         end
-        return NetCostDominanceOracle(pos, net, mdl)
+        return ConnectivityDominanceOracle(pos, net, mdl)
     end
 end
 
-@inline function (cst::NetCostDominanceOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::ConnectivityDominanceOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net[j, j′]
@@ -56,7 +56,7 @@ end
     end
 end
 
-@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: NetCostDominanceOracle{Ti, Mdl}}
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: ConnectivityDominanceOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
         j = destep(_j)
@@ -70,7 +70,7 @@ end
 
 
 #=
-mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
+mutable struct ConnectivityStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     A::SparseMatrixCSC{Tv, Ti}
     mdl::Mdl
     hst::Vector{Ti}
@@ -81,16 +81,16 @@ mutable struct NetCostStepOracle{Tv, Ti, Mdl} <: AbstractOracleCost{Mdl}
     x_net::Ti
 end
 
-function oracle_stripe(hint::StepHint, mdl::AbstractNetCostModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
+function oracle_stripe(hint::StepHint, mdl::AbstractConnectivityModel, A::SparseMatrixCSC{Tv, Ti}; kwargs...) where {Tv, Ti}
     @inbounds begin
         m, n = size(A)
-        return NetCostStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
+        return ConnectivityStepOracle(A, mdl, ones(Ti, m), undefs(Ti, n + 1), Ti(1), Ti(1), Ti(1), Ti(0))
     end
 end
 
-oracle_model(ocl::NetCostStepOracle) = ocl.mdl
+oracle_model(ocl::ConnectivityStepOracle) = ocl.mdl
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -102,7 +102,7 @@ oracle_model(ocl::NetCostStepOracle) = ocl.mdl
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Next{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -119,7 +119,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Prev{Ti}, _j′::Same{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -136,7 +136,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: NetCostStepOracle{Tv, Ti, Mdl}}
+@propagate_inbounds function (stp::Step{Ocl})(_j::Same{Ti}, _j′::Next{Ti}, _k...) where {Tv, Ti, Mdl, Ocl <: ConnectivityStepOracle{Tv, Ti, Mdl}}
     j = destep(_j)
     j′ = destep(_j′)
     k = maptuple(destep, _k...)
@@ -164,7 +164,7 @@ end
     return ocl.mdl(j′ - j, q′ - pos[j], x_net, k...)
 end
 
-@inline function (ocl::NetCostStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
+@inline function (ocl::ConnectivityStepOracle{Tv, Ti, Mdl})(j::Ti, j′::Ti, k...) where {Tv, Ti, Mdl}
     @inbounds begin
         ocl_j = ocl.j
         ocl_j′ = ocl.j′
@@ -224,11 +224,11 @@ end
 
 
 #=
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:AbstractNetCostModel, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{F}, args...; kwargs...) where {F<:AbstractConnectivityModel, Tv, Ti}
     return pack_stripe(A, DynamicTotalChunker(ConstrainedCost(method.f, FeasibleCost(), Feasible())), args..., kwargs...)
 end
 
-function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost{F}}, args...; x_net = nothing, kwargs...) where {F<:AbstractNetCostModel, Tv, Ti}
+function pack_stripe(A::SparseMatrixCSC{Tv, Ti}, method::DynamicTotalChunker{<:ConstrainedCost{F}}, args...; x_net = nothing, kwargs...) where {F<:AbstractConnectivityModel, Tv, Ti}
     @inbounds begin
         # matrix notation...
         # i = 1:m rows, j = 1:n columns

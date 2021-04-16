@@ -44,22 +44,22 @@ export WorkCostOracle
 
 export VertexCount
 
-export AbstractNetCostModel
-export AffineNetCostModel
-export NetCostOracle
-export AbstractSymCostModel
-export AffineSymCostModel
-export SymCostOracle
-export AbstractCommCostModel
-export AffineCommCostModel
-export CommCostOracle
-export AbstractLocalCostModel
-export AffineLocalCostModel
-export LocalCostOracle
+export AbstractConnectivityModel
+export AffineConnectivityModel
+export ConnectivityOracle
+export AbstractSymmetricConnectivityModel
+export AffineSymmetricConnectivityModel
+export SymmetricConnectivityOracle
+export AbstractPrimaryConnectivityModel
+export AffinePrimaryConnectivityModel
+export PrimaryConnectivityOracle
+export AbstractSecondaryConnectivityModel
+export AffineSecondaryConnectivityModel
+export SecondaryConnectivityOracle
 
-export AbstractEnvNetCostModel
-export AffineEnvNetCostModel
-export EnvNetCostOracle
+export AbstractEnvConnectivityModel
+export AffineEnvConnectivityModel
+export EnvConnectivityOracle
 
 export bottleneck_value
 export total_value
@@ -166,10 +166,10 @@ include("DynamicSplitter.jl")
 include("ReferenceSplitter.jl")
 
 include("WorkCosts.jl")
-include("NetCosts.jl")
-include("SymCosts.jl")
-include("CommCosts.jl")
-include("LocalCosts.jl")
+include("ConnectivityCosts.jl")
+include("SymmetricConnectivityCosts.jl")
+include("PrimaryConnectivityCosts.jl")
+include("SecondaryConnectivityCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 

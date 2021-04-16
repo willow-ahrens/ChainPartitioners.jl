@@ -22,7 +22,7 @@ for mtx in [
     x = rand(n)
     ref_time = @belapsed(mul!($y, $A, $x))
 
-    mdl = ConstrainedCost(AffineNetCostModel{Int64}(0, 0, 0, 1), VertexCount(), cld(n, 8))
+    mdl = ConstrainedCost(AffineConnectivityModel{Int64}(0, 0, 0, 1), VertexCount(), cld(n, 8))
 
     #println()
     #println()

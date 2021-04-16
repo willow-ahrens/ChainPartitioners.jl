@@ -11,15 +11,15 @@
             AffineWorkCostModel(0, 0, 1),
             AffineWorkCostModel(0, 1, 0),
             AffineWorkCostModel(0, 1, 1),
-            AffineNetCostModel(0, 0, 0, 1),
-            AffineNetCostModel(0, 0, 1, 0),
-            AffineNetCostModel(0, 0, 1, 1),
-            AffineNetCostModel(0, 1, 0, 0),
-            AffineNetCostModel(0, 1, 0, 1),
-            AffineNetCostModel(0, 1, 1, 0),
-            AffineNetCostModel(0, 1, 1, 1),
-            AffineSymCostModel(10, 10, 10, 10, 0),
-            AffineSymCostModel(10, 10, 10, 100, 8),
+            AffineConnectivityModel(0, 0, 0, 1),
+            AffineConnectivityModel(0, 0, 1, 0),
+            AffineConnectivityModel(0, 0, 1, 1),
+            AffineConnectivityModel(0, 1, 0, 0),
+            AffineConnectivityModel(0, 1, 0, 1),
+            AffineConnectivityModel(0, 1, 1, 0),
+            AffineConnectivityModel(0, 1, 1, 1),
+            AffineSymmetricConnectivityModel(10, 10, 10, 10, 0),
+            AffineSymmetricConnectivityModel(10, 10, 10, 100, 8),
         ]
         for mdl in models
             ocl = oracle_stripe(mdl, A, Φ)
@@ -31,9 +31,9 @@
 
         Π = SplitPartition(K, [1, sort(rand(1:(m + 1), K - 1))..., m + 1])
         models = [
-            (AffineCommCostModel(0, 0, 0, 0, 1), AffineLocalCostModel(0, 0, 0, 0, 1)),
-            (AffineCommCostModel(0, 0, 0, 1, 1), AffineLocalCostModel(0, 0, 0, 1, 1)),
-            (AffineCommCostModel(1, 1, 1, 1, 1), AffineLocalCostModel(1, 1, 1, 1, 1)),
+            (AffinePrimaryConnectivityModel(0, 0, 0, 0, 1), AffineSecondaryConnectivityModel(0, 0, 0, 0, 1)),
+            (AffinePrimaryConnectivityModel(0, 0, 0, 1, 1), AffineSecondaryConnectivityModel(0, 0, 0, 1, 1)),
+            (AffinePrimaryConnectivityModel(1, 1, 1, 1, 1), AffineSecondaryConnectivityModel(1, 1, 1, 1, 1)),
         ]
         adj_A = permutedims(A)
         for (comm_mdl, local_mdl) in models
