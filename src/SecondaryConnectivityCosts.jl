@@ -61,7 +61,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSecondaryConnectivityMod
         end
 
         (n, K, n′, πos, prm), _ = partwise(A, convert(MapPartition, Π))
-        lcc = partwisecost!(hint, n, K, n′, πos, prm, VertexCount(); kwargs...)
+        lcc = partwisecount!(hint, n, K, n′, πos, prm, VertexCount(); kwargs...)
 
         return SecondaryConnectivityOracle(Π, adj_pos, πos, lcc, mdl)
     end

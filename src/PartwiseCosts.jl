@@ -59,7 +59,7 @@ function partwise(A::SparseMatrixCSC{Tv, Ti}, Π::MapPartition{Ti}) where {Tv, T
     end
 end
 
-struct PartwiseCost{Ti <: Integer, Ocl}
+struct PartwiseCount{Ti <: Integer, Ocl}
     n::Int
     K::Int
     n′::Int
@@ -68,21 +68,21 @@ struct PartwiseCost{Ti <: Integer, Ocl}
     ocl::Ocl
 end
 
-Base.size(arg::PartwiseCost) = (arg.n + 1, arg.n + 1, arg.K)
+Base.size(arg::PartwiseCount) = (arg.n + 1, arg.n + 1, arg.K)
 
-partwisecost!(args...; kwargs...) = partwisecost!(NoHint(), args...; kwargs...)
-partwisecost!(::AbstractHint, args...; kwargs...) = @assert false
-partwisecost!(hint::AbstractHint, n, K, n′, πos, prm, ocl; kwargs...) =
-    PartwiseCost(hint, n, K, n′, πos, prm, ocl; kwargs...)
+partwisecount!(args...; kwargs...) = partwisecount!(NoHint(), args...; kwargs...)
+partwisecount!(::AbstractHint, args...; kwargs...) = @assert false
+partwisecount!(hint::AbstractHint, n, K, n′, πos, prm, ocl; kwargs...) =
+    PartwiseCount(hint, n, K, n′, πos, prm, ocl; kwargs...)
 
-PartwiseCost(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
-    PartwiseCost{Ti, Ocl}(hint, n, K, n′, πos, prm, ocl; kwargs...)
+PartwiseCount(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
+    PartwiseCount{Ti, Ocl}(hint, n, K, n′, πos, prm, ocl; kwargs...)
 
-PartwiseCost{Ti, Ocl}(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
-    PartwiseCost{Ti, Ocl}(n, K, n′, πos, prm, ocl)
+PartwiseCount{Ti, Ocl}(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
+    PartwiseCount{Ti, Ocl}(n, K, n′, πos, prm, ocl)
 
-Base.getindex(arg::PartwiseCost{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
-function (arg::PartwiseCost{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
+Base.getindex(arg::PartwiseCount{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
+function (arg::PartwiseCount{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
         tmp = @view arg.prm[arg.πos[k] : arg.πos[k + 1] - 1]
         rnk_j = arg.πos[k] + searchsortedfirst(tmp, j) - 1
@@ -91,29 +91,29 @@ function (arg::PartwiseCost{Ti})(j::Integer, j′::Integer, k::Integer) where {T
     end
 end
 
-mutable struct PartwiseCostStepper{Ti, Ocl} <: AbstractArray{Ti, 3}
+mutable struct PartwiseCountStepper{Ti, Ocl} <: AbstractArray{Ti, 3}
     rnk_j::Ti
     rnk_j′::Ti
-    cst::PartwiseCost{Ti, Ocl}
+    cst::PartwiseCount{Ti, Ocl}
 end
 
-Base.size(arg::PartwiseCostStepper) = size(arg.cst)
+Base.size(arg::PartwiseCountStepper) = size(arg.cst)
 
-partwisecost!(hint::StepHint, n, K, n′, πos, prm, ocl; kwargs...) =
-    PartwiseCostStepper(hint, n, K, n′, πos, prm, ocl; kwargs...)
+partwisecount!(hint::StepHint, n, K, n′, πos, prm, ocl; kwargs...) =
+    PartwiseCountStepper(hint, n, K, n′, πos, prm, ocl; kwargs...)
 
-PartwiseCostStepper(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
-    PartwiseCostStepper{Ti, Ocl}(hint, n, K, n′, πos, prm, ocl; kwargs...)
+PartwiseCountStepper(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl} = 
+    PartwiseCountStepper{Ti, Ocl}(hint, n, K, n′, πos, prm, ocl; kwargs...)
 
-function PartwiseCostStepper{Ti, Ocl}(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl}
+function PartwiseCountStepper{Ti, Ocl}(hint::AbstractHint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...) where {Ti, Ocl}
     rnk_j = 0
     rnk_j′ = 0
-    cst = PartwiseCost{Ti, Ocl}(hint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...)
-    return PartwiseCostStepper{Ti, Ocl}(rnk_j, rnk_j′, cst)
+    cst = PartwiseCount{Ti, Ocl}(hint, n, K, n′, πos::Vector{Ti}, prm::Vector{Ti}, ocl::Ocl; kwargs...)
+    return PartwiseCountStepper{Ti, Ocl}(rnk_j, rnk_j′, cst)
 end
 
-Base.getindex(arg::PartwiseCostStepper{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
-function (arg::PartwiseCostStepper{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
+Base.getindex(arg::PartwiseCountStepper{Ti}, j::Integer, j′::Integer, k::Integer) where {Ti} = arg(j, j′, k)
+function (arg::PartwiseCountStepper{Ti})(j::Integer, j′::Integer, k::Integer) where {Ti}
     @inbounds begin
         tmp = @view arg.cst.prm[arg.cst.πos[k] : arg.cst.πos[k + 1] - 1]
         rnk_j = arg.cst.πos[k] + searchsortedfirst(tmp, j) - 1
@@ -124,7 +124,7 @@ function (arg::PartwiseCostStepper{Ti})(j::Integer, j′::Integer, k::Integer) w
     end
 end
 
-@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: PartwiseCostStepper{Ti}}
+@propagate_inbounds function (stp::Step{Net})(_j::Same, _j′::Next, _k::Same) where {Ti, Net <: PartwiseCountStepper{Ti}}
     begin
         arg = stp.ocl
         j = destep(_j)
@@ -146,7 +146,7 @@ end
     end
 end
 
-@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same, _k::Same) where {Ti, Net <: PartwiseCostStepper{Ti}}
+@propagate_inbounds function (stp::Step{Net})(_j::Next, _j′::Same, _k::Same) where {Ti, Net <: PartwiseCountStepper{Ti}}
     begin
         arg = stp.ocl
         j = destep(_j)

@@ -61,7 +61,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractPrimaryConnectivityModel
             net = netcount(hint, A; kwargs...)
         end
         args, Ap = partwise(A, convert(MapPartition, Π))
-        lcr = partwisecost!(hint, args..., netcount(hint, Ap, kwargs...); kwargs...)
+        lcr = partwisecount!(hint, args..., netcount(hint, Ap, kwargs...); kwargs...)
         return PrimaryConnectivityOracle(pos, net, lcr, mdl)
     end
 end

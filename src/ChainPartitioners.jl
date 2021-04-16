@@ -29,7 +29,7 @@ export NetCount
 export netcount
 
 export partwise
-export partwisecost!
+export partwisecount!
 
 export AbstractModel
 export AbstractIncreasingModel
@@ -173,7 +173,7 @@ include("SecondaryConnectivityCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 
-include("PartwiseCosts.jl")
+include("PartwiseCounts.jl")
 
 include("EquiPartitioner.jl")
 include("AlternatingPacker.jl")
