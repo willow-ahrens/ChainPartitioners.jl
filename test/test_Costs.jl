@@ -20,6 +20,7 @@
             AffineConnectivityModel(0, 1, 1, 1),
             AffineSymmetricConnectivityModel(10, 10, 10, 10, 0),
             AffineSymmetricConnectivityModel(10, 10, 10, 100, 8),
+            AffineSymmetricEdgeCutModel(α = 10, β_vertex = 10, β_local_pin = 10, β_remote_pin = 100),
         ]
         for mdl in models
             ocl = oracle_stripe(mdl, A, Φ)

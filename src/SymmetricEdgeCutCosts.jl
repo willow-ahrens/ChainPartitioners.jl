@@ -9,6 +9,13 @@ struct AffineSymmetricEdgeCutModel{Tv} <: AbstractSymmetricEdgeCutModel
     β_remote_pin::Tv
 end
 
+function AffineSymmetricEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
+    AffineSymmetricEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
+end
+function AffineSymmetricEdgeCutModel{Tv}(; α = zero(Tv), β_vertex = zero(Tv), β_local_pin = zero(Tv), β_remote_pin = zero(Tv)) where {Tv}
+    AffineSymmetricEdgeCutModel{Tv}(α, β_vertex, β_local_pin, β_remote_pin)
+end
+
 @inline cost_type(::Type{AffineSymmetricEdgeCutModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineSymmetricEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_local_pins * mdl.β_local_pin + n_remote_pins * mdl.β_remote_pin
@@ -21,7 +28,7 @@ end
 
 oracle_model(ocl::SymmetricEdgeCutOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::SymmetricEdgeCutOracle{<:Any, <:Any, <:Any, <:AffineSymmetricEdgeCutModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::SymmetricEdgeCutOracle{<:Any, <:Any, <:AffineSymmetricEdgeCutModel})
     return bound_stripe(A, K, ocl.mdl)
 end
 
@@ -29,7 +36,6 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymmetricEdgeCutModel)
     @inbounds begin
         m, n = size(A)
         N = nnz(A)
-        mdl = oracle_model(ocl)
         c_hi = mdl.α + mdl.β_vertex * n + max(mdl.β_local_pin, mdl.β_remote_pin) * N
         c_lo = mdl.α + fld(mdl.β_vertex * n + min(mdl.β_local_pin, mdl.β_remote_pin) * N, K)
         return (c_lo, c_hi)
@@ -40,8 +46,8 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymmetricEdgeCutModel, A
     @inbounds begin
         m, n = size(A)
         pos = A.colptr
-        selfpin = selfpincount!(hint, A; kwargs...)
-        return SymmetricEdgeCutOracle(pos, lcp, mdl)
+        selfpin = selfpincount(hint, A; kwargs...)
+        return SymmetricEdgeCutOracle(pos, selfpin, mdl)
     end
 end
 

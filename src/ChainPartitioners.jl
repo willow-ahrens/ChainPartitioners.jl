@@ -61,6 +61,7 @@ export PrimaryConnectivityOracle
 export AbstractSecondaryConnectivityModel
 export AffineSecondaryConnectivityModel
 export SecondaryConnectivityOracle
+export AffineSymmetricEdgeCutModel
 
 export AbstractEnvConnectivityModel
 export AffineEnvConnectivityModel
@@ -175,6 +176,7 @@ include("ConnectivityCosts.jl")
 include("SymmetricConnectivityCosts.jl")
 include("PrimaryConnectivityCosts.jl")
 include("SecondaryConnectivityCosts.jl")
+include("SymmetricEdgeCutCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 
