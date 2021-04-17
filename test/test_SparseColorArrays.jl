@@ -3,6 +3,8 @@ ref_netcount(A, j, j′) = length(union(A.rowval[A.colptr[j]:A.colptr[j′] - 1]
 ref_netcount(A, Φ_domain, j, j′, k) = length(intersect(union(A[:, j:(j′ - 1)].rowval), Φ_domain.prm[Φ_domain.spl[k]:Φ_domain.spl[k + 1] - 1]))
 ref_colnetcount(At, Φ_domain, j, j′, k) = length(intersect(union(At[:, Φ_domain.prm[Φ_domain.spl[k]:Φ_domain.spl[k + 1] - 1]].rowval), j:(j′ - 1)))
 
+ref_selfnetcount(A, j, j′) = length(setdiff(union(A.rowval[A.colptr[j]:A.colptr[j′] - 1]), union(A.rowval[A.colptr[1]:A.colptr[j] - 1], A.rowval[A.colptr[j′]:A.colptr[end] - 1])))
+
 #ref_primarypincount(A, Φ_domain, j, j′, k) = sum(A[Φ_domain.prm[Φ_domain.spl[k]:Φ_domain.spl[k + 1] - 1], j:j′ - 1] .!= 0)
 
 ref_selfpincount(A, j, j′) = sum(A[j:j′ - 1, j:j′ - 1] .!= 0)
@@ -14,15 +16,18 @@ ref_selfpincount(A, j, j′) = sum(A[j:j′ - 1, j:j′ - 1] .!= 0)
             for n = test_dims
                 A = dropzeros!(sprand(UInt, m, n, 0.5))
                 net = netcount(hint..., A)
+                selfnet = selfnetcount(hint..., A)
                 @testset "hint=$hint, n = $n, m = $m" begin
                     for (j, j′) in test_points(10, 1:n + 1, 1:n + 1)
                         (j, j′) = minmax(j, j′)
                         @test net[j, j′] == ref_netcount(A, j, j′)
+                        @test selfnet[j, j′] == ref_selfnetcount(A, j, j′)
 
                         for _ = 1:10
                             _j, _j′= rand(filter(((_j, _j′),) -> destep(_j) < destep(_j′), collect(Iterators.product(Δ(j, 1:n + 1), Δ(j′, 1:n + 1)))))
                             (j, j′) = map(destep, (_j, _j′))
                             @test ChainPartitioners.Step(net)(_j, _j′) == ref_netcount(A, j, j′)
+                            @test ChainPartitioners.Step(selfnet)(_j, _j′) == ref_selfnetcount(A, j, j′)
                         end
                     end
                 end

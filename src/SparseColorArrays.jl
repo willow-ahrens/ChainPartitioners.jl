@@ -119,9 +119,10 @@ end
 
 struct SelfNetCount{Ti, Lnk} <: AbstractMatrix{Ti}
     n::Int
-    pos::Vector{Ti}
     lnk::Lnk
 end
+
+SelfNetCount{Ti}(n, lnk::Lnk) where {Ti, Lnk} = SelfNetCount{Ti, Lnk}(n, lnk)
 
 Base.size(arg::SelfNetCount) = (arg.n + 1, arg.n + 1)
 
@@ -140,18 +141,24 @@ SelfNetCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwar
 function SelfNetCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
     @inbounds begin
         hst = zeros(Ti, m)
-        hst′ = zeros(Ti, m)
+        hst′ = undefs(Ti, m)
         idx′ = undefs(Ti, N)
-        pos′ = zeros(Ti, n)
+        pos′ = zeros(Ti, n + 1)
 
         for j = 1:n
             for q in pos[j] : pos[j + 1] - 1
                 i = idx[q]
                 if hst[i] == 0
-                    pos′[(n + 2) - j] += 1
                     hst[i] = j
                 end
                 hst′[i] = j
+            end
+        end
+
+        for i = 1:m
+            if hst[i] != 0
+                j′ = hst′[i]
+                pos′[j′ + 1] += 1
             end
         end
 
@@ -167,14 +174,14 @@ function SelfNetCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vec
         for i = 1:m
             if hst[i] != 0
                 j = hst[i]
-                j′ = hst[i]
-                q = pos′[(n + 1) - j]
-                idx[q] = j′
-                pos′[(n + 1) - j] = q + 1
+                j′ = hst′[i]
+                q = pos′[j′ + 1]
+                idx′[q] = (n + 1) - j
+                pos′[j′ + 1] = q + 1
             end
         end
 
-        return SelfNetCount(n, pos, dominancecount!(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
+        return SelfNetCount{Ti}(n, dominancecount!(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
     end
 end
 
