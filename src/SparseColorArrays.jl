@@ -148,7 +148,7 @@ function SelfNetCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vec
             for q in pos[j] : pos[j + 1] - 1
                 i = idx[q]
                 if hst[i] == 0
-                    pos′[(n + 1) - j] += 1
+                    pos′[(n + 2) - j] += 1
                     hst[i] = j
                 end
                 hst′[i] = j
@@ -219,6 +219,8 @@ struct SelfPinCount{Ti, Lnk} <: AbstractMatrix{Ti}
     lnk::Lnk
 end
 
+SelfPinCount{Ti}(n, lnk::Lnk) where {Ti, Lnk} = SelfPinCount{Ti, Lnk}(n, lnk)
+
 Base.size(arg::SelfPinCount) = (arg.n + 1, arg.n + 1)
 
 selfpincount(args...; kwargs...) = selfpincount(NoHint(), args...; kwargs...)
@@ -235,15 +237,14 @@ SelfPinCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwar
     SelfPinCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
 function SelfPinCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
     @inbounds begin
-        hst = zeros(Ti, m)
-        pos′ = zeros(Ti, m)
+        pos′ = zeros(Ti, n + 1)
         idx′ = zeros(Ti, N)
 
         for j = 1:n
             for q in pos[j] : pos[j + 1] - 1
                 i = idx[q]
                 (i, i′) = minmax(j, i)
-                pos′[i′] += 1
+                pos′[i′ + 1] += 1
             end
         end
 
@@ -257,12 +258,12 @@ function SelfPinCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vec
                 i = idx[q]
                 (i, i′) = minmax(j, i)
                 q′ = pos′[i′ + 1]
-                idx′[q] = (n + 1) - i
+                idx′[q′] = (n + 1) - i
                 pos′[i′ + 1] = q′ + 1
             end
         end
 
-        return SelfPinCount(n, dominancecount!(hint, n + 1, n + 1, N, pos, idx′; kwargs...))
+        return SelfPinCount{Ti}(n, dominancecount!(hint, n + 1, n + 1, N, pos′, idx′; kwargs...))
     end
 end
 

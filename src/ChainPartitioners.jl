@@ -27,6 +27,11 @@ export rowenvelope
 
 export NetCount
 export netcount
+export netcount!
+export selfpincount
+export selfpincount!
+export selfnetcount
+export selfnetcount!
 
 export partwise
 export partwisecount!
