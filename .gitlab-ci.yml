@@ -18,7 +18,7 @@
   script:
     # Let's run the tests. Substitute `coverage = false` below, if you do not
     # want coverage results.
-    - julia -e 'using Pkg; Pkg.add(pwd()); Pkg.build("ChainPartitioners"); Pkg.test("ChainPartitioners"; coverage = true)'
+    - julia -e 'using Pkg; Pkg.add(path=pwd()); Pkg.build("ChainPartitioners"); Pkg.test("ChainPartitioners"; coverage = true)'
     # Comment out below if you do not want coverage results.
     - julia -e 'using Pkg; Pkg.add("Coverage");
       import ChainPartitioners; cd(joinpath(dirname(pathof(ChainPartitioners)), ".."));
