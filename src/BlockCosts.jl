@@ -3,8 +3,8 @@ struct ColumnBlockComponentCostModel{Tv, α_Col, β_Col} <: AbstractConnectivity
     β_col::β_Col
 end
 
-function (T::Type{<:ColumnBlockComponentCostModel})(; α_col=1, β_col=1)
-    T(α_col, β_col)
+function ColumnBlockComponentCostModel{Tv}(; α_col=false, β_col=false) where {Tv}
+    ColumnBlockComponentCostModel{Tv}(α_col, β_col)
 end
 
 @deprecate ColumnBlockComponentCostModel{Tv}(w_max, α_col, β_col) where {Tv, Ti} ConstrainedCost(ColumnBlockComponentCostModel{Tv}(α_col, β_col), VertexCount(), w_max)
@@ -23,8 +23,8 @@ struct BlockComponentCostModel{Tv, R, α_Row, α_Col, β_Row<:Tuple{Vararg{Any, 
     β_col::β_Col
 end
 
-function (T::Type{<:BlockComponentCostModel})(; α_row=1, α_col=1, β_row = (), β_col = ())
-    T(α_row, α_col, β_row, β_col)
+function BlockComponentCostModel{Tv}(; α_row=false, α_col=false, β_row = (), β_col = ()) where {Tv}
+    BlockComponentCostModel{Tv}(α_row, α_col, β_row, β_col)
 end
 
 function Base.permutedims(cst::BlockComponentCostModel{Tv}) where {Tv}

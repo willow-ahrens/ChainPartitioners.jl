@@ -63,9 +63,9 @@ export AffineSecondaryConnectivityModel
 export SecondaryConnectivityOracle
 export AffineSymmetricEdgeCutModel
 
-export AbstractEnvConnectivityModel
-export AffineEnvConnectivityModel
-export EnvConnectivityOracle
+export AbstractEnvelopeModel
+export AffineEnvelopeModel
+export EnvelopeOracle
 
 export bottleneck_value
 export total_value
@@ -173,10 +173,12 @@ include("ReferenceSplitter.jl")
 
 include("WorkCosts.jl")
 include("ConnectivityCosts.jl")
-include("SymmetricConnectivityCosts.jl")
-include("PrimaryConnectivityCosts.jl")
-include("SecondaryConnectivityCosts.jl")
 include("SymmetricEdgeCutCosts.jl")
+include("SymmetricConnectivityCosts.jl")
+include("PrimaryEdgeCutCosts.jl")
+include("PrimaryConnectivityCosts.jl")
+include("SecondaryEdgeCutCosts.jl")
+include("SecondaryConnectivityCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 

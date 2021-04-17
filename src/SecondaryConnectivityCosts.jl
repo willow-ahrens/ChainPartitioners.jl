@@ -10,6 +10,10 @@ struct AffineSecondaryConnectivityModel{Tv} <: AbstractSecondaryConnectivityMode
     β_remote_net::Tv
 end
 
+function AffineSecondaryConnectivityModel(; α = false, β_vertex = false, β_pin = false, β_local_net = false, β_remote_net = false)
+    AffineSecondaryConnectivityModel(promote(α, β_vertex, β_pin, β_local_net, β_remote_net)...)
+end
+
 @inline cost_type(::Type{AffineSecondaryConnectivityModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineSecondaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net

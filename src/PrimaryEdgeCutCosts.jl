@@ -9,6 +9,10 @@ struct AffinePrimaryEdgeCutModel{Tv} <: AbstractPrimaryEdgeCutModel
     β_remote_pin::Tv
 end
 
+function AffinePrimaryEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
+    AffinePrimaryEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
+end
+
 @inline cost_type(::Type{AffinePrimaryEdgeCutModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffinePrimaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_local_pins * mdl.β_local_pin + n_remote_pins * mdl.β_remote_pin
@@ -21,7 +25,7 @@ end
 
 oracle_model(ocl::PrimaryEdgeCutOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::PrimaryEdgeCutOracle{<:Any, <:Any, <:Any, <:AffinePrimaryEdgeCutModel})
+function bound_stripe(A::SparseMatrixCSC, K, ocl::PrimaryEdgeCutOracle{<:Any, <:Any, <:AffinePrimaryEdgeCutModel})
     return bound_stripe(A, K, ocl.mdl)
 end
 

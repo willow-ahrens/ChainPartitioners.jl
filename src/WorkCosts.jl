@@ -8,6 +8,10 @@ struct AffineWorkCostModel{Tv} <: AbstractWorkCostModel
     β_pin::Tv
 end
 
+function AffineWorkModel(; α = false, β_vertex = false, β_pin = false)
+    AffineWorkModel(promote(α, β_vertex, β_pin)...)
+end
+
 @inline cost_type(::Type{AffineWorkCostModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineWorkCostModel)(n_vertices, n_pins) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin

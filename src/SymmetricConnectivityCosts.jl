@@ -10,6 +10,10 @@ struct AffineSymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityMode
     Δ_pins::Tv
 end
 
+function AffineSymmetricConnectivityModel(; α = false, β_vertex = false, β_pin = false, β_net = false, Δ_pins = false)
+    AffineSymmetricConnectivityModel(promote(α, β_vertex, β_pin, β_net, Δ_pins)...)
+end
+
 @inline cost_type(::Type{AffineSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineSymmetricConnectivityModel)(n_vertices, n_pins, n_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net

@@ -12,9 +12,6 @@ end
 function AffineSymmetricEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
     AffineSymmetricEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
 end
-function AffineSymmetricEdgeCutModel{Tv}(; α = zero(Tv), β_vertex = zero(Tv), β_local_pin = zero(Tv), β_remote_pin = zero(Tv)) where {Tv}
-    AffineSymmetricEdgeCutModel{Tv}(α, β_vertex, β_local_pin, β_remote_pin)
-end
 
 @inline cost_type(::Type{AffineSymmetricEdgeCutModel{Tv}}) where {Tv} = Tv
 

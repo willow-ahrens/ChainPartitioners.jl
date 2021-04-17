@@ -12,6 +12,10 @@ struct AffineHyperedgeCutModel{Tv} <: AbstractHyperedgeCutModel
     β_cut_net::Tv
 end
 
+function AffineHyperedgeCutModel(; α = false, β_vertex = false, β_pin = false, β_self_net = false, β_cut_net = false)
+    AffineHyperedgeCutModel(promote(α, β_vertex, β_pin, β_self_net, β_cut_net)...)
+end
+
 @inline cost_type(::Type{AffineHyperedgeCutModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineHyperedgeCutModel)(n_vertices, n_pins, n_self_nets, n_cut_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_self_nets * mdl.β_self_net + n_cut_nets * mdl.β_cut_net

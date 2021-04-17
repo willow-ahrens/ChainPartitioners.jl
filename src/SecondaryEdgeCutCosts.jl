@@ -5,9 +5,12 @@ abstract type AbstractSecondaryEdgeCutModel end
 struct AffineSecondaryEdgeCutModel{Tv} <: AbstractSecondaryEdgeCutModel
     α::Tv
     β_vertex::Tv
-    β_pin::Tv
     β_local_pin::Tv
     β_remote_pin::Tv
+end
+
+function AffineSecondaryEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
+    AffineSecondaryEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
 end
 
 @inline cost_type(::Type{AffineSecondaryEdgeCutModel{Tv}}) where {Tv} = Tv
