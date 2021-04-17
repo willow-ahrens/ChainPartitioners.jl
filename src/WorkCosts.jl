@@ -8,8 +8,8 @@ struct AffineWorkCostModel{Tv} <: AbstractWorkCostModel
     β_pin::Tv
 end
 
-function AffineWorkModel(; α = false, β_vertex = false, β_pin = false)
-    AffineWorkModel(promote(α, β_vertex, β_pin)...)
+function AffineWorkCostModel(; α = false, β_vertex = false, β_pin = false)
+    AffineWorkCostModel(promote(α, β_vertex, β_pin)...)
 end
 
 @inline cost_type(::Type{AffineWorkCostModel{Tv}}) where {Tv} = Tv

@@ -8,18 +8,18 @@
         Φ = SplitPartition(K, [1, sort(rand(1:(n + 1), K - 1))..., n + 1])
 
         models = [
-            AffineWorkCostModel(0, 0, 1),
-            AffineWorkCostModel(0, 1, 0),
-            AffineWorkCostModel(0, 1, 1),
-            AffineConnectivityModel(0, 0, 0, 1),
-            AffineConnectivityModel(0, 0, 1, 0),
-            AffineConnectivityModel(0, 0, 1, 1),
-            AffineConnectivityModel(0, 1, 0, 0),
-            AffineConnectivityModel(0, 1, 0, 1),
-            AffineConnectivityModel(0, 1, 1, 0),
-            AffineConnectivityModel(0, 1, 1, 1),
-            AffineSymmetricConnectivityModel(10, 10, 10, 10, 0),
-            AffineSymmetricConnectivityModel(10, 10, 10, 100, 8),
+            AffineWorkCostModel(α = 0, β_vertex = 0, β_pin = 1),
+            AffineWorkCostModel(α = 0, β_vertex = 1, β_pin = 0),
+            AffineWorkCostModel(α = 0, β_vertex = 1, β_pin = 1),
+            AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_net = 1),
+            AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 1, β_net = 0),
+            AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 1, β_net = 1),
+            AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 0, β_net = 0),
+            AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 0, β_net = 1),
+            AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 1, β_net = 0),
+            AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 1, β_net = 1),
+            AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 10, Δ_pins = 0),
+            AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 100, Δ_pins = 8),
             AffineSymmetricEdgeCutModel(α = 10, β_vertex = 10, β_local_pin = 10, β_remote_pin = 100),
         ]
         for mdl in models
@@ -32,9 +32,12 @@
 
         Π = SplitPartition(K, [1, sort(rand(1:(m + 1), K - 1))..., m + 1])
         models = [
-            (AffinePrimaryConnectivityModel(0, 0, 0, 0, 1), AffineSecondaryConnectivityModel(0, 0, 0, 0, 1)),
-            (AffinePrimaryConnectivityModel(0, 0, 0, 1, 1), AffineSecondaryConnectivityModel(0, 0, 0, 1, 1)),
-            (AffinePrimaryConnectivityModel(1, 1, 1, 1, 1), AffineSecondaryConnectivityModel(1, 1, 1, 1, 1)),
+            (AffinePrimaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 0, β_remote_net = 1),
+            AffineSecondaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 0, β_remote_net = 1)),
+            (AffinePrimaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1),
+            AffineSecondaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1)),
+            (AffinePrimaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1),
+            AffineSecondaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1)),
         ]
         adj_A = permutedims(A)
         for (comm_mdl, local_mdl) in models
@@ -60,8 +63,8 @@
         Π = pack_stripe(A, EquiChunker(u))
         Φ = pack_stripe(A, EquiChunker(w))
         models = (
-            BlockComponentCostModel{Int64}(0, 0, (2, identity), (2, x->2x)),
-            BlockComponentCostModel{Int64}(identity, x->3x, (2, identity), (2, x->2x)),
+            BlockComponentCostModel{Int64}(β_row = (2, identity), β_col = (2, x->2x)),
+            BlockComponentCostModel{Int64}(α_row = identity, α_col = x->3x, β_row = (2, identity), β_col = (2, x->2x)),
             )
         for mdl in models
             ocl = oracle_stripe(mdl, A, Π)
