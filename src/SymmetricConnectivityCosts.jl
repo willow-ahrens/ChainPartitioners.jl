@@ -1,6 +1,6 @@
 abstract type AbstractSymmetricConnectivityModel end
 
-@inline (mdl::AbstractSymmetricConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl(n_vertices, n_pins, n_nets)
+@inline (mdl::AbstractSymmetricConnectivityModel)(n_vertices, n_pins, n_local_nets, remote_nets, k) = mdl(n_vertices, n_pins, n_local_nets, n_remote_nets)
 
 struct AffineSymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     α::Tv
