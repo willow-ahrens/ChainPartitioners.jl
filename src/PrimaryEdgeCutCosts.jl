@@ -25,15 +25,13 @@ end
 
 oracle_model(ocl::PrimaryEdgeCutOracle) = ocl.mdl
 
-function bound_stripe(A::SparseMatrixCSC, K, ocl::PrimaryEdgeCutOracle{<:Any, <:Any, <:AffinePrimaryEdgeCutModel})
-    return bound_stripe(A, K, ocl.mdl)
-end
-
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffinePrimaryEdgeCutModel)
     @inbounds begin
         m, n = size(A)
         N = nnz(A)
-        mdl = oracle_model(ocl)
+        @assert mdl.β_vertex >= 0
+        @assert mdl.β_local_pin >= 0
+        @assert mdl.β_remote_pin >= 0
         c_hi = mdl.α + mdl.β_vertex * n + max(mdl.β_local_pin, mdl.β_remote_pin) * N
         c_lo = mdl.α + fld(mdl.β_vertex * n + min(mdl.β_local_pin, mdl.β_remote_pin) * N, K)
         return (c_lo, c_hi)
@@ -53,7 +51,7 @@ end
 @inline function (cst::PrimaryEdgeCutOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
-        l = cst.lcr(j, j′, k)
+        l = cst.lcp(j, j′, k)
         return cst.mdl(j′ - j, l, w - l, k)
     end
 end

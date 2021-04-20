@@ -27,25 +27,29 @@ end
 
 oracle_model(ocl::EnvelopeOracle) = ocl.mdl
 
-function upperbound_stripe(A::SparseMatrixCSC, K, ocl::EnvelopeOracle{<:Any, <:AffineEnvelopeModel})
+
+function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineEnvelopeModel})
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
-    (env_lo, env_hi) = ocl.env[1, end]
-    return mdl.α + mdl.β_vertex * n + mdl.β_pin * N + mdl.β_net * (env_hi - env_lo)
-end
-function upperbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvelopeModel)
-    m, n = size(A)
-    N = nnz(A)
-    (env_lo, env_hi) = extrema(A.rowval)
-    return mdl.α + mdl.β_vertex * n + mdl.β_pin * N + mdl.β_net * (env_hi - env_lo)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_net >= 0
+    c_hi = ocl(1, n + 1)
+    c_lo = mdl.α + fld(c_hi - mdl.α, K)
+    return (c_lo, c_hi)
 end
 
-function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::EnvelopeOracle{<:Any, <:AffineEnvelopeModel})
-    return fld(upperbound_stripe(A, K, mdl), K) #fld is not strictly correct here
-end
-function lowerbound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvelopeModel)
-    return fld(upperbound_stripe(A, K, mdl), K)
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineEnvelopeModel)
+    m, n = size(A)
+    N = nnz(A)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_net >= 0
+    (env_lo, env_hi) = extrema(A.rowval)
+    c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * N + mdl.β_net * (env_hi - env_lo)
+    c_lo = mdl.α + fld(mdl.β_vertex * n + mdl.β_pin * N + mdl.β_net * (env_hi - env_lo), K)
+    return (c_lo, c_hi)
 end
 
 function oracle_stripe(hint::AbstractHint, mdl::AbstractEnvelopeModel, A::SparseMatrixCSC; env=nothing, adj_A=nothing, kwargs...)

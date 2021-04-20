@@ -20,20 +20,6 @@ end
 
 (mdl::AffineHyperedgeCutModel)(n_vertices, n_pins, n_self_nets, n_cut_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_self_nets * mdl.β_self_net + n_cut_nets * mdl.β_cut_net
 
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineHyperedgeCutModel)
-    return bound_stripe(A, K, oracle_stripe(StepHint(), mdl, A))
-end
-function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineHyperedgeCutModel})
-    m, n = size(A)
-    N = nnz(A)
-    mdl = oracle_model(ocl)
-    c_hi = ocl(1, n + 1)
-    c_lo = mdl.α + fld(c_hi - mdl.α, K)
-    return (c_lo, c_hi)
-end
-
-
-
 struct HyperedgeCutOracle{Ti, Net, SelfNet, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net

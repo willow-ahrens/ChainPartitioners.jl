@@ -61,7 +61,18 @@ export PrimaryConnectivityOracle
 export AbstractSecondaryConnectivityModel
 export AffineSecondaryConnectivityModel
 export SecondaryConnectivityOracle
+export AbstractSymmetricEdgeCutModel
 export AffineSymmetricEdgeCutModel
+export SymmetricEdgeCutOracle
+export AbstractPrimaryEdgeCutModel
+export AffinePrimaryEdgeCutModel
+export PrimaryEdgeCutOracle
+export AbstractSecondaryEdgeCutModel
+export AffineSecondaryEdgeCutModel
+export SecondaryEdgeCutOracle
+export HyperedgeCutOracle
+export AbstractHyperedgeCutModel
+export AffineHyperedgeCutModel
 
 export AbstractEnvelopeModel
 export AffineEnvelopeModel
@@ -179,6 +190,7 @@ include("PrimaryEdgeCutCosts.jl")
 include("PrimaryConnectivityCosts.jl")
 include("SecondaryEdgeCutCosts.jl")
 include("SecondaryConnectivityCosts.jl")
+include("HyperedgeCutCosts.jl")
 include("EnvelopeCosts.jl")
 include("BlockCosts.jl")
 

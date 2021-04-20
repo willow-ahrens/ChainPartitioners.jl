@@ -22,7 +22,7 @@ Base.size(arg::PinCount) = (arg.n + 1, arg.n + 1)
 pincount(args...; kwargs...) = pincount(NoHint(), args...; kwargs...)
 pincount(::AbstractHint, args...; kwargs...) = @assert false
 pincount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
-    pincount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+    pincount!(hint, size(A)..., nnz(A), A.colptr; kwargs...)
 
 pincount!(args...; kwargs...) = pincount!(NoHint(), args...; kwargs...)
 pincount!(::AbstractHint, args...; kwargs...) = @assert false

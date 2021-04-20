@@ -19,6 +19,10 @@ end
 (mdl::AffineSecondaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryConnectivityModel)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_local_net >= 0
+    @assert mdl.β_remote_net >= 0
     adj_A = adjointpattern(A)
     c_hi = bottleneck_value(adj_A, Π, AffineConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_remote_net))
     c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_pin))
@@ -41,6 +45,10 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::SecondaryC
         c_hi = 0
         (m, n) = size(A)
         mdl = oracle_model(ocl)
+        @assert mdl.β_vertex >= 0
+        @assert mdl.β_pin >= 0
+        @assert mdl.β_local_net >= 0
+        @assert mdl.β_remote_net >= 0
         for k = 1:K
             n_vertices = Π.spl[k + 1] - Π.spl[k]
             n_pins = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]

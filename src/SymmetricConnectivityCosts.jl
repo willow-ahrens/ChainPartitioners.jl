@@ -23,6 +23,9 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineSym
     @assert m == n
     N = nnz(A)
     mdl = oracle_model(ocl)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_net >= 0
     c_hi = ocl(1, n + 1)
     c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
@@ -30,6 +33,9 @@ end
 
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineSymmetricConnectivityModel)
     @inbounds begin
+        @assert mdl.β_vertex >= 0
+        @assert mdl.β_pin >= 0
+        @assert mdl.β_net >= 0
         m, n = size(A)
         @assert m == n
         N = nnz(A)

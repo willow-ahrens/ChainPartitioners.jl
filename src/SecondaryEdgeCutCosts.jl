@@ -17,20 +17,21 @@ end
 
 (mdl::AffineSecondaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_local_pins * mdl.β_local_pin + n_remote_pins * mdl.β_remote_pin
 
-#=
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryEdgeCutModel)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_local_pin >= 0
+    @assert mdl.β_remote_pin >= 0
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_value(adj_A, Π, AffineEdgeCutModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_remote_pin))
-    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_pin))
+    c_hi = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_remote_pin))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_local_pin))
     return (c_lo, c_hi)
 end
-=#
 
-struct SecondaryEdgeCutOracle{Ti, Lcc, Mdl} <: AbstractOracleCost{Mdl}
+struct SecondaryEdgeCutOracle{Ti, Lcv, Mdl} <: AbstractOracleCost{Mdl}
     Π::SplitPartition{Ti}
     pos::Vector{Ti}
     πos::Vector{Ti}
-    lcc::Lcc
+    lcv::Lcv
     mdl::Mdl
 end
 
@@ -42,6 +43,9 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::SecondaryE
         c_hi = 0
         (m, n) = size(A)
         mdl = oracle_model(ocl)
+        @assert mdl.β_vertex >= 0
+        @assert mdl.β_local_pin >= 0
+        @assert mdl.β_remote_pin >= 0
         for k = 1:K
             n_vertices = Π.spl[k + 1] - Π.spl[k]
             n_pins = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
@@ -64,10 +68,10 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSecondaryEdgeCutModel, A
             adj_pos = adj_A.colptr
         end
 
-        (n, K, n′, πos, prm), _ = partwise(A, convert(MapPartition, Π))
-        lcc = partwisecount!(hint, n, K, n′, πos, prm, PinCount(); kwargs...)
+        (n, K, n′, πos, prm), Ap = partwise(A, convert(MapPartition, Π))
+        lcv = partwisecount!(hint, n, K, n′, πos, prm, pincount(hint, Ap); kwargs...)
 
-        return SecondaryEdgeCutOracle(Π, adj_pos, πos, lcc, mdl)
+        return SecondaryEdgeCutOracle(Π, adj_pos, πos, lcv, mdl)
     end
 end
 
@@ -75,14 +79,7 @@ end
     @inbounds begin
         w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
         d = cst.πos[k + 1] - cst.πos[k]
-        l = cst.lcc(i, i′, k)
+        l = cst.lcv(i, i′, k)
         return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], l, w - l, k)
     end
-end
-
-function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl::AffineSecondaryEdgeCutModel) where {G}
-    return compute_objective(g, adjointpattern(A), Φ, Π, AffineSecondaryEdgeCutModel(mdl.α, mdl.β_vertex, mdl.β_local_pin, mdl.β_remote_pin))
-end
-function compute_objective(g::G, A, Π, Φ, mdl::AffineSecondaryEdgeCutModel) where {G}
-    return compute_objective(g, adjointpattern(A), Φ, Π, AffineSecondaryEdgeCutModel(mdl.α, mdl.β_vertex, mdl.β_local_pin, mdl.β_remote_pin))
 end

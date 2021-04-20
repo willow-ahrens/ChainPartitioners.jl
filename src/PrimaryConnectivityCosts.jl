@@ -18,10 +18,10 @@ end
 
 (mdl::AffinePrimaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
-struct PrimaryConnectivityOracle{Ti, Net, Lcr, Mdl} <: AbstractOracleCost{Mdl}
+struct PrimaryConnectivityOracle{Ti, Net, Lcn, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     net::Net
-    lcr::Lcr
+    lcn::Lcn
     mdl::Mdl
 end
 
@@ -31,30 +31,23 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::PrimaryConnectivityOracle{<:An
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
-    c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * N + mdl.β_remote_net * ocl.net[1, end]
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_local_net >= 0
+    @assert mdl.β_remote_net >= 0
+    c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * N + max(mdl.β_local_net, mdl.β_remote_net) * ocl.net[1, end]
     c_lo = mdl.α + fld(mdl.β_vertex * n + mdl.β_pin * N, K)
     return (c_lo, c_hi)
 end
 
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffinePrimaryConnectivityModel)
-    @inbounds begin
-        m, n = size(A)
-        N = nnz(A)
-        hst = falses(m)
-        n_remote_nets = 0
-        for j = 1:n
-            for q = A.colptr[j]:A.colptr[j+1]-1
-                i = A.rowval[q]
-                if !hst[i]
-                    n_remote_nets += 1
-                end
-                hst[i] = true
-            end
-        end
-        c_hi = mdl.α + mdl.β_vertex * n + mdl.β_pin * N + mdl.β_remote_net * n_remote_nets
-        c_lo = mdl.α + fld(mdl.β_vertex * n + mdl.β_pin * N, K)
-        return (c_lo, c_hi)
-    end
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_local_net >= 0
+    @assert mdl.β_remote_net >= 0
+    (_, c_hi) = bound_stripe(A, K, AffineConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, max(mdl.β_local_net, mdl.β_remote_net)))
+    (c_lo, _) = bound_stripe(A, K, AffineConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, min(mdl.β_local_net, mdl.β_remote_net)))
+    return (c_lo, c_hi)
 end
 
 function oracle_stripe(hint::AbstractHint, mdl::AbstractPrimaryConnectivityModel, A::SparseMatrixCSC, Π; net=nothing, adj_A=nothing, kwargs...)
@@ -65,8 +58,8 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractPrimaryConnectivityModel
             net = netcount(hint, A; kwargs...)
         end
         args, Ap = partwise(A, convert(MapPartition, Π))
-        lcr = partwisecount!(hint, args..., netcount(hint, Ap, kwargs...); kwargs...)
-        return PrimaryConnectivityOracle(pos, net, lcr, mdl)
+        lcn = partwisecount!(hint, args..., netcount(hint, Ap, kwargs...); kwargs...)
+        return PrimaryConnectivityOracle(pos, net, lcn, mdl)
     end
 end
 
@@ -74,7 +67,7 @@ end
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net(j, j′)
-        l = cst.lcr(j, j′, k)
+        l = cst.lcn(j, j′, k)
         return cst.mdl(j′ - j, w, l, d - l, k)
     end
 end
@@ -87,7 +80,7 @@ end
         k = destep(_k)
         w = cst.pos[j′] - cst.pos[j]
         d = Step(cst.net)(_j, _j′)
-        l = Step(cst.lcr)(_j, _j′, _k)
+        l = Step(cst.lcn)(_j, _j′, _k)
         return cst.mdl(j′ - j, w, l, d - l, k)
     end
 end

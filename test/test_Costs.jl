@@ -20,7 +20,6 @@
             AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 1, β_net = 1),
             AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 10, Δ_pins = 0),
             AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 100, Δ_pins = 8),
-            AffineSymmetricEdgeCutModel(α = 10, β_vertex = 10, β_local_pin = 10, β_remote_pin = 100),
         ]
         for mdl in models
             ocl = oracle_stripe(mdl, A, Φ)
@@ -28,6 +27,18 @@
             @test bound_stripe(A, K, Π, mdl) == bound_stripe(A, K, Π, ocl)
             c_lo, c_hi = bound_stripe(A, K, Π, mdl)
             @test 0 <= c_lo <= bottleneck_value(A, Π, Φ, mdl) <= c_hi
+        end
+
+        models = [
+            AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = 0, β_cut_net = 1),
+            AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = 1, β_cut_net = 0),
+            AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = 1, β_cut_net = 1),
+            AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = -1),
+            AffineSymmetricEdgeCutModel(α = 10, β_vertex = 10, β_self_pin = 10, β_cut_pin = 100),
+        ]
+        for mdl in models
+            ocl = oracle_stripe(mdl, A, Φ)
+            @test bottleneck_value(A, Π, Φ, mdl) == bottleneck_value(A, Π, Φ, ocl)
         end
 
         Π = SplitPartition(K, [1, sort(rand(1:(m + 1), K - 1))..., m + 1])
@@ -38,6 +49,12 @@
             AffineSecondaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1)),
             (AffinePrimaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1),
             AffineSecondaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 0, β_remote_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 0, β_remote_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 1, β_remote_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 1, β_remote_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 1, β_vertex = 1, β_local_pin = 1, β_remote_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 1, β_vertex = 1, β_local_pin = 1, β_remote_pin = 1)),
         ]
         adj_A = permutedims(A)
         for (comm_mdl, local_mdl) in models

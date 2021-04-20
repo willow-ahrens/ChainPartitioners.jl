@@ -26,6 +26,9 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineCon
     m, n = size(A)
     N = nnz(A)
     mdl = oracle_model(ocl)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_pin >= 0
+    @assert mdl.β_net >= 0
     c_hi = ocl(1, n + 1)
     c_lo = mdl.α + fld(c_hi - mdl.α, K)
     return (c_lo, c_hi)
