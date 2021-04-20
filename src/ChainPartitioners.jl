@@ -32,6 +32,8 @@ export selfpincount
 export selfpincount!
 export selfnetcount
 export selfnetcount!
+export dianetcount
+export dianetcount!
 
 export partwise
 export partwisecount!

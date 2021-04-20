@@ -62,6 +62,42 @@ netcount!(::AbstractHint, args...; kwargs...) = @assert false
 netcount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
     NetCount(hint, m, n, N, pos, idx; kwargs...)
 
+dianetcount(args...; kwargs...) = dianetcount(NoHint(), args...; kwargs...)
+dianetcount(::AbstractHint, args...; kwargs...) = @assert false
+dianetcount(hint::AbstractHint, A::SparseMatrixCSC; kwargs...) =
+    dianetcount!(hint, size(A)..., nnz(A), A.colptr, A.rowval; kwargs...)
+
+dianetcount!(args...; kwargs...) = dianetcount!(NoHint(), args...; kwargs...)
+dianetcount!(::AbstractHint, args...; kwargs...) = @assert false
+function dianetcount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} 
+    @inbounds begin
+        hst = zeros(Ti, m)
+        pos′ = undefs(Ti, n + 1)
+        idx′ = undefs(Ti, N + n)
+
+        q′ = 1
+        for j = 1:n
+            pos′[j] = q′
+            for q in pos[j] : pos[j + 1] - 1
+                i = idx[q]
+                idx′[q′] = (n + 1) - hst[i]
+                hst[i] = j
+                q′ += 1
+            end
+            if hst[j] < j
+                idx′[q′] = (n + 1) - hst[j]
+                hst[j] = j
+                q′ += 1
+            end
+        end
+        pos′[n + 1] = q′
+        N′ = q′ - 1
+        resize!(idx′, N′)
+
+        return NetCount(n, pos′, DominanceCount{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
+    end
+end
+
 NetCount(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti} = 
     NetCount{Ti}(hint, m, n, N, pos, idx; kwargs...)
 function NetCount{Ti}(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{Ti}; kwargs...) where {Ti}
