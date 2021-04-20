@@ -14,6 +14,20 @@ function AffineMonotonizedSymmetricConnectivityModel(; α = false, β_vertex = f
     AffineMonotonizedSymmetricConnectivityModel(promote(α, β_vertex, β_over_pin, β_dia_net, Δ_pins)...)
 end
 
+function AffineMonotonizedSymmetricConnectivityModel(mdl::AffineSymmetricConnectivityModel{Tv}) where {Tv}
+    α = mdl.α
+    β_dia_net = mdl.β_remote_net
+    β_over_pin = mdl.β_pin
+    if mdl.β_vertex < mdl.β_remote_net
+        Δ_pins = cld(mdl.β_remote_net - mdl.β_vertex, mdl.β_pin)
+        β_vertex = zero(Tv)
+    else
+        Δ_pins = 0
+        β_vertex = mdl.β_vertex - mdl.β_remote_net
+    end
+    return AffineMonotonizedSymmetricConnectivityModel(α, β_vertex, β_over_pin, β_dia_net, Δ_pins)
+end
+
 @inline cost_type(::Type{AffineMonotonizedSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
 (mdl::AffineMonotonizedSymmetricConnectivityModel)(n_vertices, n_over_pins, n_dia_nets) = mdl.α + n_vertices * mdl.β_vertex + n_over_pins * mdl.β_over_pin + n_dia_nets * mdl.β_dia_net
