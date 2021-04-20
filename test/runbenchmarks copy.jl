@@ -15,7 +15,7 @@ function main(args)
 
     work_model = (AffineWorkCostModel(0, 10, 1), "work_model")
     net_model = (AffineConnectivityModel(0, 10, 1, 100), "net_model")
-    sym_model = (AffineSymmetricConnectivityModel(0, 0, 1, 100, 90), "sym_model")
+    sym_model = (AffineMonotonizedSymmetricConnectivityModel(0, 0, 1, 100, 90), "sym_model")
     comm_model = (AffinePrimaryConnectivityModel(0, 10, 1, 0, 100), "comm_model")
     local_model = (AffineSecondaryConnectivityModel(0, 10, 1, 0, 100), "local_model")
     col_block_model = (ColumnBlockComponentCostModel{Int}(8, 3, (w) -> 1 + w), "col_block_model")

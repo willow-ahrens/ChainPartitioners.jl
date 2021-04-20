@@ -16,7 +16,7 @@ for mtx in [
 
     work_model = AffineWorkCostModel(0, 10, 1)
     net_model = AffineConnectivityModel(0, 10, 1, 100)
-    sym_model = AffineSymmetricConnectivityModel(0, 0, 1, 100, 90)
+    sym_model = AffineMonotonizedSymmetricConnectivityModel(0, 0, 1, 100, 90)
     comm_model = AffinePrimaryConnectivityModel(0, 10, 1, 0, 100)
     loc_model = AffineSecondaryConnectivityModel(0, 10, 1, 0, 100)
     eps=0.1

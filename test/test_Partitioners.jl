@@ -9,7 +9,7 @@ end
 
 @inline ChainPartitioners.cost_type(::Type{FunkyConnectivityModel{Tv}}) where {Tv} = Tv
 
-struct FunkySymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
+struct FunkyMonotonizedSymmetricConnectivityModel{Tv} <: AbstractMonotonizedSymmetricConnectivityModel
     α::Vector{Tv}
     β_vertex::Tv
     β_pin::Tv
@@ -17,9 +17,9 @@ struct FunkySymmetricConnectivityModel{Tv} <: AbstractSymmetricConnectivityModel
     Δ_pins::Tv
 end
 
-@inline ChainPartitioners.cost_type(::Type{FunkySymmetricConnectivityModel{Tv}}) where {Tv} = Tv
+@inline ChainPartitioners.cost_type(::Type{FunkyMonotonizedSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::FunkySymmetricConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net 
+(mdl::FunkyMonotonizedSymmetricConnectivityModel)(n_vertices, n_pins, n_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_nets * mdl.β_net 
 
 struct FunkyPrimaryConnectivityModel{Tv} <: AbstractPrimaryConnectivityModel
     α::Vector{Tv}
@@ -33,7 +33,7 @@ end
 
 (mdl::FunkyPrimaryConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α[k] + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
-function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, mdl::Union{FunkyConnectivityModel, FunkySymmetricConnectivityModel})
+function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, mdl::Union{FunkyConnectivityModel, FunkyMonotonizedSymmetricConnectivityModel})
     ocl = oracle_stripe(mdl, A)
     m, n = size(A)
     args = (minimum(mdl.α), maximum(mdl.α), maximum(ocl(1, n + 1, k) for k = 1:K))
@@ -47,7 +47,7 @@ function ChainPartitioners.bound_stripe(A::SparseMatrixCSC, K, Π, mdl::Union{Fu
     return (minimum(args), maximum(args))
 end
 
-LazyBisectCost = Union{AbstractConnectivityModel, AbstractSymmetricConnectivityModel, AbstractPrimaryConnectivityModel}
+LazyBisectCost = Union{AbstractConnectivityModel, AbstractMonotonizedSymmetricConnectivityModel, AbstractPrimaryConnectivityModel}
 
 
 
@@ -87,10 +87,10 @@ end
                 AffineWorkCostModel(0, 10, 1);
                 AffineConnectivityModel(0, 3, 1, 3);
                 AffinePrimaryConnectivityModel(0, 2, 1, 3, 6);
-                m == n ? AffineSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
+                m == n ? AffineMonotonizedSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
                 FunkyConnectivityModel(rand(1:10, K), 3, 1, 3);
                 FunkyPrimaryConnectivityModel(rand(1:10, K), 2, 1, 3, 6);
-                m == n ? FunkySymmetricConnectivityModel(rand(1:10, K), 3, 1, 3, 5) : [];
+                m == n ? FunkyMonotonizedSymmetricConnectivityModel(rand(1:10, K), 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
@@ -123,8 +123,8 @@ end
                 AffineSecondaryConnectivityModel(0, 2, 1, 3, 6);
                 FunkyConnectivityModel(1 + nnz(A) + 3n + 3m .+ rand(1:10, K), -3, -1, -3);
                 FunkyPrimaryConnectivityModel(1 + nnz(A) + 3n + 6m .+ rand(1:10, K), -2, -1, -3, -6);
-                #m == n ? AffineSymmetricConnectivityModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
-                m == n ? FunkySymmetricConnectivityModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
+                #m == n ? AffineMonotonizedSymmetricConnectivityModel(1 + nnz(A) + 18n + 3m, -3, -1, -3, 5) : [];
+                m == n ? FunkyMonotonizedSymmetricConnectivityModel(1 + nnz(A) + 18n + 3m .+ rand(1:10, K), -3, -1, -3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceBottleneckSplitter(f), Π)
@@ -149,7 +149,7 @@ end
 
             for f = [
                 AffineConnectivityModel(0, 3, 1, 3);
-                m == n ? AffineSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
+                m == n ? AffineMonotonizedSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
             ]
                 Π = partition_stripe(A', K, EquiSplitter())
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f), Π)

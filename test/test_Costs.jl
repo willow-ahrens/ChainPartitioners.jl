@@ -18,8 +18,8 @@
             AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 0, β_net = 1),
             AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 1, β_net = 0),
             AffineConnectivityModel(α = 0, β_vertex = 1, β_pin = 1, β_net = 1),
-            AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 10, Δ_pins = 0),
-            AffineSymmetricConnectivityModel(α = 10, β_vertex = 10, β_pin = 10, β_net = 100, Δ_pins = 8),
+            AffineMonotonizedSymmetricConnectivityModel(α = 10, β_vertex = 10, β_over_pin = 10, β_dia_net = 10, Δ_pins = 0),
+            AffineMonotonizedSymmetricConnectivityModel(α = 10, β_vertex = 10, β_over_pin = 10, β_dia_net = 100, Δ_pins = 8),
         ]
         for mdl in models
             ocl = oracle_stripe(mdl, A, Φ)

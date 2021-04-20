@@ -54,9 +54,9 @@ export VertexCount
 export AbstractConnectivityModel
 export AffineConnectivityModel
 export ConnectivityOracle
-export AbstractSymmetricConnectivityModel
-export AffineSymmetricConnectivityModel
-export SymmetricConnectivityOracle
+export AbstractMonotonizedSymmetricConnectivityModel
+export AffineMonotonizedSymmetricConnectivityModel
+export MonotonizedSymmetricConnectivityOracle
 export AbstractPrimaryConnectivityModel
 export AffinePrimaryConnectivityModel
 export PrimaryConnectivityOracle
@@ -187,7 +187,7 @@ include("ReferenceSplitter.jl")
 include("WorkCosts.jl")
 include("ConnectivityCosts.jl")
 include("SymmetricEdgeCutCosts.jl")
-include("SymmetricConnectivityCosts.jl")
+include("MonotonizedSymmetricConnectivityCosts.jl")
 include("PrimaryEdgeCutCosts.jl")
 include("PrimaryConnectivityCosts.jl")
 include("SecondaryEdgeCutCosts.jl")
