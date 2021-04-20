@@ -16,7 +16,7 @@ end
 
 @inline cost_type(::Type{AffineSymmetricConnectivityModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSymmetricConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets, k) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
+(mdl::AffineSymmetricConnectivityModel)(n_vertices, n_pins, n_local_nets, n_remote_nets) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin + n_local_nets * mdl.β_local_net + n_remote_nets * mdl.β_remote_net
 
 struct SymmetricConnectivityOracle{Ti, Net, DiaNet, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
