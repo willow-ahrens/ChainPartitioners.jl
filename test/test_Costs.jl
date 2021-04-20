@@ -35,6 +35,12 @@
             AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = 1, β_cut_net = 1),
             AffineHyperedgeCutModel(α = 0, β_vertex = 0, β_pin = 0, β_self_net = -1),
             AffineSymmetricEdgeCutModel(α = 10, β_vertex = 10, β_self_pin = 10, β_cut_pin = 100),
+            AffineSymmetricConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 0, β_remote_net = 1),
+            AffineSymmetricConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1),
+            AffineSymmetricConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1),
+            AffineSymmetricEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 0, β_cut_pin = 1),
+            AffineSymmetricEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 1, β_cut_pin = 1),
+            AffineSymmetricEdgeCutModel(α = 1, β_vertex = 1, β_self_pin = 1, β_cut_pin = 1),
         ]
         for mdl in models
             ocl = oracle_stripe(mdl, A, Φ)
@@ -49,12 +55,12 @@
             AffineSecondaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1)),
             (AffinePrimaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1),
             AffineSecondaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1)),
-            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 0, β_remote_pin = 1),
-            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 0, β_remote_pin = 1)),
-            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 1, β_remote_pin = 1),
-            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_local_pin = 1, β_remote_pin = 1)),
-            (AffinePrimaryEdgeCutModel(α = 1, β_vertex = 1, β_local_pin = 1, β_remote_pin = 1),
-            AffineSecondaryEdgeCutModel(α = 1, β_vertex = 1, β_local_pin = 1, β_remote_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 0, β_cut_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 0, β_cut_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 1, β_cut_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 1, β_cut_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 1, β_vertex = 1, β_self_pin = 1, β_cut_pin = 1),
+            AffineSecondaryEdgeCutModel(α = 1, β_vertex = 1, β_self_pin = 1, β_cut_pin = 1)),
         ]
         adj_A = permutedims(A)
         for (comm_mdl, local_mdl) in models
@@ -70,6 +76,30 @@
             @test 0 <= c_lo <= bottleneck_value(adj_A, Φ, Π, local_mdl) <= c_hi
             @test bottleneck_value(adj_A, Φ, Π, local_mdl) == bottleneck_value(A, Π, Φ, comm_mdl)
             @test bottleneck_value(adj_A, Φ, Π, local_ocl) == bottleneck_value(A, Π, Φ, comm_ocl)
+        end
+
+        models = [
+            (AffinePrimaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 0, β_remote_net = 1),
+            AffineSymmetricConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 0, β_remote_net = 1)),
+            (AffinePrimaryConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1),
+            AffineSymmetricConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_local_net = 1, β_remote_net = 1)),
+            (AffinePrimaryConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1),
+            AffineSymmetricConnectivityModel(α = 1, β_vertex = 1, β_pin = 1, β_local_net = 1, β_remote_net = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 0, β_cut_pin = 1),
+            AffineSymmetricEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 0, β_cut_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 1, β_cut_pin = 1),
+            AffineSymmetricEdgeCutModel(α = 0, β_vertex = 0, β_self_pin = 1, β_cut_pin = 1)),
+            (AffinePrimaryEdgeCutModel(α = 1, β_vertex = 1, β_self_pin = 1, β_cut_pin = 1),
+            AffineSymmetricEdgeCutModel(α = 1, β_vertex = 1, β_self_pin = 1, β_cut_pin = 1)),
+        ]
+
+        for (comm_mdl, sym_mdl) in models
+            comm_ocl = oracle_stripe(comm_mdl, A, Π)
+            sym_ocl = oracle_stripe(sym_mdl, A)
+            @test bottleneck_value(A, Π, Π, comm_mdl) == bottleneck_value(A, Π, Π, comm_ocl)
+            @test bottleneck_value(A, Π, sym_mdl) == bottleneck_value(A, Π, sym_ocl)
+            @test bottleneck_value(A, Π, sym_mdl) == bottleneck_value(A, Π, Π, comm_mdl)
+            @test bottleneck_value(A, Π, sym_ocl) == bottleneck_value(A, Π, Π, comm_ocl)
         end
     end
 

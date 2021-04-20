@@ -1,29 +1,29 @@
 abstract type AbstractSecondaryEdgeCutModel end
 
-@inline (mdl::AbstractSecondaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl(n_vertices, n_local_pins, n_remote_pins)
+@inline (mdl::AbstractSecondaryEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins, k) = mdl(n_vertices, n_self_pins, n_cut_pins)
 
 struct AffineSecondaryEdgeCutModel{Tv} <: AbstractSecondaryEdgeCutModel
     α::Tv
     β_vertex::Tv
-    β_local_pin::Tv
-    β_remote_pin::Tv
+    β_self_pin::Tv
+    β_cut_pin::Tv
 end
 
-function AffineSecondaryEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
-    AffineSecondaryEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
+function AffineSecondaryEdgeCutModel(; α = false, β_vertex = false, β_self_pin = false, β_cut_pin = false)
+    AffineSecondaryEdgeCutModel(promote(α, β_vertex, β_self_pin, β_cut_pin)...)
 end
 
 @inline cost_type(::Type{AffineSecondaryEdgeCutModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSecondaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_local_pins * mdl.β_local_pin + n_remote_pins * mdl.β_remote_pin
+(mdl::AffineSecondaryEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_self_pins * mdl.β_self_pin + n_cut_pins * mdl.β_cut_pin
 
 function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryEdgeCutModel)
     @assert mdl.β_vertex >= 0
-    @assert mdl.β_local_pin >= 0
-    @assert mdl.β_remote_pin >= 0
+    @assert mdl.β_self_pin >= 0
+    @assert mdl.β_cut_pin >= 0
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_remote_pin))
-    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_local_pin))
+    c_hi = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_cut_pin))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_self_pin))
     return (c_lo, c_hi)
 end
 
@@ -44,13 +44,13 @@ function bound_stripe(A::SparseMatrixCSC, K, Π::SplitPartition, ocl::SecondaryE
         (m, n) = size(A)
         mdl = oracle_model(ocl)
         @assert mdl.β_vertex >= 0
-        @assert mdl.β_local_pin >= 0
-        @assert mdl.β_remote_pin >= 0
+        @assert mdl.β_self_pin >= 0
+        @assert mdl.β_cut_pin >= 0
         for k = 1:K
             n_vertices = Π.spl[k + 1] - Π.spl[k]
             n_pins = ocl.pos[Π.spl[k + 1]] - ocl.pos[Π.spl[k]]
-            c_lo = max(c_lo, mdl.α + n_vertices * mdl.β_vertex + n_pins * min(mdl.β_local_pin, mdl.β_remote_pin))
-            c_hi = max(c_hi, mdl.α + n_vertices * mdl.β_vertex + n_pins * max(mdl.β_local_pin, mdl.β_remote_pin))
+            c_lo = max(c_lo, mdl.α + n_vertices * mdl.β_vertex + n_pins * min(mdl.β_self_pin, mdl.β_cut_pin))
+            c_hi = max(c_hi, mdl.α + n_vertices * mdl.β_vertex + n_pins * max(mdl.β_self_pin, mdl.β_cut_pin))
         end
         return (c_lo, c_hi)
     end

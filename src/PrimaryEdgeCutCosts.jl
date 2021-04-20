@@ -1,21 +1,21 @@
 abstract type AbstractPrimaryEdgeCutModel end
 
-@inline (mdl::AbstractPrimaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl(n_vertices, n_local_pins, n_remote_pins)
+@inline (mdl::AbstractPrimaryEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins, k) = mdl(n_vertices, n_self_pins, n_cut_pins)
 
 struct AffinePrimaryEdgeCutModel{Tv} <: AbstractPrimaryEdgeCutModel
     α::Tv
     β_vertex::Tv
-    β_local_pin::Tv
-    β_remote_pin::Tv
+    β_self_pin::Tv
+    β_cut_pin::Tv
 end
 
-function AffinePrimaryEdgeCutModel(; α = false, β_vertex = false, β_local_pin = false, β_remote_pin = false)
-    AffinePrimaryEdgeCutModel(promote(α, β_vertex, β_local_pin, β_remote_pin)...)
+function AffinePrimaryEdgeCutModel(; α = false, β_vertex = false, β_self_pin = false, β_cut_pin = false)
+    AffinePrimaryEdgeCutModel(promote(α, β_vertex, β_self_pin, β_cut_pin)...)
 end
 
 @inline cost_type(::Type{AffinePrimaryEdgeCutModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffinePrimaryEdgeCutModel)(n_vertices, n_local_pins, n_remote_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_local_pins * mdl.β_local_pin + n_remote_pins * mdl.β_remote_pin
+(mdl::AffinePrimaryEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_self_pins * mdl.β_self_pin + n_cut_pins * mdl.β_cut_pin
 
 struct PrimaryEdgeCutOracle{Ti, Lcp, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
@@ -30,10 +30,10 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffinePrimaryEdgeCutModel)
         m, n = size(A)
         N = nnz(A)
         @assert mdl.β_vertex >= 0
-        @assert mdl.β_local_pin >= 0
-        @assert mdl.β_remote_pin >= 0
-        c_hi = mdl.α + mdl.β_vertex * n + max(mdl.β_local_pin, mdl.β_remote_pin) * N
-        c_lo = mdl.α + fld(mdl.β_vertex * n + min(mdl.β_local_pin, mdl.β_remote_pin) * N, K)
+        @assert mdl.β_self_pin >= 0
+        @assert mdl.β_cut_pin >= 0
+        c_hi = mdl.α + mdl.β_vertex * n + max(mdl.β_self_pin, mdl.β_cut_pin) * N
+        c_lo = mdl.α + fld(mdl.β_vertex * n + min(mdl.β_self_pin, mdl.β_cut_pin) * N, K)
         return (c_lo, c_hi)
     end
 end
