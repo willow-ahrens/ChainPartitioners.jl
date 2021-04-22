@@ -13,7 +13,7 @@ function main(args)
     suite["partition_plaid"] = BenchmarkGroup(["partition", "plaid"])
     suite["pack_stripe"] = BenchmarkGroup(["pack", "stripe"])
 
-    work_model = (AffineWorkCostModel(0, 10, 1), "work_model")
+    work_model = (AffineWorkModel(0, 10, 1), "work_model")
     net_model = (AffineConnectivityModel(0, 10, 1, 100), "net_model")
     sym_model = (AffineMonotonizedSymmetricConnectivityModel(0, 0, 1, 100, 90), "sym_model")
     comm_model = (AffinePrimaryConnectivityModel(0, 10, 1, 0, 100), "comm_model")

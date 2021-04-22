@@ -1,42 +1,42 @@
-abstract type AbstractWorkCostModel end
+abstract type AbstractWorkCost end
 
-@inline (mdl::AbstractWorkCostModel)(n_vertices, n_pins, k) = mdl(n_vertices, n_pins)
+@inline (mdl::AbstractWorkCost)(n_vertices, n_pins, k) = mdl(n_vertices, n_pins)
 
-struct AffineWorkCostModel{Tv} <: AbstractWorkCostModel
+struct AffineWorkModel{Tv} <: AbstractWorkCost
     α::Tv
     β_vertex::Tv
     β_pin::Tv
 end
 
-function AffineWorkCostModel(; α = false, β_vertex = false, β_pin = false)
-    AffineWorkCostModel(promote(α, β_vertex, β_pin)...)
+function AffineWorkModel(; α = false, β_vertex = false, β_pin = false)
+    AffineWorkModel(promote(α, β_vertex, β_pin)...)
 end
 
-@inline cost_type(::Type{AffineWorkCostModel{Tv}}) where {Tv} = Tv
+@inline cost_type(::Type{AffineWorkModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineWorkCostModel)(n_vertices, n_pins) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin
+(mdl::AffineWorkModel)(n_vertices, n_pins) = mdl.α + n_vertices * mdl.β_vertex + n_pins * mdl.β_pin
 
-struct WorkCostOracle{Ti, Mdl <: AbstractWorkCostModel} <: AbstractOracleCost{Mdl}
+struct WorkOracle{Ti, Mdl <: AbstractWorkCost} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
     mdl::Mdl
 end
 
-oracle_model(ocl::WorkCostOracle) = ocl.mdl
+oracle_model(ocl::WorkOracle) = ocl.mdl
 
-function oracle_stripe(hint::AbstractHint, mdl::AbstractWorkCostModel, A::SparseMatrixCSC; kwargs...)
-    return WorkCostOracle(A.colptr, mdl)
+function oracle_stripe(hint::AbstractHint, mdl::AbstractWorkCost, A::SparseMatrixCSC; kwargs...)
+    return WorkOracle(A.colptr, mdl)
 end
 
-@inline function (cst::WorkCostOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::WorkOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         return cst.mdl(j′ - j, w, k...)
     end
 end
 
-bound_stripe(A::SparseMatrixCSC, K, ocl::WorkCostOracle{<:Any, <:AffineWorkCostModel}) = 
+bound_stripe(A::SparseMatrixCSC, K, ocl::WorkOracle{<:Any, <:AffineWorkModel}) = 
     bound_stripe(A, K, oracle_model(ocl))
-function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
+function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkModel)
     m, n = size(A)
     N = nnz(A)
     c_lo = mdl.α + fld(mdl.β_vertex * n + mdl.β_pin * N, K)
@@ -50,7 +50,7 @@ function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineWorkCostModel)
     return (c_lo, c_hi)
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::AbstractWorkCost) where {G}
     cst = objective_identity(g, cost_type(mdl))
     for k = 1:Π.K
         j = Π.spl[k]
@@ -60,7 +60,7 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::SplitPartition, mdl::Ab
     return cst
 end
 
-function compute_objective(g::G, A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCostModel) where {G}
+function compute_objective(g::G, A::SparseMatrixCSC, Π::DomainPartition, mdl::AbstractWorkCost) where {G}
     cst = objective_identity(g, cost_type(mdl))
     for k = 1:Π.K
         s = Π.spl[k]
@@ -76,6 +76,6 @@ function compute_objective(g::G, A::SparseMatrixCSC, Π::DomainPartition, mdl::A
     return cst
 end
 
-function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCostModel)
+function compute_objective(g, A::SparseMatrixCSC, Π::MapPartition, mdl::AbstractWorkCost)
     return compute_objective(g, A, convert(DomainPartition, Π), mdl)
 end

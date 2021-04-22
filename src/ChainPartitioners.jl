@@ -45,9 +45,9 @@ export AbstractDecreasingModel
 export ConstrainedCost
 export ConstrainedCostOracle
 
-export AbstractWorkCostModel
-export AffineWorkCostModel
-export WorkCostOracle
+export AbstractWorkCost
+export AffineWorkModel
+export WorkOracle
 
 export VertexCount
 

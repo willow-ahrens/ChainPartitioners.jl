@@ -22,8 +22,8 @@ function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryEdgeCutMode
     @assert mdl.β_self_pin >= 0
     @assert mdl.β_cut_pin >= 0
     adj_A = adjointpattern(A)
-    c_hi = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_cut_pin))
-    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_self_pin))
+    c_hi = bottleneck_value(adj_A, Π, AffineWorkModel(mdl.α, mdl.β_vertex, mdl.β_cut_pin))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkModel(mdl.α, mdl.β_vertex, mdl.β_self_pin))
     return (c_lo, c_hi)
 end
 

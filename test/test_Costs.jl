@@ -8,9 +8,9 @@
         Φ = SplitPartition(K, [1, sort(rand(1:(n + 1), K - 1))..., n + 1])
 
         models = [
-            AffineWorkCostModel(α = 0, β_vertex = 0, β_pin = 1),
-            AffineWorkCostModel(α = 0, β_vertex = 1, β_pin = 0),
-            AffineWorkCostModel(α = 0, β_vertex = 1, β_pin = 1),
+            AffineWorkModel(α = 0, β_vertex = 0, β_pin = 1),
+            AffineWorkModel(α = 0, β_vertex = 1, β_pin = 0),
+            AffineWorkModel(α = 0, β_vertex = 1, β_pin = 1),
             AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 0, β_net = 1),
             AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 1, β_net = 0),
             AffineConnectivityModel(α = 0, β_vertex = 0, β_pin = 1, β_net = 1),

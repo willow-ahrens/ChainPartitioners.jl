@@ -25,7 +25,7 @@ function bound_stripe(A::SparseMatrixCSC, K, Π, mdl::AffineSecondaryConnectivit
     @assert mdl.β_remote_net >= 0
     adj_A = adjointpattern(A)
     c_hi = bottleneck_value(adj_A, Π, AffineConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_remote_net))
-    c_lo = bottleneck_value(adj_A, Π, AffineWorkCostModel(mdl.α, mdl.β_vertex, mdl.β_pin))
+    c_lo = bottleneck_value(adj_A, Π, AffineWorkModel(mdl.α, mdl.β_vertex, mdl.β_pin))
     return (c_lo, c_hi)
 end
 

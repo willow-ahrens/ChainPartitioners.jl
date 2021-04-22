@@ -51,25 +51,25 @@ LazyBisectCost = Union{AbstractConnectivityModel, AbstractMonotonizedSymmetricCo
 
 
 
-struct ConvexWorkCostModel <: AbstractWorkCostModel
+struct ConvexWorkModel <: AbstractWorkCost
     α::Float64
     β_vertex::Float64
     β_pin::Float64
 end
 
-(mdl::ConvexWorkCostModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^0.8
+(mdl::ConvexWorkModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^0.8
 
-@inline ChainPartitioners.cost_type(::Type{ConvexWorkCostModel}) = Float64
+@inline ChainPartitioners.cost_type(::Type{ConvexWorkModel}) = Float64
 
-struct ConcaveWorkCostModel <: AbstractWorkCostModel
+struct ConcaveWorkModel <: AbstractWorkCost
     α::Float64
     β_vertex::Float64
     β_pin::Float64
 end
 
-(mdl::ConcaveWorkCostModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^2
+(mdl::ConcaveWorkModel)(n_vertices, n_pins) = mdl.α + (n_vertices * mdl.β_vertex + n_pins * mdl.β_pin)^2
 
-@inline ChainPartitioners.cost_type(::Type{ConcaveWorkCostModel}) = Float64
+@inline ChainPartitioners.cost_type(::Type{ConcaveWorkModel}) = Float64
 
 
 
@@ -84,7 +84,7 @@ end
         (m, n) = size(A)
         for K = [1, 2, 3, 4, 8]
             for f = [
-                AffineWorkCostModel(0, 10, 1);
+                AffineWorkModel(0, 10, 1);
                 AffineConnectivityModel(0, 3, 1, 3);
                 AffinePrimaryConnectivityModel(0, 2, 1, 3, 6);
                 m == n ? AffineMonotonizedSymmetricConnectivityModel(0, 3, 1, 3, 5) : [];
@@ -117,7 +117,7 @@ end
             # These complicated affine terms are designed to ensure nonnegativity.
             # Affine cost functions are commented out because their upper and lower bounds assume nonnegative coefficients.
             for f = [
-                #AffineWorkCostModel(1 + nnz(A), 0, -1);
+                #AffineWorkModel(1 + nnz(A), 0, -1);
                 #AffineConnectivityModel(1 + nnz(A) + 3n + 3m, -3, -1, -3);
                 #AffinePrimaryConnectivityModel(1 + nnz(A) + 3n + 6m, -2, -1, -3, -6);
                 AffineSecondaryConnectivityModel(0, 2, 1, 3, 6);
@@ -168,15 +168,15 @@ end
             end
 
             for (f,) = [
-                (ConvexWorkCostModel(0, 0, 1),);
+                (ConvexWorkModel(0, 0, 1),);
                 (AffineConnectivityModel(0.0, 0.0, 0.0, 1.0),);
-                (AffineWorkCostModel(0, 0, 0),);
-                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+                (AffineWorkModel(0, 0, 0),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 2),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 4),);
+                (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
+                (ConstrainedCost(ConvexWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 2),);
+                (ConstrainedCost(ConvexWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 4),);
+                (ConstrainedCost(ConvexWorkModel(0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
             ]
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
                 c = total_value(A, Φ, f)
@@ -195,11 +195,11 @@ end
             end
 
             for (f,) = [
-                (ConcaveWorkCostModel(0, 0, 1),);
-                (AffineWorkCostModel(0, 0, 0),);
-                (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
-                (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
-                (ConstrainedCost(ConcaveWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+                (ConcaveWorkModel(0, 0, 1),);
+                (AffineWorkModel(0, 0, 0),);
+                (ConstrainedCost(ConcaveWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 2),);
+                (ConstrainedCost(ConcaveWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 4),);
+                (ConstrainedCost(ConcaveWorkModel(0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
             ]
                 Φ = partition_stripe(A, K, ReferenceTotalSplitter(f))
                 c = total_value(A, Φ, f)
@@ -244,17 +244,17 @@ end
         end
 
         for (f,) = [
-            (ConvexWorkCostModel(0.0, 0, 1),);
-            (ConvexWorkCostModel(-0.7, 0, 1),);
+            (ConvexWorkModel(0.0, 0, 1),);
+            (ConvexWorkModel(-0.7, 0, 1),);
             (AffineConnectivityModel(-0.5, 0.0, 0.0, 1.0),);
             (AffineConnectivityModel(0, 0, 0, 1),);
-            (AffineWorkCostModel(0, 0, 0),);
-            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 2),);
-            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 4),);
-            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
-            (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
-            (ConstrainedCost(ConvexWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
-            (ConstrainedCost(ConvexWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            (AffineWorkModel(0, 0, 0),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 2),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 4),);
+            (ConstrainedCost(AffineConnectivityModel(0, 0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
+            (ConstrainedCost(ConvexWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 2),);
+            (ConstrainedCost(ConvexWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 4),);
+            (ConstrainedCost(ConvexWorkModel(0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
         ]
             Φ = pack_stripe(A, ReferenceTotalChunker(f))
             c = total_value(A, Φ, f)
@@ -272,12 +272,12 @@ end
         end
 
         for (f,) = [
-            (ConcaveWorkCostModel(0.0, 0, 1),);
-            (ConcaveWorkCostModel(-0.7, 0, 1),);
-            (AffineWorkCostModel(0, 0, 0),);
-            (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 2),);
-            (ConstrainedCost(ConcaveWorkCostModel(0, 1, 0), AffineWorkCostModel(0, 1, 0), 4),);
-            (ConstrainedCost(ConcaveWorkCostModel(0, 0, 1), AffineWorkCostModel(0, 1, 0), 8),);
+            (ConcaveWorkModel(0.0, 0, 1),);
+            (ConcaveWorkModel(-0.7, 0, 1),);
+            (AffineWorkModel(0, 0, 0),);
+            (ConstrainedCost(ConcaveWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 2),);
+            (ConstrainedCost(ConcaveWorkModel(0, 1, 0), AffineWorkModel(0, 1, 0), 4),);
+            (ConstrainedCost(ConcaveWorkModel(0, 0, 1), AffineWorkModel(0, 1, 0), 8),);
         ]
             Φ = pack_stripe(A, ReferenceTotalChunker(f))
             c = total_value(A, Φ, f)

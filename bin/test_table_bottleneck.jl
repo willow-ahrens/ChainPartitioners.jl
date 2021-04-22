@@ -14,7 +14,7 @@ for mtx in [
            ]
     A = permutedims(1.0 * sparse(mdopen(mtx).A))
 
-    work_model = AffineWorkCostModel(0, 10, 1)
+    work_model = AffineWorkModel(0, 10, 1)
     net_model = AffineConnectivityModel(0, 10, 1, 100)
     sym_model = AffineMonotonizedSymmetricConnectivityModel(0, 0, 1, 100, 90)
     comm_model = AffinePrimaryConnectivityModel(0, 10, 1, 0, 100)
