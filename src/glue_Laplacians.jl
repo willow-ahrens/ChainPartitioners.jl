@@ -21,6 +21,14 @@ function permute_plaid(A::Symmetric{Tv, SparseMatrixCSC{Tv, Ti}}, ::SpectralPerm
     return (prm, prm)
 end
 
+function permute_stripe(A::Symmetric{Tv, SparseMatrixCSC{Tv, Ti}}, method::SpectralPermuter) where {Tv, Ti}
+    return permute_plaid(A, method)[end]
+end
+
+function permute_stripe(A::SparseMatrixCSC, method::SpectralPermuter)
+    return permute_plaid(A, method)[end]
+end
+
 function permute_plaid(A::SparseMatrixCSC{Tv, Ti}, method::SpectralPermuter; kwargs...) where {Tv, Ti}
     (m, n) = size(A)
     A = SparseMatrixCSC{Float64, Ti}(m, n, copy(A.colptr), copy(A.rowval), ones(nnz(A)))

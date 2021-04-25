@@ -58,8 +58,12 @@ end
 
 struct SymmetricPartitioner{Mtds}
     mtds::Mtds
+    function SymmetricPartitioner{Mtds}(mtds::Mtds) where {Mtds}
+        return new{Mtds}(mtds)
+    end
 end
 
+SymmetricPartitioner(mtd) = SymmetricPartitioner{Tuple{typeof(mtd)}}((mtd,))
 SymmetricPartitioner(mtds...) = SymmetricPartitioner{typeof(mtds)}(mtds)
 
 function partition_plaid(A::SparseMatrixCSC, K, method::SymmetricPartitioner; adj_A = nothing, kwargs...)

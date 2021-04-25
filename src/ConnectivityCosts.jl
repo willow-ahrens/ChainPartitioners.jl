@@ -55,7 +55,7 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractConnectivityModel, A::Sp
     end
 end
 
-@inline function (cst::ConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
+@inline function (cst::ConnectivityOracle{Ti, Mdl})(j, j′, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         d = cst.net[j, j′]
