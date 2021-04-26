@@ -100,9 +100,9 @@ end
                     (DynamicBottleneckSplitter(f), 0);
                     (BisectIndexBottleneckSplitter(f), 0);
                     (BisectCostBottleneckSplitter(f, 0.1), 0.1);
-                    f isa LazyBisectCost ? (LazyBisectCostBottleneckSplitter(f, 0.1), 0.1) : [];
                     (BisectCostBottleneckSplitter(f, 0.01), 0.01);
-                    f isa LazyBisectCost ? (LazyBisectCostBottleneckSplitter(f, 0.01), 0.01) : [];
+                    (LazyBisectCostBottleneckSplitter(f, 0.1), 0.1);
+                    (LazyBisectCostBottleneckSplitter(f, 0.01), 0.01);
                 ]
                     Φ′ = partition_stripe(A, K, method, Π)
                     @test issorted(Φ′.spl)
@@ -137,6 +137,10 @@ end
                     (FlipBisectCostBottleneckSplitter(f, 0.01), 0.01);
                     (FlipBisectCostBottleneckSplitter(f, 0.001), 0.001);
                     (FlipBisectCostBottleneckSplitter(f, 0.0001), 0.0001);
+                    (LazyFlipBisectCostBottleneckSplitter(f, 0.1), 0.1);
+                    (LazyFlipBisectCostBottleneckSplitter(f, 0.01), 0.01);
+                    (LazyFlipBisectCostBottleneckSplitter(f, 0.001), 0.001);
+                    (LazyFlipBisectCostBottleneckSplitter(f, 0.0001), 0.0001);
                 ]
                     Φ′ = partition_stripe(A, K, method, Π)
                     @test issorted(Φ′.spl)

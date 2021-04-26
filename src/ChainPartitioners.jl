@@ -100,8 +100,9 @@ export ConcaveTotalSplitter
 export BisectIndexBottleneckSplitter
 export FlipBisectIndexBottleneckSplitter
 export BisectCostBottleneckSplitter
-export LazyBisectCostBottleneckSplitter
 export FlipBisectCostBottleneckSplitter
+export LazyBisectCostBottleneckSplitter
+export LazyFlipBisectCostBottleneckSplitter
 export SymmetricPartitioner
 export MagneticPartitioner
 export GreedyBottleneckPartitioner

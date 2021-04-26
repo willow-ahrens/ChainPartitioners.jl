@@ -15,7 +15,7 @@ end
 
 @inline cost_type(::Type{AffineSymmetricEdgeCutModel{Tv}}) where {Tv} = Tv
 
-(mdl::AffineSymmetricEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins, k) = mdl.α + n_vertices * mdl.β_vertex + n_self_pins * mdl.β_self_pin + n_cut_pins * mdl.β_cut_pin
+(mdl::AffineSymmetricEdgeCutModel)(n_vertices, n_self_pins, n_cut_pins) = mdl.α + n_vertices * mdl.β_vertex + n_self_pins * mdl.β_self_pin + n_cut_pins * mdl.β_cut_pin
 
 struct SymmetricEdgeCutOracle{Ti, SelfPin, Mdl} <: AbstractOracleCost{Mdl}
     pos::Vector{Ti}
@@ -34,22 +34,22 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractSymmetricEdgeCutModel, A
     end
 end
 
-@inline function (cst::SymmetricEdgeCutOracle{Ti, Mdl})(j::Ti, j′::Ti, k) where {Ti, Mdl}
+@inline function (cst::SymmetricEdgeCutOracle{Ti, Mdl})(j, j′, k...) where {Ti, Mdl}
     @inbounds begin
         w = cst.pos[j′] - cst.pos[j]
         l = cst.selfpin(j, j′)
-        return cst.mdl(j′ - j, l, w - l, k)
+        return cst.mdl(j′ - j, l, w - l, k...)
     end
 end
 
-@inline function (stp::Step{Ocl})(_j, _j′, _k) where {Ti, Mdl, Ocl <: SymmetricEdgeCutOracle{Ti, Mdl}}
+@inline function (stp::Step{Ocl})(_j, _j′, _k...) where {Ti, Mdl, Ocl <: SymmetricEdgeCutOracle{Ti, Mdl}}
     @inbounds begin
         cst = stp.ocl
         j = destep(_j)
         j′ = destep(_j′)
-        k = destep(_k)
+        k = maptuple(destep, _k...)
         w = cst.pos[j′] - cst.pos[j]
         l = Step(cst.selfpin)(_j, _j′)
-        return cst.mdl(j′ - j, l, w - l, k)
+        return cst.mdl(j′ - j, l, w - l, k...)
     end
 end
