@@ -65,7 +65,15 @@ function compute_objective(g, A, Φ::SplitPartition, mdl::AbstractOracleCost) wh
     return cst
 end
 
-
+function compute_weight(A, weight)
+    w = oracle_stripe(StepHint(), weight, A)
+    m, n = size(A)
+    wgt = undefs(cost_type(w), n)
+    for j = 1:n
+        wgt[j] = Step(w)(Same(j), Next(j + 1))
+        Step(w)(Next(j), Same(j + 1))
+    end
+end
 
 struct Extended{T}
     i::Bool

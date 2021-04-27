@@ -13,6 +13,7 @@ end
 function KaHyParPartitioner(;
     configuration::Union{Nothing, KaHyParConfiguration, String}=nothing,
     imbalance::Union{Nothing, Float64} = nothing,
+    weight::Any = VertexCount(),
     verbose = false
 )
     if isa(configuration, KaHyParConfiguration)
@@ -26,6 +27,7 @@ function KaHyParPartitioner(;
     return KaHyParPartitioner(
         configuration,
         imbalance,
+        weight,
         verbose,
     )
 end
@@ -46,7 +48,7 @@ function partition_stripe(A::SparseMatrixCSC, K, method::KaHyParPartitioner; kwa
         asg = KaHyPar.partition(
             KaHyPar.HyperGraph(
                 adjointpattern(A),
-                (A).colptr[2:end] .- (A).colptr[1:end - 1],
+                compute_weight(A, method.weight),
                 ones(Int64, m)
             ),
             K;
@@ -57,7 +59,7 @@ function partition_stripe(A::SparseMatrixCSC, K, method::KaHyParPartitioner; kwa
         asg = @suppress KaHyPar.partition(
             KaHyPar.HyperGraph(
                 adjointpattern(A),
-                (A).colptr[2:end] .- (A).colptr[1:end - 1],
+                compute_weight(A, method.weight),
                 ones(Int64, m)
             ),
             K;

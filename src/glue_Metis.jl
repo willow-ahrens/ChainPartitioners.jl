@@ -201,16 +201,6 @@ function metis_partition(A::SparseMatrixCSC, wgt, K, method::MetisPartitioner)
     return asg
 end
 
-function compute_weight(A, weight)
-    w = oracle_stripe(StepHint(), weight, A)
-    m, n = size(A)
-    wgt = undefs(cost_type(w), n)
-    for j = 1:n
-        wgt[j] = Step(w)(Same(j), Next(j + 1))
-        Step(w)(Next(j), Same(j + 1))
-    end
-end
-
 function partition_stripe(A::Symmetric{Tv, SparseMatrixCSC{Tv, Ti}}, K, method::MetisPartitioner; kwargs...) where {Tv, Ti}
     wgt = method.weight isa VertexCount ? nothing : compute_weight(A, method.weight)
     asg = metis_partition(pattern(SparseMatrixCSC(A)), wgt, K, method)
