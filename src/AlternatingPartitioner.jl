@@ -31,18 +31,20 @@ function partition_plaid(A::SparseMatrixCSC, K, method::AlternatingPartitioner; 
     return (Π, Φ)
 end
 
-struct AlternatingNetPartitioner{Mtds}
+struct AlternatingNetPartitioner{Hint, Mtds}
+    hint::Hint
     mtds::Mtds
 end
 
-AlternatingNetPartitioner(mtds...) = AlternatingNetPartitioner{typeof(mtds)}(mtds)
+AlternatingNetPartitioner(mtds...) = AlternatingNetPartitioner{NoHint, typeof(mtds)}(NoHint(), mtds)
+AlternatingNetPartitioner(hint::Hint, mtds...) where {Hint<:AbstractHint} = AlternatingNetPartitioner{Hint, typeof(mtds)}(hint, mtds)
 
 function partition_plaid(A::SparseMatrixCSC, K, method::AlternatingNetPartitioner; adj_A = nothing, net = nothing, kwargs...)
     if adj_A === nothing
         adj_A = adjointpattern(A)
     end
     if net === nothing
-        net = netcount(A; kwargs...)#TODO hint goes here
+        net = netcount(method.hint, A; kwargs...)
     end
     Φ = partition_stripe(A, K, method.mtds[1]; net=net, adj_A=adj_A, kwargs...)
     Π = partition_stripe(adj_A, K, method.mtds[2], Φ; adj_A=A, kwargs...)
