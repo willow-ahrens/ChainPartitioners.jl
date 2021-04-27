@@ -2,6 +2,7 @@
 struct KaHyParPartitioner
     configuration::Union{Nothing, Symbol, String}
     imbalance::Union{Nothing, Float64}
+    weight::Any
     verbose::Bool
 end
 
