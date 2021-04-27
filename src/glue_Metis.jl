@@ -43,6 +43,7 @@ struct MetisPartitioner
     forcecontiguous::Union{Nothing, Bool}
     compressgraph::Union{Nothing, Bool}
     imbalance::Union{Nothing, Float64}
+    weight::Any
     verbose_info::Bool
     verbose_time::Bool
     verbose_coarsen::Bool
@@ -71,6 +72,7 @@ MetisPartitioner(;
     forcecontiguous = nothing,
     compressgraph = nothing,
     imbalance = nothing,
+    weight = VertexCount(),
     verbose_info = false,
     verbose_time = false,
     verbose_coarsen = false,
@@ -97,6 +99,7 @@ MetisPartitioner(;
     forcecontiguous,
     compressgraph,
     imbalance,
+    weight,
     verbose_info,
     verbose_time,
     verbose_coarsen,
@@ -109,7 +112,7 @@ MetisPartitioner(;
     verbose_memory,
 )
 
-function metis_partition(A::SparseMatrixCSC, K, method::MetisPartitioner)
+function metis_partition(A::SparseMatrixCSC, wgt, K, method::MetisPartitioner)
     old_options = copy(Metis.options)
 
     fill!(Metis.options, Cint(-1))
@@ -182,6 +185,11 @@ function metis_partition(A::SparseMatrixCSC, K, method::MetisPartitioner)
     if method.verbose_contiguous verbose |= Metis.METIS_DBG_CONTIGINFO end
     if method.verbose_memory verbose |= Metis.METIS_DBG_MEMORY end
 
+    g = Metis.graph(A)
+    if wgt !== nothing
+        g = Metis.Graph(g.nvtxs, g.xadj, g.adjncy, convert(Vector{typeof(g.nvtxs)}, wgt))
+    end
+
     if verbose == 0
         asg = @suppress Metis.partition(A, K, alg=alg)
     else
@@ -193,8 +201,19 @@ function metis_partition(A::SparseMatrixCSC, K, method::MetisPartitioner)
     return asg
 end
 
+function compute_weight(A, weight)
+    w = oracle_stripe(StepHint(), weight, A)
+    m, n = size(A)
+    wgt = undefs(cost_type(w), n)
+    for j = 1:n
+        wgt[j] = Step(w)(Same(j), Next(j + 1))
+        Step(w)(Next(j), Same(j + 1))
+    end
+end
+
 function partition_stripe(A::Symmetric{Tv, SparseMatrixCSC{Tv, Ti}}, K, method::MetisPartitioner; kwargs...) where {Tv, Ti}
-    asg = metis_partition(pattern(SparseMatrixCSC(A)), K, method)
+    wgt = method.weight isa VertexCount ? nothing : compute_weight(A, method.weight)
+    asg = metis_partition(pattern(SparseMatrixCSC(A)), wgt, K, method)
     return MapPartition(K, asg)
 end
 
@@ -203,19 +222,22 @@ function partition_stripe(A::SparseMatrixCSC, K, method::MetisPartitioner; kwarg
 end
 
 function partition_plaid(A::Symmetric{Tv, SparseMatrixCSC{Tv, Ti}}, K, method::MetisPartitioner; kwargs...) where {Tv, Ti}
-    asg = metis_partition(pattern(SparseMatrixCSC(A)), K, method)
-    return (MapPartition(K, asg), MapPartition(K, asg))
+    Φ = partition_stripe(A, K, method, kwargs...)
+    return (Φ, Φ)
 end
 
 function partition_plaid(A::SparseMatrixCSC, K, method::MetisPartitioner; kwargs...)
     if method.assumesymmetry || (method.checksymmetry && issymmetric(pattern(A)))
-        asg = metis_partition(pattern(A), K, method)
+        wgt = method.weight isa VertexCount ? nothing : compute_weight(A, method.weight)
+        asg = metis_partition(pattern(A), wgt, K, method)
         return (MapPartition(K, asg), MapPartition(K, asg))
     else
         m, n = size(A)
         AP = pattern(A)
         B = hvcat((2, 2), spzeros(Bool, m, m), AP, adjointpattern(AP), spzeros(Bool, n, n))
-        asg = metis_partition(B, K, method)
+        wgt = compute_weight(A, method.weight)
+        wgt = vcat(zeros(eltype(wgt), m), wgt)
+        asg = metis_partition(B, wgt, K, method)
         return (MapPartition(K, asg[1:m]), MapPartition(K, asg[m + 1:end]))
     end
 end
