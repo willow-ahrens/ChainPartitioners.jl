@@ -73,6 +73,7 @@ function compute_weight(A, weight)
         wgt[j] = Step(w)(Same(j), Next(j + 1))
         Step(w)(Next(j), Same(j + 1))
     end
+    return wgt
 end
 
 struct Extended{T}
