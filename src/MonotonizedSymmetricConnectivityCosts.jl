@@ -45,6 +45,8 @@ function bound_stripe(A::SparseMatrixCSC, K, ocl::AbstractOracleCost{<:AffineMon
     return (c_lo, c_hi)
 end
 
+
+
 function bound_stripe(A::SparseMatrixCSC, K, mdl::AffineMonotonizedSymmetricConnectivityModel)
     @inbounds begin
         @assert mdl.β_vertex >= 0
@@ -87,6 +89,19 @@ function oracle_stripe(hint::AbstractHint, mdl::AbstractMonotonizedSymmetricConn
 
         return MonotonizedSymmetricConnectivityOracle(overpos, dianet, mdl)
     end
+end
+
+function bound_stripe(A::SparseMatrixCSC, K, ocl::MonotonizedSymmetricConnectivityOracle{<:Any, <:Any, <:AffineMonotonizedSymmetricConnectivityModel})
+    m, n = size(A)
+    @assert m == n
+    N = nnz(A)
+    mdl = oracle_model(ocl)
+    @assert mdl.β_vertex >= 0
+    @assert mdl.β_over_pin >= 0
+    @assert mdl.β_dia_net >= 0
+    c_hi = mdl.α + mdl.β_vertex * n + mdl.β_over_pin * (ocl.overpos[end] - ocl.overpos[1]) + mdl.β_dia_net * m
+    c_lo = mdl.α + fld(c_hi - mdl.α, K)
+    return (c_lo, c_hi)
 end
 
 @inline function (cst::MonotonizedSymmetricConnectivityOracle{Ti, Mdl})(j::Ti, j′::Ti, k...) where {Ti, Mdl}
