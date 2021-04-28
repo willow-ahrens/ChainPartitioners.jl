@@ -69,16 +69,20 @@ SymmetricPartitioner(mtd) = SymmetricPartitioner{Tuple{typeof(mtd)}}((mtd,))
 SymmetricPartitioner(mtds...) = SymmetricPartitioner{typeof(mtds)}(mtds)
 
 function partition_plaid(A::SparseMatrixCSC, K, method::SymmetricPartitioner; adj_A = nothing, kwargs...)
-    if adj_A === nothing
-        adj_A = adjointpattern(A)
-    end
-    Π = partition_stripe(A, K, method.mtds[1]; adj_A=adj_A, kwargs...)
-    for (i, mtd) in enumerate(method.mtds[2:end])
-        if isodd(i)
-            Π = partition_stripe(A, K, mtd, Π; adj_A=adj_A, kwargs...)
-        else
-            Π = partition_stripe(adj_A, K, mtd, Π; adj_A=A, kwargs...)
+    if length(method.mtds) > 1
+        if adj_A === nothing
+            adj_A = adjointpattern(A)
         end
+        Π = partition_stripe(A, K, method.mtds[1]; adj_A=adj_A, kwargs...)
+        for (i, mtd) in enumerate(method.mtds[2:end])
+            if isodd(i)
+                Π = partition_stripe(A, K, mtd, Π; adj_A=adj_A, kwargs...)
+            else
+                Π = partition_stripe(adj_A, K, mtd, Π; adj_A=A, kwargs...)
+            end
+        end
+    else
+        Π = partition_stripe(A, K, method.mtds[1]; kwargs...)
     end
     return (Π, Π)
 end
