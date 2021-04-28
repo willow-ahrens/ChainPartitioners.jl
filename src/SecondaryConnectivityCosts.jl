@@ -88,6 +88,19 @@ end
     end
 end
 
+@inline function (stp::Step{Ocl})(_j, _j′, _k) where {Ti, Mdl, Ocl <: SecondaryConnectivityOracle{Ti, Mdl}}
+    @inbounds begin
+        cst = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        k = destep(_k)
+        w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
+        d = cst.πos[k + 1] - cst.πos[k]
+        l = Step(cst.lcc)(_j, _j′, _k)
+        return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], w, l, d - l, k)
+    end
+end
+
 function compute_objective(g::G, A, Π, Φ::SplitPartition, mdl::AffineSecondaryConnectivityModel) where {G}
     return compute_objective(g, adjointpattern(A), Φ, Π, AffinePrimaryConnectivityModel(mdl.α, mdl.β_vertex, mdl.β_pin, mdl.β_local_net, mdl.β_remote_net))
 end

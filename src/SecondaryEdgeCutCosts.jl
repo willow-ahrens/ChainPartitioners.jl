@@ -83,3 +83,16 @@ end
         return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], l, w - l, k)
     end
 end
+
+@inline function (stp::Step{Ocl})(_j, _j′, _k) where {Ti, Mdl, Ocl <: SecondaryEdgeCutOracle{Ti, Mdl}}
+    @inbounds begin
+        cst = stp.ocl
+        j = destep(_j)
+        j′ = destep(_j′)
+        k = destep(_k)
+        w = cst.pos[cst.Π.spl[k + 1]] - cst.pos[cst.Π.spl[k]]
+        d = cst.πos[k + 1] - cst.πos[k]
+        l = Step(cst.lcv)(_j, _j′, _k)
+        return cst.mdl(cst.Π.spl[k + 1] - cst.Π.spl[k], l, w - l, k)
+    end
+end

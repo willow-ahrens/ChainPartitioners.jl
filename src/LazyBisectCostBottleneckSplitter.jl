@@ -50,7 +50,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyBisectCostB
             end
         end
 
-        c_lo, c_hi = bound_stripe(A, K, args..., method.f) ./ 1
+        c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
         for k = 1:K
             c_lo = max(c_lo, f(1, 1, k))
@@ -82,7 +82,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectC
         N = nnz(A)
         ϵ = method.ϵ
 
-        f = oracle_stripe(StepHint(), method.f, A, args...)
+        f = oracle_stripe(StepHint(), method.f, A, args...; kwargs...)
 
         spl = undefs(Int, K + 1)
         spl[1] = 1
@@ -122,7 +122,7 @@ function partition_stripe(A::SparseMatrixCSC{Tv, Ti}, K, method::LazyFlipBisectC
             end
         end
 
-        c_lo, c_hi = bound_stripe(A, K, args..., method.f) ./ 1
+        c_lo, c_hi = bound_stripe(A, K, args..., f) ./ 1
 
         while c_lo * (1 + ϵ) < c_hi
             c = (c_lo + c_hi) / 2

@@ -274,6 +274,12 @@ function (arg::SparseStepwiseDominanceSum{Tv, Ti})(i::Integer, j::Integer) where
         val = arg.val
         arg_i = arg.i
         arg_j = arg.j
+        #reset case
+        if (arg.m + pos[j + 1]) < pos[arg_j + 1] - pos[j + 1]
+            arg_j = zero(Ti)
+            c = zero(Tv)
+            zero!(Δ)
+        end
         for q = pos[j + 1] : pos[arg_j + 1] - 1
             Δ[idx[q]] -= val[q]
             if idx[q] <= i
@@ -706,6 +712,12 @@ function (arg::SparseStepwiseDominanceCount{Ti})(i::Integer, j::Integer) where {
         idx = arg.idx
         arg_i = arg.i
         arg_j = arg.j
+        #reset case
+        if (arg.m + pos[j + 1]) < pos[arg_j + 1] - pos[j + 1]
+            arg_j = zero(Ti)
+            c = zero(Ti)
+            zero!(Δ)
+        end
         for q = pos[j + 1] : pos[arg_j + 1] - 1
             Δ[idx[q]] -= 1
             c -= idx[q] <= arg_i
