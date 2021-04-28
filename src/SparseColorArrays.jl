@@ -94,7 +94,7 @@ function dianetcount!(hint::AbstractHint, m, n, N, pos::Vector{Ti}, idx::Vector{
         N′ = q′ - 1
         resize!(idx′, N′)
 
-        return NetCount(n, pos′, DominanceCount{Ti}(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
+        return NetCount(n, pos′, dominancecount!(hint, n + 1, n + 1, N′, pos′, idx′; kwargs...))
     end
 end
 

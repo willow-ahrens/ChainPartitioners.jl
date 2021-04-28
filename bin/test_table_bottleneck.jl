@@ -44,7 +44,8 @@ for mtx in [
         #(AlternatingNetPartitioner(SparseHint(), BisectCostBottleneckSplitter(net_model, eps), MagneticPartitioner(), BisectCostBottleneckSplitter(comm_model, eps)), "split_nets__map_local__split_comm__approx", true),
         #(AlternatingNetPartitioner(SparseHint(), BisectCostBottleneckSplitter(net_model, eps), GreedyBottleneckPartitioner(loc_model)), "split_nets__map_greedy__approx", true),
         #(AlternatingNetPartitioner(SparseHint(), BisectCostBottleneckSplitter(net_model, eps), GreedyBottleneckPartitioner(loc_model), BisectCostBottleneckSplitter(comm_model, eps)), "split_nets__map_greedy__split_comm__approx", true),
-        (AlternatingPartitioner(LazyBisectCostBottleneckSplitter(net_model, eps), LazyFlipBisectCostBottleneckSplitter(loc_model, eps)), "split_nets__split_comm__lazy__approx", false),
+        #(AlternatingPartitioner(LazyBisectCostBottleneckSplitter(net_model, eps), LazyFlipBisectCostBottleneckSplitter(loc_model, eps)), "split_nets__split_comm__lazy__approx", false),
+        (PermutingPartitioner(CuthillMcKeePermuter(), SymmetricPartitioner(LazyBisectCostBottleneckSplitter(sym_model, eps))), "split_sym__symmetric__lazy__approx", false),
         (MetisPartitioner(weight=work_model), "metis", false)
         #(AlternatingPartitioner(LazyBisectCostBottleneckSplitter(net_model, eps), FlipBisectCostBottleneckSplitter(loc_model, eps), LazyBisectCostBottleneckSplitter(comm_model, eps), FlipBisectCostBottleneckSplitter(loc_model, eps)), "split_nets__split_comm__split_comm__split_comm__lazy__approx", false),
         #(AlternatingPartitioner(LazyBisectCostBottleneckSplitter(net_model, eps), MagneticPartitioner()), "split_nets__map_local__lazy__approx", true),
@@ -54,9 +55,9 @@ for mtx in [
     ]
         for K in [16]
             setup_time = time(@benchmark (Π, Φ) = partition_plaid($A, $K, $method))
-            @profile begin
+            #@profile begin
             (Π, Φ) = partition_plaid(A, K, method)
-            end
+            #end
             Profile.print()
             push!(rows, [K key setup_time])
             println(method)
