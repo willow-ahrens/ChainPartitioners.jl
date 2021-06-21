@@ -11,7 +11,8 @@ This package is a collection of matrix partitioning and reordering routines. Cha
 
 ### Publications
 
-[P. Ahrens, “Load Plus Communication Balancing in Contiguous Partitions for Distributed Sparse Matrices: Efficient Algorithms and Experiments,” arXiv:2007.16192 [cs], Nov. 2020](http://arxiv.org/abs/2007.16192)
+[P. Ahrens, “Contiguous Graph Partitioning For Optimal Total Or Bottleneck Communication,” arXiv:2007.16192v4 [cs], Nov. 2020](http://arxiv.org/abs/2007.16192)
+[P. Ahrens and E. Boman, “On Optimal Partitioning For Sparse Matrices In Variable Block Row Format,” arXiv:2005.12414v2 [cs], Nov. 2020](http://arxiv.org/abs/2005.12414)
 
 ### Extras
 
