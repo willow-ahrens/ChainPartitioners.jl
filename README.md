@@ -11,7 +11,7 @@ This package is a collection of matrix partitioning and reordering routines. Cha
 
 ### Publications
 
-[P. Ahrens, “Contiguous Graph Partitioning For Optimal Total Or Bottleneck Communication,” arXiv:2007.16192v4 [cs], Nov. 2020](http://arxiv.org/abs/2007.16192)
+[P. Ahrens, “Contiguous Graph Partitioning For Optimal Total Or Bottleneck Communication,” arXiv:2007.16192v4 [cs], Jun. 2021](http://arxiv.org/abs/2007.16192)
 
 [P. Ahrens and E. Boman, “On Optimal Partitioning For Sparse Matrices In Variable Block Row Format,” arXiv:2005.12414v2 [cs], Nov. 2020](http://arxiv.org/abs/2005.12414)
 
